@@ -9,32 +9,13 @@ file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/include")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/dict")
 
 #-------------------------------------------------------
-# ----- Options for reading LArSoft files --------------
-#-------------------------------------------------------
-
-#currently not used
-
-set (LARSOFT_PRODUCTION PDSPProd2)
-set (LARSOFT_DATAMC_DIR mc)
-
-set (LARSOFTREADER_DIR "${CMAKE_SOURCE_DIR}/src/LArSoftReader/src/${LARSOFT_PRODUCTION}")
-
-#-------------------------------------------------------
-# ----- Check the access to CVMFS  ---------------------
-#-------------------------------------------------------
-
-find_package(CVMFS)
-
-message("CVMFS found: ${COMPILETF}")
-
-#-------------------------------------------------------
 # ----- Set cmake options ------------------------------
 #-------------------------------------------------------
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "-g -pipe -Wall -ansi -Wnon-virtual-dtor -fpic -Woverloaded-virtual -std=c++17 -DCOMPILETF=${COMPILETF}")
+set(CMAKE_CXX_FLAGS "-g -pipe -Wall -ansi -Wnon-virtual-dtor -fpic -Woverloaded-virtual -std=c++17")
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}")
 
@@ -55,7 +36,7 @@ set (CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 #------ ROOT -------------------
 # Add Minuit for CoherentFit Algorithm
 find_package(ROOT REQUIRED COMPONENTS Geom EG Minuit MathMore)
-#find_package(ROOT REQUIRED COMPONENTS Geom EG TMVA)
+#find_package(ROOT REQUIRED COMPONENTS Geom EG)
 include(${ROOT_USE_FILE})
 
 message("ROOT_USE_FILE:            ${ROOT_USE_FILE}")
@@ -71,30 +52,12 @@ message("HighLAND libraries:           ${HIGHLAND_LIBRARIES}")
 include_directories(${HIGHLAND_INCLUDE_DIRS})
 link_directories(${HIGHLAND_LIBRARY_DIR})
 
-#------ TENSORFLOW------------------
-find_package(TENSORFLOW REQUIRED)
-
-message("TENSORFLOW include directories: ${TENSORFLOW_INCLUDE_DIRS}")
-message("TENSORFLOW libraries:           ${TENSORFLOW_LIBRARIES}")
-
-#------ PROTOBUF------------------
-find_package(HPROTOBUF REQUIRED)
-
-message("PROTOBUF include directories: ${PROTOBUF_INCLUDE_DIRS}")
-message("PROTOBUF libraries:           ${PROTOBUF_LIBRARIES}")
-
-#------ EIGEN------------------
-find_package(EIGEN REQUIRED)
-
-message("EIGEN include directories: ${EIGEN_INCLUDE_DIRS}")
-message("EIGEN libraries:           ${EIGEN_LIBRARIES}")
-
 #-------------------------------------------------------
 #----- include directories -----------------------------
 #-------------------------------------------------------
 
 file(GLOB highlandPD_inc ${CMAKE_SOURCE_DIR}/src/*/src
-                         ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit
+#                         ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit
 #                         ${LARSOFTREADER_DIR} ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}
                          ${CMAKE_BINARY_DIR}/dict)
 
@@ -105,8 +68,8 @@ message("Include directories: ${INCLUDE_DIRECTORIES}")
 #------- ROOT Dictionaries -----------------------------
 #-------------------------------------------------------
 
-file(GLOB dict_src ${CMAKE_SOURCE_DIR}/src/*/src/*_LinkDef.h
-                   ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*_LinkDef.h)
+file(GLOB dict_src ${CMAKE_SOURCE_DIR}/src/*/src/*_LinkDef.h)
+#                   ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*_LinkDef.h)
 
 foreach(file0 ${dict_src})
   string(FIND ${file0} "/"          pos_ini REVERSE)
@@ -141,13 +104,13 @@ endforeach(file0)
 #-------- the highlandPD library -------------------------
 #-------------------------------------------------------
 
-file(GLOB highlandPD_src  ${CMAKE_SOURCE_DIR}/src/*/src/*.cxx
-                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.cxx)
+file(GLOB highlandPD_src  ${CMAKE_SOURCE_DIR}/src/*/src/*.cxx)
+#                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.cxx)
 #                          ${LARSOFTREADER_DIR}/LArSoft*.cxx
 #                          ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/LArSoftReaderProjectSource.cxx)    
 
 add_library(highlandPD SHARED ${dict_src} ${highlandPD_src} )
-target_include_directories(highlandPD PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc} ${TENSORFLOW_INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS})
+target_include_directories(highlandPD PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 foreach(dir ${dirs})
@@ -163,8 +126,8 @@ set(HIGHLAND_PD_LIBRARIES "-L${CMAKE_BINARY_DIR} -lhighlandPD")
 #----- highlandPD includes -------------------------------
 #-------------------------------------------------------
 
-file(GLOB highlandPD_inc2 ${CMAKE_SOURCE_DIR}/src/*/src/*.hxx
-                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.hxx)
+file(GLOB highlandPD_inc2 ${CMAKE_SOURCE_DIR}/src/*/src/*.hxx)
+#                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.hxx)
 #                          ${LARSOFTREADER_DIR}/*.hxx
 #                          ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/*.h)
 
@@ -183,87 +146,87 @@ endforeach(file0)
 
 add_executable(secondaryKaon.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryKaonAnalysis.cxx)
 target_include_directories(secondaryKaon.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(secondaryKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS secondaryKaon.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(secondaryProton.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryProtonAnalysis.cxx)
 target_include_directories(secondaryProton.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(secondaryProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS secondaryProton.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(secondaryKaonXS.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryKaonXSAnalysis.cxx)
 target_include_directories(secondaryKaonXS.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryKaonXS.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(secondaryKaonXS.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS secondaryKaonXS.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(CreateMiniTreeKaon.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeKaon.cxx)
 target_include_directories(CreateMiniTreeKaon.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(CreateMiniTreeKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS CreateMiniTreeKaon.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(CreateMiniTreeEventCandidates.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeEventCandidates.cxx)
 target_include_directories(CreateMiniTreeEventCandidates.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeEventCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(CreateMiniTreeEventCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS CreateMiniTreeEventCandidates.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(CreateMiniTreeCandidates.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeCandidates.cxx)
 target_include_directories(CreateMiniTreeCandidates.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(CreateMiniTreeCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS CreateMiniTreeCandidates.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 #add_executable(CreateMiniTreePD.exe ${CMAKE_SOURCE_DIR}/src/pdIO/app/RunCreateMiniTreePD.cxx)
 #target_include_directories(CreateMiniTreePD.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-#target_link_libraries(CreateMiniTreePD.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+#target_link_libraries(CreateMiniTreePD.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 #INSTALL(TARGETS CreateMiniTreePD.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(CoherentFit.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/RunCoherentFit.cxx)
-target_include_directories(CoherentFit.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CoherentFit.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
-INSTALL(TARGETS CoherentFit.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+#add_executable(CoherentFit.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/RunCoherentFit.cxx)
+#target_include_directories(CoherentFit.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
+#target_link_libraries(CoherentFit.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
+#INSTALL(TARGETS CoherentFit.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(pdExampleAnalysis.exe ${CMAKE_SOURCE_DIR}/src/pdExampleAnalysis/app/RunpdExampleAnalysis.cxx)
 target_include_directories(pdExampleAnalysis.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(pdExampleAnalysis.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(pdExampleAnalysis.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS pdExampleAnalysis.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(dEdxCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundEdxCalibration.cxx)
 target_include_directories(dEdxCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dEdxCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(dEdxCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS dEdxCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(dQdxYZCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundQdxYZCalibration.cxx)
 target_include_directories(dQdxYZCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dQdxYZCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(dQdxYZCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS dQdxYZCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(dQdxXCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundQdxXCalibration.cxx)
 target_include_directories(dQdxXCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dQdxXCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(dQdxXCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS dQdxXCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(CreateMichelRemovingMiniTree.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RunCreateMichelRemovingMiniTree.cxx)
 target_include_directories(CreateMichelRemovingMiniTree.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMichelRemovingMiniTree.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(CreateMichelRemovingMiniTree.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS CreateMichelRemovingMiniTree.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(BrokenTracks.exe ${CMAKE_SOURCE_DIR}/src/BrokenTracksAnalysis/app/RunBrokenTracks.cxx)
 target_include_directories(BrokenTracks.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(BrokenTracks.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(BrokenTracks.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS BrokenTracks.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(BeamWeights.exe ${CMAKE_SOURCE_DIR}/src/BeamWeightsAnalysis/app/RunBeamWeights.cxx)
 target_include_directories(BeamWeights.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(BeamWeights.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(BeamWeights.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS BeamWeights.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(StoppingProton.exe ${CMAKE_SOURCE_DIR}/src/StoppingProtonAnalysis/app/RunStoppingProtonAnalysis.cxx)
 target_include_directories(StoppingProton.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(StoppingProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(StoppingProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS StoppingProton.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 add_executable(QPIX.exe ${CMAKE_SOURCE_DIR}/src/QPIXAnalysis/app/RunQPIXAnalysis.cxx)
 target_include_directories(QPIX.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(QPIX.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES} ${TENSORFLOW_LIBRARIES} ${PROTOBUF_LIBRARIES})
+target_link_libraries(QPIX.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS QPIX.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 
@@ -292,8 +255,9 @@ add_dependencies(CreateMichelRemovingMiniTree.exe  dEdxCalibration.exe)
 add_dependencies(dEdxCalibration.exe               dQdxXCalibration.exe)
 add_dependencies(dQdxXCalibration.exe              dQdxYZCalibration.exe)
 add_dependencies(dQdxYZCalibration.exe             pdExampleAnalysis.exe)
-add_dependencies(pdExampleAnalysis.exe             CoherentFit.exe)
-add_dependencies(CoherentFit.exe                   CreateMiniTreeCandidates.exe)
+#add_dependencies(pdExampleAnalysis.exe             CoherentFit.exe)
+#add_dependencies(CoherentFit.exe                   CreateMiniTreeCandidates.exe)
+add_dependencies(pdExampleAnalysis.exe             CreateMiniTreeCandidates.exe)
 add_dependencies(CreateMiniTreeCandidates.exe      CreateMiniTreeEventCandidates.exe)
 add_dependencies(CreateMiniTreeEventCandidates.exe CreateMiniTreeKaon.exe)
 add_dependencies(CreateMiniTreeKaon.exe            secondaryKaonXS.exe)
