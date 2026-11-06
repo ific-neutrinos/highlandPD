@@ -38,6 +38,7 @@ class secondaryKaonSelectionNoBranches: public SelectionBase{
   static bool MuonMom(AnaParticlePD* part);
   static bool KaonMuonAngle(AnaParticlePD* part);
   static bool KaonMuonDistance(AnaParticlePD* part);
+  static bool KaonInFV(AnaParticlePD* part);
 
 protected:
 

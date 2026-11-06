@@ -77,6 +77,7 @@ private:
   bool _FillBeamParticleHitsInfo;
   bool _FillBeamParticleDaughtersInfo;
   bool _FillKaonCandidatesInfo;
+  bool _FillKaonCandidatesHitInfo;
   bool _FillKaonCandidatesPIDInfo;
   bool _FillBestKaonCandidateInfo;
   bool _FillToyVariablesInfo;
@@ -92,6 +93,7 @@ private:
 
   bool _ApplySCECorrection;
   bool _ApplydEdxCorrection;
+  bool _ApplyRecombinationCorrection;
 
 public:
 

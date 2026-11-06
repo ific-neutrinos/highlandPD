@@ -11,13 +11,14 @@
  < secondaryKaonAnalysis.XSSelection.BeamPDGFilter           = 211 >
 
 --- Output tree ------------
- < secondaryKaonAnalysis.FillBeamInstrumentationInfo           = 1 >
- < secondaryKaonAnalysis.FillBeamParticleInfo                  = 1 >
+ < secondaryKaonAnalysis.FillBeamInstrumentationInfo           = 0 >
+ < secondaryKaonAnalysis.FillBeamParticleInfo                  = 0 >
  < secondaryKaonAnalysis.FillBeamParticleHitsInfo              = 0 >
  < secondaryKaonAnalysis.FillBeamParticleDaughtersInfo         = 0 >
  < secondaryKaonAnalysis.FillKaonCandidatesInfo                = 0 >
  < secondaryKaonAnalysis.FillBestKaonCandidateInfo             = 1 >
- < secondaryKaonAnalysis.FillToyVariablesInfo                  = 1 >
+ < secondaryKaonAnalysis.FillBestKaonCandidatePIDInfo          = 1 >	
+ < secondaryKaonAnalysis.FillToyVariablesInfo                  = 0 >
 
 --- Corrections ------------
  < secondaryKaonAnalysis.ApplySCECorrection                    = 1 >
@@ -47,6 +48,7 @@
  < secondaryKaonAnalysis.xsAnalysis.FillBeamParticleHitsInfo              = 0 >
  < secondaryKaonAnalysis.xsAnalysis.FillBeamParticleDaughtersInfo         = 1 >
  < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesInfo                = 1 >
+ < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesHitInfo             = 0 >
  < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatePIDInfo              = 0 >
  < secondaryKaonAnalysis.xsAnalysis.FillBestKaonCandidateInfo             = 0 >
  < secondaryKaonAnalysis.xsAnalysis.FillToyVariablesInfo                  = 0 >
@@ -54,6 +56,7 @@
 --- Corrections ------------
  < secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection                    = 1 >
  < secondaryKaonAnalysis.xsAnalysis.ApplydEdxCorrection                   = 0 >
+ < secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationCorrection          = 1 >
 
 --- Systematics ------------
  < secondaryKaonAnalysis.xsAnalysis.ApplydQdxSystematic                   = 0 >

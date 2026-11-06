@@ -53,6 +53,7 @@ bool secondaryKaonAnalysis::Initialize(){
   _FillBeamParticleDaughtersInfo = ND::params().GetParameterI("secondaryKaonAnalysis.FillBeamParticleDaughtersInfo");
   _FillKaonCandidatesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.FillKaonCandidatesInfo");
   _FillBestKaonCandidateInfo = ND::params().GetParameterI("secondaryKaonAnalysis.FillBestKaonCandidateInfo");
+  _FillBestKaonCandidatePIDInfo = ND::params().GetParameterI("secondaryKaonAnalysis.FillBestKaonCandidatePIDInfo");
   _FillToyVariablesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.FillToyVariablesInfo");
 
   _ApplydQdxSystematic = ND::params().GetParameterI("secondaryKaonAnalysis.ApplydQdxSystematic");
@@ -222,6 +223,8 @@ void secondaryKaonAnalysis::DefineMicroTrees(bool addBase){
     kaonTree::AddKaonVariables_KaonBestCandidateReco    (output());
     kaonTree::AddKaonVariables_KaonBestCandidateHitsReco(output());
     kaonTree::AddKaonVariables_KaonBestCandidateTrue    (output());
+    if(_FillBestKaonCandidatePIDInfo)
+      kaonTree::AddKaonVariables_KaonBestCandidateRecoPID    (output());
   }
   
   // -------- Add toy variables ---------------------------------
@@ -264,7 +267,7 @@ void secondaryKaonAnalysis::FillMicroTrees(bool addBase){
   if (addBase) baseAnalysis::FillMicroTreesBase(addBase); 
   
   // Fill standard variables for the PD analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::FillStandardVariables_EventInfo(        output(), static_cast<AnaEventInfoPD*>(GetEvent().EventInfo));
+  standardPDTree::FillStandardVariables_EventInfo(output(),&GetEvent());
   if(_FillBeamInstrumentationInfo){
     standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
     standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
@@ -308,13 +311,16 @@ void secondaryKaonAnalysis::FillMicroTrees(bool addBase){
 	max = ksel->GetAccumCutLevel(ibranch);
 	branchmax = ibranch;
       }
-    }
+    }    
 
     if(box().Candidates.size()>0){
       AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[branchmax]->ParentID));
       kaonTree::FillKaonVariables_KaonBestCandidateReco    (output(), box().Candidates[branchmax], parent);
       kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(output(), box().Candidates[branchmax]);
       kaonTree::FillKaonVariables_KaonBestCandidateTrue    (output(), box().Candidates[branchmax], parent);
+
+      if(_FillBestKaonCandidatePIDInfo)
+	kaonTree::FillKaonVariables_KaonBestCandidateRecoPID    (output(), box().Candidates[branchmax]);
     }
   }  
 }
@@ -380,7 +386,6 @@ void secondaryKaonAnalysis::FillTruthTree(){
 //********************************************************************
 
   // Fill the "truth" tree
-
   if(!output().HasTree(OutputManager::truth))return;
 
   output().SetCurrentTree(OutputManager::truth);
@@ -392,17 +397,17 @@ void secondaryKaonAnalysis::FillTruthTree(){
 
     // Check if this particle needs to be saved in the truth tree
     if (!CheckFillTruthTree(&part)) continue;
-
+    if(part.AccumLevel[0][0]>-1)
     // Initialize the truth tree. We must do that for each saved particle since several entries may correspond to the same spill
     output().InitializeTree(OutputManager::truth);
 
     // accumulated cut levels to compute efficiencies. This is taken directly from the AnaTrueObject
-    Int_t accumLevel=0;  
+    Int_t accumLevel=-1; // ???  
     for(std::vector<SelectionBase*>::iterator itf = sel().GetSelections().begin(); itf != sel().GetSelections().end(); itf++){
       if(!(*itf)->IsEnabled())continue;
 
       Int_t isel = (*itf)->GetEnabledIndex();
-
+      
       for(UInt_t ibranch=0;ibranch<(*itf)->GetNBranches();ibranch++){
         if(part.AccumLevel.size()>0) accumLevel = part.AccumLevel[isel][ibranch];
         if(sel().GetNEnabledSelections()>1){
@@ -445,14 +450,66 @@ void secondaryKaonAnalysis::FillTruthTree(){
 }
 
 //********************************************************************
-bool secondaryKaonAnalysis::CheckFillTruthTree(const AnaTrueParticlePD* part){
+bool secondaryKaonAnalysis::CheckFillTruthTree(AnaTrueParticlePD* part){
 //********************************************************************
 
+  // if(!part)return false;
+  // else if(abs(part->PDG)==321){
+  //   return true;
+  // }
+  // else return false;
+
   if(!part)return false;
-  else if(abs(part->PDG)==321){
-    return true;
+  if(part->PDG!=321)
+    return false;
+  bool result = CheckGoodTruthKaon(part);
+  if(result){
+    double true_KE = sqrt(pow(part->Momentum*1000,2)+pow(493.677,2))-493.677;
+    if(true_KE<30)result = false;
   }
-  else return false;
+  return result;
+}
+
+//********************************************************************
+bool secondaryKaonAnalysis::CheckGoodTruthKaon(AnaTrueParticlePD* part, bool checkchain){
+//********************************************************************
+  
+  //safety checks
+  if(!part)return false;
+  if(part->PDG!=321)
+    return false;
+  if(part->ProcessStart == 1) //ignore primary
+    return false;
+  //decaying kaons to mu+nu channel are ok
+  if(part->ProcessEnd==2){
+    bool found_mu = false;
+    bool found_nu = false;
+    bool found_pi = false;
+    for(int idau = 0; idau < part->Daughters.size(); idau++){
+      AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
+      if(!dau)continue;
+      if(dau->PDG==-13)found_mu = true;
+      if(dau->PDG==14)found_nu = true;
+      if(abs(dau->PDG)==211 || dau->PDG == 111)found_pi = true;
+    }
+    if(found_mu && found_nu && !found_pi){
+      part->Signal = true;
+      return true; //good decay
+    }
+    else
+      return false; //other decay
+  }
+  //interacting kaons to kaon with good decay are ok
+  else if(part->ProcessEnd==3 && checkchain){
+    for(int idau = 0; idau < part->Daughters.size(); idau++){
+      AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
+      if(!dau)continue;
+      if(dau->PDG==321)
+  	return CheckGoodTruthKaon(dau,false); //check kaon with good decay. Only one level down in the chain
+      
+    }
+  }
+  return false; //false otherwise
 }
 
 //********************************************************************
@@ -472,7 +529,27 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 
   // Fill true kaons candidate info
   //const kaonAnaTrueVertex& kvtx = static_cast<const kaonAnaTrueVertex&>(vtx);
-  kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part);
+  AnaTrueParticlePD* dau = NULL;
+  if(part.ProcessEnd==2){
+    for(int idau = 0; idau < part.Daughters.size(); idau++){
+      AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
+      if(!dauu)continue;
+      if(dauu->PDG==-13)dau = dauu;
+    }
+  }
+  else if(part.ProcessEnd==3){
+    for(int idau = 0; idau < part.Daughters.size(); idau++){
+      AnaTrueParticlePD* dauk = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
+      if(!dauk)continue;
+      if(dauk->PDG==321)
+	for(int idau = 0; idau < dauk->Daughters.size(); idau++){
+	  AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,dauk->Daughters[idau]);
+	  if(!dauu)continue;
+	  if(dauu->PDG==-13)dau = dauu;
+	}
+    }
+  }
+  kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part, dau);
 }
 
 //********************************************************************
@@ -498,6 +575,7 @@ void secondaryKaonAnalysis::FillCategories(){
     if(box().Candidates.size()>0){
       for(int i = 0; i < (int)box().Candidates.size(); i++){
 	anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[i]),              "candidate",   1);
+	SetIsSignal(box().Candidates[i]);
 	kaonAnaUtils::FillCandidateParticleReducedCategory(box().Candidates[i]);
 	kaonAnaUtils::FillCandidateDaughterParticleReducedCategory(box().Candidates[i]);
 	if(!box().Candidates[i]->Daughters.empty()){
@@ -541,10 +619,13 @@ void secondaryKaonAnalysis::FillCategories(){
 //********************************************************************
 bool secondaryKaonAnalysis::FinalizeConfiguration(){
 //********************************************************************
-  
+
   // This is called before FillMicroTrees()
 
-  const Int_t CandidatesAccumLevel = 1; //TODO: think about this
+  // As the efficiency and purity are computed in a candidate-by-candidate basis,
+  // Truth particles accum_level can only be > -1 if the truth particle is associated
+  // to a reco particle
+  const Int_t CandidatesAccumLevel = -1; 
   
   // Save the accum level for the true particle associated to the recon one such that efficiencies can be computed from the truth tree
   if(conf().GetCurrentConfigurationIndex() != ConfigurationManager::default_conf)
@@ -559,46 +640,63 @@ bool secondaryKaonAnalysis::FinalizeConfiguration(){
     // When the AccumLevel has not been already saved for this vertex 
     if(part->AccumLevel.size() == 0)
       part->AccumLevel.resize(sel().GetNEnabledSelections());
-    
+
+    // Loop over selections (only 1 in our case)
     for(std::vector<SelectionBase*>::iterator it = sel().GetSelections().begin(); it != sel().GetSelections().end(); it++){
       
       if(!(*it)->IsEnabled())continue;
       
       Int_t isel = (*it)->GetEnabledIndex();
 
+      // Loop over branches (10 in our case)
       if (part->AccumLevel[isel].size() == 0)
         part->AccumLevel[isel].resize((*it)->GetNBranches());
-      
+
       bool found = false;
       int branch = 0;
       int max_accum_level = -1;
 
       for(int i = 0; i < (int)box().Candidates.size(); i++){
 	if(!box().Candidates[i]->TrueObject)continue;
-	if(box().Candidates[i]->TrueObject->ID == part->ID){
-	  if((*it)->GetAccumCutLevel(i)>max_accum_level){
+	if(box().Candidates[i]->TrueObject->ID == part->ID){ // check truth-reco association
+	  if((*it)->GetAccumCutLevel(i)>max_accum_level){ // in case more than a reco is associated to a truth?
 	    max_accum_level = (*it)->GetAccumCutLevel(i);
 	    branch = i;
 	  }
 	  found = true;
-	  //break;
+	  //break; // let's go only for a single truth-reco association
 	}
       }
-
+      
       int min_accum_level = 100;
       for(int i = 0; i < (int)box().Candidates.size(); i++){
 	if((*it)->GetAccumCutLevel(i)<min_accum_level)min_accum_level=(*it)->GetAccumCutLevel(i);
       }
-
-      if(!found){
-	part->AccumLevel[0][0] = std::min(min_accum_level, CandidatesAccumLevel);
+      
+      if(!found){ // if not truth-reco association, -1
+	//part->AccumLevel[0][0] = std::min(min_accum_level, CandidatesAccumLevel);
+	part->AccumLevel[0][0] = CandidatesAccumLevel; // if not truth-reco association, -1
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
-      }
-      else{
+      } 
+      else{ // otherwise, reco level
 	part->AccumLevel[0][0] = (*it)->GetAccumCutLevel(branch);
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
       }
     }
   }
   return true;
+}
+
+
+//********************************************************************
+void secondaryKaonAnalysis::SetIsSignal(AnaParticlePD* part){
+//********************************************************************
+
+  if(!part)return;
+  AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
+  if(!truepart)return;
+  if(truepart->PDG!=321)
+    return;
+  bool result = CheckGoodTruthKaon(truepart);
+  truepart->Signal = result;
 }

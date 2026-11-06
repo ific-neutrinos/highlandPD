@@ -1,5 +1,5 @@
 --- Cut levels --------
- < StoppingProtonAnalysis.MinAccumLevelToSave = 4 >   // minimum accum level to save the event
+ < StoppingProtonAnalysis.MinAccumLevelToSave = 5 >   // minimum accum level to save the event
 
 --- Systematics ------------
 

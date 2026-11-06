@@ -55,9 +55,9 @@ void kaonAnaUtils::AddBeamParticleOriginCategory(){
 void kaonAnaUtils::AddBestCandidateParticleReducedCategory(){
 //********************************************************************
 
-  std::string part_types[] = {"#pi^{-}", "#pi^{+}", "k^{+}" , "p"  , NAMEOTHER};
-  int part_codes[]         = {-211     , 211      ,  321    ,  2212, CATOTHER};
-  int part_colors[]        = {4        , 31       ,  92     ,   8  , COLOTHER};
+  std::string part_types[] = {"k^{+}#rightarrow#mu^{+}", "k^{+} (other)" , "#pi^{-}", "#pi^{+}", "p"  ,    NAMEOTHER};
+  int part_codes[]         = { 3210                    ,  321            , -211     , 211      ,  2212,    CATOTHER};
+  int part_colors[]        = { 92                      ,  96             , 4        , 31       ,  8   ,    COLOTHER};
   const int NPART = sizeof(part_types)/sizeof(part_types[0]);
   
   std::reverse(part_types,  part_types  + NPART);
@@ -71,9 +71,9 @@ void kaonAnaUtils::AddBestCandidateParticleReducedCategory(){
 void kaonAnaUtils::AddCandidateParticleReducedCategory(){
 //********************************************************************
 
-  std::string part_types[] = {"#pi^{-}", "#pi^{+}", "k^{+}" , "p"  , NAMEOTHER};
-  int part_codes[]         = {-211     , 211      ,  321    ,  2212, CATOTHER};
-  int part_colors[]        = {4        , 31       ,  92     ,   8  , COLOTHER};
+  std::string part_types[] = {"k^{+}#rightarrow#mu^{+}", "k^{+} (other)" , "#pi^{-}", "#pi^{+}", "p"  , NAMEOTHER};
+  int part_codes[]         = { 3210                    ,  321            , -211     , 211      ,  2212, CATOTHER};
+  int part_colors[]        = { 96                      ,  92             , 4        , 31       ,   8  , COLOTHER};
   const int NPART = sizeof(part_types)/sizeof(part_types[0]);
 
   std::reverse(part_types,  part_types  + NPART);
@@ -182,13 +182,17 @@ void kaonAnaUtils::FillBestCandidateParticleReducedCategory(AnaParticlePD* part)
 //********************************************************************
   
   if(!part) return;  
-  AnaTrueParticle* truepart = static_cast<AnaTrueParticle*>(part->TrueObject);
+  AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
 
   if(!truepart)                    anaUtils::_categ->SetCode("bestcandidateparticlereduced", CATNOTRUTH, CATNOTRUTH);
   else{
     if      (truepart->PDG == -211)anaUtils::_categ->SetCode("bestcandidateparticlereduced", -211,       CATOTHER);
     else if (truepart->PDG == 211 )anaUtils::_categ->SetCode("bestcandidateparticlereduced", 211,        CATOTHER);
-    else if (truepart->PDG == 321 )anaUtils::_categ->SetCode("bestcandidateparticlereduced", 321,        CATOTHER);
+    else if (truepart->PDG == 321){
+      if(truepart->Signal)         anaUtils::_categ->SetCode("bestcandidateparticlereduced", 3210,       CATOTHER);
+      
+      else                         anaUtils::_categ->SetCode("bestcandidateparticlereduced", 321,        CATOTHER);
+    }
     else if (truepart->PDG == 2212)anaUtils::_categ->SetCode("bestcandidateparticlereduced", 2212,       CATOTHER);
     else                           anaUtils::_categ->SetCode("bestcandidateparticlereduced", CATOTHER,   CATOTHER);
   }
@@ -197,15 +201,18 @@ void kaonAnaUtils::FillBestCandidateParticleReducedCategory(AnaParticlePD* part)
 //********************************************************************
 void kaonAnaUtils::FillCandidateParticleReducedCategory(AnaParticlePD* part){
 //********************************************************************
-  
-  if(!part) return;  
-  AnaTrueParticle* truepart = static_cast<AnaTrueParticle*>(part->TrueObject);
 
+  if(!part) return;  
+  AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
+  
   if(!truepart)                    anaUtils::_categ->SetObjectCode("candidateparticlereduced", CATNOTRUTH, CATNOTRUTH, -1);
   else{
-         if (truepart->PDG == -211)anaUtils::_categ->SetObjectCode("candidateparticlereduced", -211,       CATOTHER, -1);
+    if (truepart->PDG == -211)     anaUtils::_categ->SetObjectCode("candidateparticlereduced", -211,       CATOTHER, -1);
     else if (truepart->PDG == 211 )anaUtils::_categ->SetObjectCode("candidateparticlereduced", 211,        CATOTHER, -1);
-    else if (truepart->PDG == 321 )anaUtils::_categ->SetObjectCode("candidateparticlereduced", 321,        CATOTHER, -1);
+    else if (truepart->PDG == 321 )
+      if(truepart->Signal)         anaUtils::_categ->SetObjectCode("candidateparticlereduced", 3210,       CATOTHER, -1);
+      
+      else                         anaUtils::_categ->SetObjectCode("candidateparticlereduced", 321,        CATOTHER, -1);
     else if (truepart->PDG == 2212)anaUtils::_categ->SetObjectCode("candidateparticlereduced", 2212,       CATOTHER, -1);
     else                           anaUtils::_categ->SetObjectCode("candidateparticlereduced", CATOTHER,   CATOTHER, -1);
   }

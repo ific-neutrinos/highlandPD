@@ -28,12 +28,13 @@ void secondaryKaonSelection::DefineSteps(){
   AddSplit(secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES);
   //next cuts have to be applied to each branch
   for(int i = 0; i < (int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES; i++){
+    AddStep(i, StepBase::kCut, "FIDUCIAL VOLUME",       new FVCut(33,-1),                true);
     AddStep(i, StepBase::kCut, "DAUGHTER TRACK-LIKE",   new MuonIsTrackCut(),             true);
     AddStep(i, StepBase::kCut, "DAUGHTER #chi^{2}",     new MuonChi2Cut(0.5,6.00),        true);
     AddStep(i, StepBase::kCut, "DAUGHTER MOM",          new MuonRangeMomCut(0.221,0.245), true);
     AddStep(i, StepBase::kCut, "ANGLE",                 new KaonMuonAngleCut(-1,0.64),    true);
     AddStep(i, StepBase::kCut, "DISTANCE",              new KaonMuonDistanceCut(0,7.7),   true);
-    // AddStep(i, StepBase::kCut, "Proton chi2 cut",            new ProtonChi2Cut(0,84),          true);
+    AddStep(i, StepBase::kCut, "KAON #chi^{2}",         new KaonChi2Cut(0,50),            true);
   }
 
   //Set the branch aliases to the different branches 
@@ -281,6 +282,57 @@ bool ProtonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   double chi2 = part->Chi2Proton;
   double ndf  = part->Chi2ndf;
   if(chi2/ndf > _lower_cut && chi2/ndf < _upper_cut && chi2 > 0 && chi2>0){
+    box.UpdateBestCandidateIndex(Index(),branchesIDs[0]);
+    return true;
+  }
+  else return false;
+}
+
+//**************************************************
+bool KaonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+//**************************************************
+  
+  (void)event;
+
+  //cast the box
+  ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);   
+
+  //get the current branch  
+  std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] > box.Candidates.size()-1)return false;
+
+  //if there is kaon, cut in its chi2
+  AnaParticlePD* part = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
+  std::pair<double,double> result = pdAnaUtils::Chi2PID(*part,321);
+  double chi2 = result.first;
+  double ndf  = result.second;
+  if(chi2/ndf > _lower_cut && chi2/ndf < _upper_cut && chi2 > 0 && ndf > 0){
+    box.UpdateBestCandidateIndex(Index(),branchesIDs[0]);
+    return true;
+  }
+  else return false;
+}
+
+//**************************************************
+bool FVCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+//**************************************************
+  
+  (void)event;
+
+  //cast the box
+  ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);   
+
+  //get the current branch  
+  std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] > box.Candidates.size()-1)return false;
+
+  //if there is kaon, check it starts and ends inside the FV
+  AnaParticlePD* part = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
+  if(part->PositionStart[2] > _lower_cut && part->PositionEnd[2] > _lower_cut){
     box.UpdateBestCandidateIndex(Index(),branchesIDs[0]);
     return true;
   }

@@ -12,7 +12,7 @@
 
 namespace secondaryKaonAnalysisConstants{
 
-  const UInt_t NMAXSAVEDCANDIDATES     = 20;
+  const UInt_t NMAXSAVEDCANDIDATES     = 10;
 }
 
 class secondaryKaonAnalysis: public baseAnalysis {
@@ -32,7 +32,8 @@ class secondaryKaonAnalysis: public baseAnalysis {
   void FillToyVarsInMicroTrees(bool addBase=true);
 
   bool CheckFillTruthTree(const AnaTrueVertex& vtx){return true;}
-  bool CheckFillTruthTree(const AnaTrueParticlePD* part);
+  bool CheckFillTruthTree(AnaTrueParticlePD* part);
+  bool CheckGoodTruthKaon(AnaTrueParticlePD* part, bool checkchain = true);
 
   //using baseAnalysis::FillTruthTree;
   bool FinalizeConfiguration();
@@ -69,6 +70,9 @@ class secondaryKaonAnalysis: public baseAnalysis {
   /// Returns the true vertex for the ToyBoxKaon
   virtual AnaTrueVertexB* GetTrueVertex() const {return box().TrueVertex;}
 
+  /// Set Signal if signal
+  void SetIsSignal(AnaParticlePD* part);
+
 
 private:
 
@@ -83,6 +87,7 @@ private:
   bool _FillBeamParticleDaughtersInfo;
   bool _FillKaonCandidatesInfo;
   bool _FillBestKaonCandidateInfo;
+  bool _FillBestKaonCandidatePIDInfo;
   bool _FillToyVariablesInfo;
 
   bool _ApplydQdxSystematic;

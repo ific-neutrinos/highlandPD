@@ -87,6 +87,7 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     //but there is no other way so far
     if(!part->Hits[2].empty()){
       _sce[toy_index]->ApplyPositionCorrection(part);
+      _sce[toy_index]->ApplyPitchCorrection(part);
       pdAnaUtils::ComputeResidualRange(part);
     }
    
@@ -138,6 +139,7 @@ bool SCEGeometricVariation::UndoSystematic(AnaEventC& event){
 
     //loop over hits
     for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
+      part->Hits[2][ihit].Pitch = original->Hits[2][ihit].Pitch;
       part->Hits[2][ihit].ResidualRange = original->Hits[2][ihit].ResidualRange;
       part->Hits[2][ihit].Position.SetX(original->Hits[2][ihit].Position.X());
       part->Hits[2][ihit].Position.SetY(original->Hits[2][ihit].Position.Y());

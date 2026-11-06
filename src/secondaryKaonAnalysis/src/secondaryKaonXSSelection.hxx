@@ -60,12 +60,12 @@ class GetKaonsForXSAction: public StepBase{
   StepBase* MakeClone(){return new GetKaonsAction();}
 };
 
-class KaonChi2Cut: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new KaonChi2Cut();}
-};
+// class KaonChi2Cut: public StepBase{
+//  public:
+//   using StepBase::Apply;
+//   bool Apply(AnaEventC& event, ToyBoxB& box) const;
+//   StepBase* MakeClone(){return new KaonChi2Cut();}
+// };
 
 class GetForcedDaughterAction: public StepBase{
  public:

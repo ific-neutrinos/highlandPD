@@ -24,6 +24,7 @@
 
 #include "ParticlePositionSCECorrection.hxx"
 #include "dEdxMCCorrection.hxx"
+#include "RecombinationDataCorrection.hxx"
 
 //********************************************************************
 secondaryKaonXSAnalysis::secondaryKaonXSAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
@@ -46,6 +47,7 @@ bool secondaryKaonXSAnalysis::Initialize(){
   _FillBeamParticleHitsInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleHitsInfo");
   _FillBeamParticleDaughtersInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleDaughtersInfo");
   _FillKaonCandidatesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesInfo");
+  _FillKaonCandidatesHitInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesHitInfo");
   _FillKaonCandidatesPIDInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatePIDInfo");
   _FillBestKaonCandidateInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBestKaonCandidateInfo");
   _FillToyVariablesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillToyVariablesInfo");
@@ -61,6 +63,7 @@ bool secondaryKaonXSAnalysis::Initialize(){
 
   _ApplySCECorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection");
   _ApplydEdxCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplydEdxCorrection");
+  _ApplyRecombinationCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.ApplyRecombinationCorrection");
   
   // Define standard categories for color drawing
   if(_FillBeamParticleInfo)
@@ -109,9 +112,11 @@ void secondaryKaonXSAnalysis::DefineCorrections(){
 
   baseAnalysis::DefineCorrections();
   if(_ApplySCECorrection)
-    corr().AddCorrection(0, "sce geometric correction", new ParticlePositionSCECorrection());
+    corr().AddCorrection(0, "sce geometric correction"      , new ParticlePositionSCECorrection());
   if(_ApplydEdxCorrection)
-    corr().AddCorrection(1, "dEdx MC correction"      , new dEdxMCCorrection());
+    corr().AddCorrection(1, "dEdx MC correction"            , new dEdxMCCorrection());
+  if(_ApplyRecombinationCorrection)
+    corr().AddCorrection(2, "Recombination data correction" , new RecombinationDataCorrection());
 }
 
 //********************************************************************
@@ -196,9 +201,9 @@ void secondaryKaonXSAnalysis::DefineMicroTrees(bool addBase){
   // -------- Add candidates variables ----------------------
   if(_FillKaonCandidatesInfo){
     kaonTree::AddKaonVariables_KaonCandidatesReco    (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
     kaonTree::AddKaonVariables_KaonCandidatesTrue    (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+    if(_FillKaonCandidatesHitInfo)
+      kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
     if(_FillKaonCandidatesPIDInfo)
       kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
   }
@@ -233,7 +238,7 @@ void secondaryKaonXSAnalysis::FillMicroTrees(bool addBase){
   if (addBase) baseAnalysis::FillMicroTreesBase(addBase); 
   
   // Fill standard variables for the PD analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::FillStandardVariables_EventInfo(        output(), static_cast<AnaEventInfoPD*>(GetEvent().EventInfo));
+  standardPDTree::FillStandardVariables_EventInfo(        output(), &GetEvent());
   if(_FillBeamInstrumentationInfo){
     standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
     standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
@@ -259,8 +264,9 @@ void secondaryKaonXSAnalysis::FillMicroTrees(bool addBase){
       for(int i = 0; i < std::min((int)box().Candidates.size(),(int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES); i++){
 	AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[i]->ParentID));
 	kaonTree::FillKaonVariables_KaonCandidatesReco    (output(), box().Candidates[i] ,parent);
-	kaonTree::FillKaonVariables_KaonCandidatesHitsReco(output(), box().Candidates[i]);
 	kaonTree::FillKaonVariables_KaonCandidatesTrue    (output(), box().Candidates[i]);
+	if(_FillKaonCandidatesHitInfo)
+	  kaonTree::FillKaonVariables_KaonCandidatesHitsReco(output(), box().Candidates[i]);
 	if(_FillKaonCandidatesPIDInfo)
 	  kaonTree::FillKaonVariables_KaonCandidatesRecoPID (output(), box().Candidates[i]);
 	output().IncrementCounter(kaonTree::ncandidates);
@@ -395,7 +401,7 @@ void secondaryKaonXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 
   // Fill true kaons candidate info
   //const kaonAnaTrueVertex& kvtx = static_cast<const kaonAnaTrueVertex&>(vtx);
-  kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part);
+  kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part, NULL);
 }
 
 //********************************************************************

@@ -337,7 +337,7 @@ void kaonTree::AddKaonVariables_KaonBestCandidateTrue(OutputManager& output){
 }
 
 //********************************************************************
-void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart){
+void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart, const AnaTrueParticlePD* trueDau){
 //********************************************************************
 
   if(!truePart)return;
@@ -358,9 +358,8 @@ void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const
   output.FillVectorVarFromArray(truekaon_trueenddir,         truePart->DirectionEnd,  3);
   //output.FillVar               (truekaon_branch,      (Int_t)kvtx.Branch               ); 
   
-  /*if(kvtx.TrueParticlesVect.size()>1){
-    AnaTrueParticlePD* trueDau = static_cast<AnaTrueParticlePD*>(kvtx.TrueParticlesVect[1]);
-    if(trueDau){
+  if(trueDau){
+    if(trueDau->PDG == -13){
       output.FillVar               (truekaon_truemuon_truemom,            trueDau->Momentum        );
       output.FillVar               (truekaon_truemuon_trueendmom,         trueDau->MomentumEnd     );
       output.FillVar               (truekaon_truemuon_truepdg,            trueDau->PDG             );
@@ -373,7 +372,7 @@ void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const
       output.FillVectorVarFromArray(truekaon_truemuon_truedir,            trueDau->Direction,     3);
       output.FillVectorVarFromArray(truekaon_truemuon_trueenddir,         trueDau->DirectionEnd,  3);
     }
-    }*/
+  }
 }
 
 //********************************************************************
@@ -405,7 +404,7 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_chi2_ndf,         part->Chi2ndf          );
   output.FillVectorVar         (candidates_nhits,            part->NHits            );
 
-  output.FillVectorVar         (candidates_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(part)   );
+  output.FillVectorVar         (candidates_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(part,20));
   output.FillVectorVar         (candidates_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,part->Hits[2]));
   output.FillVectorVar         (candidates_vtx_michelscore,  part->vtx_CNN_michelscore);
   output.FillVectorVar         (candidates_vtx_nhits,        part->vtx_CNN_NHits);
@@ -433,7 +432,7 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_dau_chi2_muon,        dau->Chi2Muon         );
   output.FillVectorVar         (candidates_dau_chi2_ndf,         dau->Chi2ndf          );
   output.FillVectorVar         (candidates_dau_nhits,            dau->NHits            );
-  output.FillVectorVar         (candidates_dau_forced,            (int)part->forced_daughter            );
+  output.FillVectorVar         (candidates_dau_forced,      (int)part->forced_daughter            );
   output.FillVectorVar         (candidates_dau_forced_matched,            (int)part->forced_daughter_matched            );
 
   output.FillVectorVar         (candidates_dau_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(dau,5));

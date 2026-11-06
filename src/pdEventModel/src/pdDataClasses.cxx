@@ -367,6 +367,7 @@ void AnaParticlePD::Print() const{
 AnaTrueParticlePD::AnaTrueParticlePD():AnaTrueParticle(){
 //********************************************************************
 
+  Signal = false;
   Pi0_decay_ID.clear();
   Origin  = kIntUnassigned;
   Generation  = kIntUnassigned;

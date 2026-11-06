@@ -24,6 +24,7 @@ namespace kaonAnaUtils{
   void FillCandidateDaughterParticleReducedCategory(AnaParticlePD* part);
   void FillCandidateDaughterMuonCategory(AnaParticlePD* parent, AnaParticlePD* daughter);
   void FillCandidateDaughterMuonReducedCategory(AnaParticlePD* parent, AnaParticlePD* daughter);
+
 }
 
 #endif

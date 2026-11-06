@@ -5,6 +5,7 @@
 void standardPDTree::AddStandardVariables_EventInfo(OutputManager& output){
 //********************************************************************
   
+  AddVarI(output, beam_quality,        "beam quality cuts");
   AddVarF(output, beam_nominal_mom,    "beam nominal momentum");
 }
 
@@ -264,9 +265,14 @@ void standardPDTree::AddStandardVariables_BeamParticleGGDaughtersReco(OutputMana
 }
 
 //********************************************************************
-void standardPDTree::FillStandardVariables_EventInfo(OutputManager& output, AnaEventInfoPD* info){
+void standardPDTree::FillStandardVariables_EventInfo(OutputManager& output, AnaEventPD* event){
 //********************************************************************
+  
+  if (!event) return;
+  bool quality = pdAnaUtils::GetBeamQuality(event);
+  output.FillVar(beam_quality, quality);   
 
+  AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(event->EventInfo);
   if (!info) return;
   output.FillVar(beam_nominal_mom, info->NominalBeamMom);   
 }

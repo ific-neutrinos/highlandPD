@@ -20,38 +20,43 @@ void secondaryKaonXSSelection::DefineSteps(){
   //copy steps from pdBaseSelection
   AddStep(StepBase::kAction,   "find beam track",            new FindBeamTrackAction(), true   );// in pdBaseAnalysis/src/pandoraPreselection  
   AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pandoraPreselection  
-
+  AddStep(StepBase::kCut,    "beam particle is proton-like", new BeamPDGCut(211));
   //select events using beam instrumentation
-  AddStep(StepBase::kCut,      "beam quality cut"    ,       new BeamQualityCut()    );
+  //AddStep(StepBase::kCut,      "beam quality cut"    ,       new BeamQualityCut()    );
   //AddStep(StepBase::kCut,      "beam quality cut"    ,       new BQCForXS()    );
   //AddStep(StepBase::kCut, "beam pdg filter", new BeamFilterForXSCut(), true);
 
+  AddStep(StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForXSAction(),true   );
+  AddStep(StepBase::kCut,      "we have a kaon",             new EventHasKaonCut(),  true);
+  
+  AddStep(StepBase::kAction,   "get forced daughter",        new GetForcedDaughterAction()   );
+
   //split the selection in branches, pions/protons/kaonsfor each possible candidate
-  AddSplit(3);
+  //AddSplit(3);
 
-  //pions, protons and kaons cuts
-  AddStep(0,StepBase::kCut, "beam pdg filter", new BeamFilterForXSCut(), true);
-  AddStep(1,StepBase::kCut, "beam pdg filter", new BeamPDGCut(2212), true);
-  AddStep(2,StepBase::kCut, "beam pdg filter", new BeamPDGCut(321), true);
+  // //pions, protons and kaons cuts
+  // AddStep(0,StepBase::kCut, "beam pdg filter", new BeamFilterForXSCut(), true);
+  // AddStep(1,StepBase::kCut, "beam pdg filter", new BeamPDGCut(2212), true);
+  // AddStep(2,StepBase::kCut, "beam pdg filter", new BeamPDGCut(321), true);
 
-  //add cuts to branches
-  for(int i = 0; i < 3; i++){
-    AddStep(i,StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForXSAction(),true   );
-    AddStep(i,StepBase::kCut,      "we have a kaon",             new EventHasKaonCut(),  true);
-    AddStep(i,StepBase::kAction,   "get forced daughter",        new GetForcedDaughterAction()   );
-    //AddStep(i,StepBase::kCut,      "dau mom muon cut",           new DauMomMuonCut(), true);
-    AddStep(i,StepBase::kCut,      "all cut",           new AllCut(), true);
-    //AddStep(i,StepBase::kAction,   "test",           new DrawingTestAction(), true);
-  }
+  // //add cuts to branches
+  // for(int i = 0; i < 3; i++){
+  //   AddStep(i,StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForXSAction(),true   );
+  //   AddStep(i,StepBase::kCut,      "we have a kaon",             new EventHasKaonCut(),  true);
+  //   AddStep(i,StepBase::kAction,   "get forced daughter",        new GetForcedDaughterAction()   );
+  //   //AddStep(i,StepBase::kCut,      "dau mom muon cut",           new DauMomMuonCut(), true);
+  //   AddStep(i,StepBase::kCut,      "all cut",           new AllCut(), true);
+  //   //AddStep(i,StepBase::kAction,   "test",           new DrawingTestAction(), true);
+  // }
 
-  //set alias for branches
-  SetBranchAlias(0,"beam pions"  ,0);
-  SetBranchAlias(1,"beam protons",1);
-  SetBranchAlias(2,"beam kaons"  ,2);
+  // //set alias for branches
+  // SetBranchAlias(0,"beam pions"  ,0);
+  // SetBranchAlias(1,"beam protons",1);
+  // SetBranchAlias(2,"beam kaons"  ,2);
 
   SetPreSelectionAccumLevel(-1);
 
-  //  SetBranchAlias(0,"NO BRANCH :)");
+  SetBranchAlias(0,"NO BRANCH :)");
 }
 
 //**************************************************
@@ -177,31 +182,32 @@ bool GetKaonsForXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
     pid = pdAnaUtils::Chi2PID(*part,2212);
     if(pid.first<0)continue;
     double chi_prot = pid.first/pid.second;
-    if(chi_kaon>0 && chi_kaon<20 && chi_prot>10)
+    //if(chi_kaon>0 && chi_kaon<20 && chi_prot>10 && chi_prot<50)
+    if(chi_prot-chi_kaon<50)
       box.Candidates.push_back(part);
   }
   
   return true;  
 }
 
-//**************************************************
-bool KaonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
-//**************************************************
+// //**************************************************
+// bool KaonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+// //**************************************************
   
-  (void)event;
+//   (void)event;
 
-  //cast the box
-  ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);   
+//   //cast the box
+//   ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);   
 
-  //get the current branch  
-  std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+//   //get the current branch  
+//   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
-  //if there is kaon, cut in its chi2
-  AnaParticlePD* kaon = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
-  std::pair<double,int> result = pdAnaUtils::Chi2PID(*kaon,321);
-  if(result.first/result.second < 40)return true;
-  else return false;
-}
+//   //if there is kaon, cut in its chi2
+//   AnaParticlePD* kaon = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
+//   std::pair<double,int> result = pdAnaUtils::Chi2PID(*kaon,321);
+//   if(result.first/result.second < 40)return true;
+//   else return false;
+// }
 
 //**************************************************
 bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
@@ -229,6 +235,8 @@ bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
       if(candidate->UniqueID == part->UniqueID)continue; //skip itself
       if(part->isPandora)continue; //skip beam particle
       if(part->Type!=2)continue; //skip showers maybe not needed?
+      double mom = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
+      if(mom < 0.2 || mom > 0.3)continue;
       double dis = 0;
       for(int i = 0; i < 3; i++)dis += pow(part->PositionStart[i]-candidate->PositionEnd[i],2);
       dis = sqrt(dis);
@@ -237,7 +245,13 @@ bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 	i_closest = ipart;
       }
     }
-    if(i_closest == -1 || dis_min>8)continue;
+    if(i_closest == -1 || dis_min>3){ //above three almost everything are protons
+      //if here and no forced daughter, remove candidate
+      if(candidate->Daughters.empty())
+	box.Candidates.erase(box.Candidates.begin()+ican);
+      ican--;
+      continue;
+    }
     //associate the closest one as forced daughter
     AnaParticlePD* forced_dau = static_cast<AnaParticlePD*>(parts[i_closest]);
     candidate->forced_daughter = true;
