@@ -4,6 +4,8 @@
 # Uso (con el entorno de highland y highlandPD ya cargado):
 #   test/regression/run_regression.sh <dir_salida> <minitree_mc> <minitree_data> [n_eventos]
 #
+# Usa "-" en lugar de un fichero para no correr esa muestra.
+#
 # Escribe <dir_salida>/{mc,data}.root y sus logs. Para comparar dos ejecuciones:
 #   root -l -b -q 'test/regression/compare.C+("ref/mc.root","new/mc.root")'
 #
@@ -34,6 +36,7 @@ NOPT=""
 status=0
 for sample in mc data; do
     if [[ ${sample} == mc ]]; then input="${MC}"; else input="${DATA}"; fi
+    [[ "${input}" == "-" ]] && continue
     echo "== ${sample}: ${input}"
     start=$(date +%s)
     # Se ejecuta desde el directorio de salida para no dejar ficheros sueltos

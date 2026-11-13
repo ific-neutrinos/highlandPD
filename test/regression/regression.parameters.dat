@@ -5,6 +5,11 @@ por defecto. Activa los sistemáticos y las variables de toys para que los
 cambios en correcciones y sistemáticos se vean en el micro-tree.
 ###############################################################################
 
+--- Cut levels ------------
+Guarda los eventos con al menos un candidato a kaón (corte 2). Con el 3 por
+defecto se guarda solo ~0,2 % de los eventos y el test no cubre casi nada.
+ < secondaryKaonAnalysis.MinAccumLevelToSave = 2 >
+
 --- Output tree ------------
  < secondaryKaonAnalysis.FillBestKaonCandidateInfo             = 1 >
  < secondaryKaonAnalysis.FillBestKaonCandidatePIDInfo          = 1 >
