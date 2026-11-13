@@ -25,7 +25,7 @@ protected:
   BinnedParams* _BP_A;
   BinnedParams* _BP_B;  
   
-  Calorimetry* _cal;
+  const Calorimetry* _cal; ///< owned by pd::services()
 };
 
 #endif

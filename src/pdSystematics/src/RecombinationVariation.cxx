@@ -1,4 +1,5 @@
 #include "RecombinationVariation.hxx"
+#include "pdServiceManager.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
@@ -11,9 +12,7 @@ RecombinationVariation::RecombinationVariation():EventVariationBase(),BinnedPara
   // Read the systematic source parameters from the data files
   SetNParameters(_BP_A->GetNBins()+_BP_B->GetNBins());
 
-  // Initialize Calorimetry object
-  _cal = new Calorimetry();
-  _cal->Initialize();
+  _cal = &pd::services().Calo();
 }
 
 //********************************************************************
@@ -53,9 +52,10 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   Float_t ModBoxA = _cal->GetModBoxA()*(A_mean +  A_var*cvar[0]);
   Float_t ModBoxB = _cal->GetModBoxB()*(B_mean +  B_var*cvar[1]); 
 
-  //modify alpha and beta values on calorimetry class
-  _cal->SetModBoxA(ModBoxA);
-  _cal->SetModBoxB(ModBoxB);
+  //varied alpha and beta values for this toy
+  CaloContext ctx = _cal->NominalContext();
+  ctx.ModBoxA = ModBoxA;
+  ctx.ModBoxB = ModBoxB;
 
   // Loop over all relevant tracks for this variation
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
@@ -67,7 +67,7 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     if(!original)continue;
 
     //Apply recombination calculation
-    _cal->ApplyRecombination(part);
+    _cal->ApplyRecombination(part, ctx);
     
     //recompute derived quantities
     std::pair<double, int> chi2pidprot = pdAnaUtils::Chi2PID(*part, 2212);
@@ -77,7 +77,6 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     part->Chi2ndf     = chi2pidmuon.second;
   }
 
-  _cal->ResetModBoxParameters(); //not really needed but just in case
 }
 
 //********************************************************************
@@ -104,7 +103,6 @@ bool RecombinationVariation::UndoSystematic(AnaEventC& event){
     part->Chi2Muon   = original->Chi2Muon;
   }
   
-  _cal->ResetModBoxParameters(); //double check
 
   // Don't reset the spill to corrected
   return false;

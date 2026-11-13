@@ -1,4 +1,5 @@
 #include "HitPositionSCECorrection.hxx"
+#include "pdServiceManager.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,8 +9,7 @@
 HitPositionSCECorrection::HitPositionSCECorrection(){
 //********************************************************************
 
-  _sce = new SpaceCharge();
-  _sce->Initialize();
+  _sce = &pd::services().SCE();
 }
 
 //********************************************************************

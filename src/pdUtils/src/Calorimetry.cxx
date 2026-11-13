@@ -4,24 +4,29 @@
 #include "Parameters.hxx"
 
 //********************************************************************
-Calorimetry::Calorimetry(){
+Calorimetry::Calorimetry(const SpaceCharge& sce):_sce(sce){
 //********************************************************************
 
   _h_norm = NULL;
   for(int i = 0; i < 3; i++)_h_XCal[i] = NULL;
   for(int i = 0; i < 3; i++)for(int j = 0; j < 2; j++)_h_YZCal[i][j] = NULL;
-  
-  _Efield  = -999.;
-  _ModBoxA = -999.;
-  _ModBoxB = -999.;
 
-  _Lifetime = -999.;
-  _Vdrift   = -999.;
-  _APAx     = -999.;
+  //read data files and create correction histograms
+  CreateNormHistogram();
+  CreateXCalHistogram();
+  CreateYZCalHistogram();
 
-  for(int i = 0; i < 3; i++)_CalAreaConstants[i] = -999.;
+  _Efield  = ND::params().GetParameterD("pdUtils.Calorimetry.Efield");
+  _ModBoxA = ND::params().GetParameterD("pdUtils.Calorimetry.ModBoxA");
+  _ModBoxB = ND::params().GetParameterD("pdUtils.Calorimetry.ModBoxB");
 
-  _sce = NULL;
+  _Lifetime = ND::params().GetParameterI("pdUtils.Calorimetry.ElectronLifetime.MC"); //nominal is MC
+  _Vdrift   = ND::params().GetParameterD("pdUtils.Calorimetry.Vdrift");
+  _APAx     = ND::params().GetParameterD("pdUtils.Calorimetry.APAx");
+
+  _CalAreaConstants[0] = ND::params().GetParameterD("pdUtils.Calorimetry.CalAreaConstant.Plane0");
+  _CalAreaConstants[1] = ND::params().GetParameterD("pdUtils.Calorimetry.CalAreaConstant.Plane1");
+  _CalAreaConstants[2] = ND::params().GetParameterD("pdUtils.Calorimetry.CalAreaConstant.Plane2");
 }
 
 //********************************************************************
@@ -31,60 +36,18 @@ Calorimetry::~Calorimetry(){
   delete _h_norm;
   for(int i = 0; i < 3; i++)delete _h_XCal[i];
   for(int i = 0; i < 3; i++)for(int j = 0; j < 2; j++)delete _h_YZCal[i][j];
-
-  delete _sce;
 }
 
 //********************************************************************
-void Calorimetry::SetSCE(SpaceCharge* sce, bool remove){
+CaloContext Calorimetry::NominalContext() const{
 //********************************************************************
 
-  if(remove)
-    delete _sce;
-  _sce = sce;
-}
-
-//********************************************************************
-void Calorimetry::Initialize(){
-//********************************************************************
-
-  //read data files and create correction histograms
-  CreateNormHistogram();
-  CreateXCalHistogram();
-  CreateYZCalHistogram();
-
-  _Efield  = 0.4867; //probably all these values should be added in the parameters file
-  _ModBoxA = 0.930;
-  _ModBoxB = 0.212; 
-
-  _Lifetime = ND::params().GetParameterI("pdUtils.Calorimetry.ElectronLifetime.MC"); //initialize to MC by default
-  _Vdrift   = 0.156461;
-  _APAx     = 368.351;
-
-  _CalAreaConstants[0] = 1.04e-3;
-  _CalAreaConstants[1] = 1.04e-3;
-  _CalAreaConstants[2] = 1.0156e-3;
-
-  if(!_sce){
-    _sce = new SpaceCharge();
-    _sce->Initialize();
-  }
-}
-
-//********************************************************************
-void Calorimetry::Initialize(SpaceCharge* sce){
-//********************************************************************
-
-  _sce = sce;
-  Initialize();
-}
-
-//********************************************************************
-void Calorimetry::ResetModBoxParameters(){
-//********************************************************************
-
-  _ModBoxA = 0.930; //should be done by reading parameters file
-  _ModBoxB = 0.212; 
+  CaloContext ctx;
+  ctx.Lifetime = _Lifetime;
+  ctx.ModBoxA  = _ModBoxA;
+  ctx.ModBoxB  = _ModBoxB;
+  ctx.SCE      = &_sce;
+  return ctx;
 }
 
 //********************************************************************
@@ -232,17 +195,18 @@ void Calorimetry::CreateYZCalHistogram(){
 }
 
 //********************************************************************
-void Calorimetry::SetLifetime(const AnaEventPD &event){
+double Calorimetry::GetLifetime(const AnaEventPD &event) const{
 //********************************************************************
-  
+
   int run = event.EventInfo->Run;
+
   //if(event.GetIsMC())
   if(run>10000)
-    _Lifetime = ND::params().GetParameterI("pdUtils.Calorimetry.ElectronLifetime.MC");
+    return ND::params().GetParameterI("pdUtils.Calorimetry.ElectronLifetime.MC");
   else{
     std::stringstream ssrun;
     ssrun << run;
-    _Lifetime = ND::params().GetParameterI(("pdUtils.Calorimetry.ElectronLifetime.Run"+ssrun.str()+"").c_str());
+    return ND::params().GetParameterI(("pdUtils.Calorimetry.ElectronLifetime.Run"+ssrun.str()+"").c_str());
   }
 }
 
@@ -327,31 +291,44 @@ void Calorimetry::ApplyYZCalibration(AnaHitPD &hit) const {
 void Calorimetry::ApplyRecombination(AnaHitPD &hit) const {
 //********************************************************************
 
+  ApplyRecombination(hit, NominalContext());
+}
+
+//********************************************************************
+void Calorimetry::ApplyRecombination(AnaHitPD &hit, const CaloContext& ctx) const {
+//********************************************************************
+
   double dQdx_e = GetElectronsFromADCArea(hit.dQdx,hit.PlaneID); //electrons from ADC area
   double rho = 1.38877;                                          //LAr density in g/cm³
   double Wion = 1000./4.237e7;                                   //Wion in MeV/e
   double Efield = _Efield;                                       //kV/cm
 
   //the -1 is added ad hoc. I don't know the reason but there is a -1 difference wrt the larsoft calculation
-  TVector3 offset = -1*(_sce->GetCalEfieldOffsets(hit.Position,hit.TPCid)); 
+  TVector3 offset = -1*(ctx.SCE->GetCalEfieldOffsets(hit.Position,hit.TPCid)); 
   Efield = sqrt(pow(Efield*(1+offset.X()),2) + pow(Efield*offset.Y(),2) + pow(Efield*offset.Z(),2));
 
   //calculate recombination factors
-  double Beta = _ModBoxB / (rho * Efield);
-  double Alpha = _ModBoxA;
+  double Beta = ctx.ModBoxB / (rho * Efield);
+  double Alpha = ctx.ModBoxA;
   hit.dEdx = (exp(Beta * Wion * dQdx_e) - Alpha) / Beta;
 }
 
 //********************************************************************
 void Calorimetry::ApplyRecombination(AnaParticlePD* part) const {
 //********************************************************************
-  
+
+  ApplyRecombination(part, NominalContext());
+}
+
+//********************************************************************
+void Calorimetry::ApplyRecombination(AnaParticlePD* part, const CaloContext& ctx) const {
+//********************************************************************
+
   if(!part)return;
   if(part->Hits[2].empty())return;
-  
-  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyRecombination(part->Hits[2][ihit]);
 
+  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
+    ApplyRecombination(part->Hits[2][ihit], ctx);
 }
 
 //********************************************************************
@@ -403,14 +380,27 @@ double Calorimetry::GetYZCalibration(AnaHitPD &hit) const {
 void Calorimetry::ApplySCECorrection(AnaParticlePD* part) const {
 //********************************************************************
 
-  if(!part)return;
-  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplySCECorrection(part->Hits[2][ihit]);
+  ApplySCECorrection(part, NominalContext());
 }
-
 
 //********************************************************************
 void Calorimetry::ApplySCECorrection(AnaHitPD &hit) const {
+//********************************************************************
+
+  ApplySCECorrection(hit, NominalContext());
+}
+
+//********************************************************************
+void Calorimetry::ApplySCECorrection(AnaParticlePD* part, const CaloContext& ctx) const {
+//********************************************************************
+
+  if(!part)return;
+  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
+    ApplySCECorrection(part->Hits[2][ihit], ctx);
+}
+
+//********************************************************************
+void Calorimetry::ApplySCECorrection(AnaHitPD &hit, const CaloContext& ctx) const {
 //********************************************************************
 
   double charge = hit.dQdx_NoSCE * hit.Pitch_NoSCE;
@@ -424,8 +414,8 @@ void Calorimetry::ApplySCECorrection(AnaHitPD &hit) const {
   
   //correct pitch by SCE effect
   TVector3 dirProjection(hitpos.X()+pitch*hitdir.X(),hitpos.Y()+pitch*hitdir.Y(),hitpos.Z()+pitch*hitdir.Z());
-  TVector3 dirOffset = _sce->GetCalPosOffsets(dirProjection, hit.TPCid);
-  TVector3 posOffset = _sce->GetCalPosOffsets(hitpos, hit.TPCid);
+  TVector3 dirOffset = ctx.SCE->GetCalPosOffsets(dirProjection, hit.TPCid);
+  TVector3 posOffset = ctx.SCE->GetCalPosOffsets(hitpos, hit.TPCid);
   TVector3 dirCorrection(pitch*hitdir.X() - dirOffset.X() + posOffset.X(),
 			 pitch*hitdir.Y() + dirOffset.Y() - posOffset.Y(),
 			 pitch*hitdir.Z() + dirOffset.Z() - posOffset.Z());
@@ -438,17 +428,30 @@ void Calorimetry::ApplySCECorrection(AnaHitPD &hit) const {
 void Calorimetry::ApplyLifetimeCorrection(AnaParticlePD* part) const {
 //********************************************************************
 
-  if(!part)return;
-  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyLifetimeCorrection(part->Hits[2][ihit]);
+  ApplyLifetimeCorrection(part, NominalContext());
 }
-
 
 //********************************************************************
 void Calorimetry::ApplyLifetimeCorrection(AnaHitPD &hit) const {
 //********************************************************************
-  
-  double xcorr = exp((_APAx-abs(hit.Position.X()))/(_Lifetime*_Vdrift));
+
+  ApplyLifetimeCorrection(hit, NominalContext());
+}
+
+//********************************************************************
+void Calorimetry::ApplyLifetimeCorrection(AnaParticlePD* part, const CaloContext& ctx) const {
+//********************************************************************
+
+  if(!part)return;
+  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
+    ApplyLifetimeCorrection(part->Hits[2][ihit], ctx);
+}
+
+//********************************************************************
+void Calorimetry::ApplyLifetimeCorrection(AnaHitPD &hit, const CaloContext& ctx) const {
+//********************************************************************
+
+  double xcorr = exp((_APAx-abs(hit.Position.X()))/(ctx.Lifetime*_Vdrift));
   hit.dQdx_elife = hit.dQdx_SCE*xcorr;
 }
 
@@ -456,16 +459,29 @@ void Calorimetry::ApplyLifetimeCorrection(AnaHitPD &hit) const {
 void Calorimetry::UndoLifetimeCorrection(AnaParticlePD* part) const {
 //********************************************************************
 
-  if(!part)return;
-  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    UndoLifetimeCorrection(part->Hits[2][ihit]);
+  UndoLifetimeCorrection(part, NominalContext());
 }
-
 
 //********************************************************************
 void Calorimetry::UndoLifetimeCorrection(AnaHitPD &hit) const {
 //********************************************************************
-  
-  double xcorr = exp((_APAx-abs(hit.Position.X()))/(_Lifetime*_Vdrift));
+
+  UndoLifetimeCorrection(hit, NominalContext());
+}
+
+//********************************************************************
+void Calorimetry::UndoLifetimeCorrection(AnaParticlePD* part, const CaloContext& ctx) const {
+//********************************************************************
+
+  if(!part)return;
+  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
+    UndoLifetimeCorrection(part->Hits[2][ihit], ctx);
+}
+
+//********************************************************************
+void Calorimetry::UndoLifetimeCorrection(AnaHitPD &hit, const CaloContext& ctx) const {
+//********************************************************************
+
+  double xcorr = exp((_APAx-abs(hit.Position.X()))/(ctx.Lifetime*_Vdrift));
   hit.dQdx_SCE = hit.dQdx_elife/xcorr;
 }

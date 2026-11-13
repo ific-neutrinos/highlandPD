@@ -22,7 +22,7 @@ public:
 protected:
 
   //this probably needs a reimplementation, it cannot be initialized here. Possibly this should be a singleton.
-  SpaceCharge* _sce;
+  const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
   
 };
 

@@ -8,9 +8,6 @@ dEdxVariation::dEdxVariation():EventVariationBase(),BinnedParams(std::string(get
   // Read the systematic source parameters from the data files
   SetNParameters(GetNBins());
 
-  // Initialize Calorimetry object
-  _cal = new Calorimetry();
-  _cal->Initialize();
  
 }
 

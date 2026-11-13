@@ -3,7 +3,6 @@
 
 #include "EventVariationBase.hxx"
 #include "BinnedParams.hxx"
-#include "Calorimetry.hxx"
 
 class dEdxVariation: public EventVariationBase, public BinnedParams{
 public:
@@ -22,7 +21,6 @@ protected:
   /// Is this particle relevant for this systematic ?
   bool IsRelevantRecObject(const AnaEventC& event, const AnaRecObjectC& part) const;
   
-  Calorimetry* _cal;
 };
 
 #endif

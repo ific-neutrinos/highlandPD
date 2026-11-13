@@ -1,4 +1,5 @@
 #include "SCECorrection.hxx"
+#include "pdServiceManager.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,11 +9,8 @@
 SCECorrection::SCECorrection(){
 //********************************************************************
 
-  _sce = new SpaceCharge();
-  _sce->Initialize();
-  _cal = new Calorimetry();
-  _cal->Initialize(_sce);
-  
+  _sce = &pd::services().SCE();
+  _cal = &pd::services().Calo();
 }
 
 //********************************************************************

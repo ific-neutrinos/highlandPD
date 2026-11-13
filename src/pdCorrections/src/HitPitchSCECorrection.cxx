@@ -1,4 +1,5 @@
 #include "HitPitchSCECorrection.hxx"
+#include "pdServiceManager.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,9 +9,7 @@
 HitPitchSCECorrection::HitPitchSCECorrection(){
 //********************************************************************
 
-  //initialize space charge effect 
-  _cal = new Calorimetry();
-  _cal->Initialize();
+  _cal = &pd::services().Calo();
 }
 
 //********************************************************************

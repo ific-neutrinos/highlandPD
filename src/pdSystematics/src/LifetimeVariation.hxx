@@ -22,7 +22,7 @@ protected:
   /// Is this particle relevant for this systematic ?
   bool IsRelevantRecObject(const AnaEventC& event, const AnaRecObjectC& part) const;
   
-  Calorimetry* _cal;
+  const Calorimetry* _cal; ///< owned by pd::services()
 };
 
 #endif

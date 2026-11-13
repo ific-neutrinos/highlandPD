@@ -1,4 +1,5 @@
 #include "LifetimeVariation.hxx"
+#include "pdServiceManager.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
@@ -8,15 +9,12 @@ LifetimeVariation::LifetimeVariation():EventVariationBase(),BinnedParams(std::st
   // Read the systematic source parameters from the data files
   SetNParameters(GetNBins());
 
-  // Initialize Calorimetry object
-  _cal = new Calorimetry();
-  _cal->Initialize();
+  _cal = &pd::services().Calo();
 }
 //********************************************************************
 LifetimeVariation::~LifetimeVariation(){
 //********************************************************************
 
-  if(_cal)delete _cal;
 }
 
 //********************************************************************
@@ -32,16 +30,17 @@ void LifetimeVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   Float_t sigma;
   GetSigmaValueForBin(0, sigma); //only 1 bin 
   
-  //set appropiate lifetime depending on mc/data and run
-  _cal->SetLifetime(*eventpd);
+  //appropiate lifetime depending on mc/data and run
+  CaloContext ctx = _cal->NominalContext();
+  ctx.Lifetime = _cal->GetLifetime(*eventpd);
 
   //compute varied lt from varied rQ
-  Float_t nom_lt = _cal->GetLifetime()/1000; //us to ms
+  Float_t nom_lt = ctx.Lifetime/1000; //us to ms
   Float_t nom_rQ = exp(-2.3/nom_lt);
   Float_t var_lt = -2.3/log(nom_rQ*(1+sigma*toy.GetToyVariations(_index)->Variations[0])); //varied lt
 
   //set new lifetime
-  _cal->SetLifetime(var_lt*1000); //ms to us
+  ctx.Lifetime = var_lt*1000; //ms to us
 
   // Loop over all relevant tracks for this variation
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
@@ -56,8 +55,8 @@ void LifetimeVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
 
     //correct every hit 
     for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
-      _cal->ApplyLifetimeCorrection(part->Hits[2][ihit]);
-      _cal->ApplyRecombination(part->Hits[2][ihit]);
+      _cal->ApplyLifetimeCorrection(part->Hits[2][ihit], ctx);
+      _cal->ApplyRecombination(part->Hits[2][ihit], ctx);
     }
 
     //recompute derived quantities
@@ -89,8 +88,6 @@ bool LifetimeVariation::UndoSystematic(AnaEventC& event){
     }
   }
 
-  //reset calorimetry object
-  _cal->ResetLifetime();
   
   // Don't reset the spill to corrected
   return false;

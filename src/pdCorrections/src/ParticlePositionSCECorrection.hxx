@@ -25,7 +25,7 @@ public:
   
 protected:
 
-  SpaceCharge* _sce;
+  const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
 };
 
 #endif

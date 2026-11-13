@@ -22,7 +22,7 @@ public:
 protected:
 
   //this probably needs a reimplementation, it cannot be initialized here. Possibly this should be a singleton.
-  Calorimetry* _cal;
+  const Calorimetry* _cal; ///< owned by pd::services()
   
 };
 

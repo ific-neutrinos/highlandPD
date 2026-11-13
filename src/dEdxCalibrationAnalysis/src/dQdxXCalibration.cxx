@@ -1,4 +1,5 @@
 #include "dQdxXCalibration.hxx"
+#include "pdServiceManager.hxx"
 
 #include <sys/time.h>
 #include <iomanip>
@@ -96,8 +97,7 @@ bool dQdxXCalibration::Initialize(){
   yzfile->Close();
 
   //always initialize space charge for ana configuration
-  _sce = new SpaceCharge();
-  _sce->Initialize();
+  _sce = &pd::services().SCE();
   
   return true;
 }
@@ -254,7 +254,7 @@ void dQdxXCalibration::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-SpaceCharge* dQdxXCalibration::GetSCE(){
+const SpaceCharge* dQdxXCalibration::GetSCE(){
 //********************************************************************
 
   if(conf().GetCurrentConfigurationIndex() == 0)return _sce;

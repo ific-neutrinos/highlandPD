@@ -6,6 +6,23 @@
  < pdUtils.SCE.Efield              = 500 >
 
 --- Calorimetry --------
+Nominal electric field (kV/cm) and ModBox recombination parameters used by
+Calorimetry. Note: RecombinationDataCorrection uses its own values
+(E = 0.553 kV/cm); it is not known whether the difference is intended.
+ < pdUtils.Calorimetry.Efield  = 0.4867 >
+ < pdUtils.Calorimetry.ModBoxA = 0.930  >
+ < pdUtils.Calorimetry.ModBoxB = 0.212  >
+
+Drift velocity (cm/us) and APA x position (cm), for the lifetime correction
+ < pdUtils.Calorimetry.Vdrift = 0.156461 >
+ < pdUtils.Calorimetry.APAx   = 368.351  >
+
+Calibration constants from ADC area to electrons, per plane
+ < pdUtils.Calorimetry.CalAreaConstant.Plane0 = 1.04e-3   >
+ < pdUtils.Calorimetry.CalAreaConstant.Plane1 = 1.04e-3   >
+ < pdUtils.Calorimetry.CalAreaConstant.Plane2 = 1.0156e-3 >
+
+Electron lifetime (us) for MC and for each data run
  < pdUtils.Calorimetry.ElectronLifetime.MC = 35000 >
  < pdUtils.Calorimetry.ElectronLifetime.Run5758 = 13210 >
  < pdUtils.Calorimetry.ElectronLifetime.Run5759 = 13430 >

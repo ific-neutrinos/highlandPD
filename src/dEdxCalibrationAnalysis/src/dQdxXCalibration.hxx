@@ -89,9 +89,9 @@ private:
   TH2F* yz_correction;
   TH3F* yz_correction_toy;
   
-  SpaceCharge* _sce;
+  const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
 
-  SpaceCharge* GetSCE();
+  const SpaceCharge* GetSCE();
   
 public:
 
