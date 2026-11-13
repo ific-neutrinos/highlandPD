@@ -5,6 +5,9 @@
 #   test/regression/run_regression.sh <dir_salida> <minitree_mc> <minitree_data> [n_eventos]
 #
 # Usa "-" en lugar de un fichero para no correr esa muestra.
+# Recomendado: todo el MC (n_eventos = 0), porque las variables de los toys
+# solo se rellenan en eventos con super candidato (~60 en el MC entero), y
+# 10.000 eventos de datos.
 #
 # Escribe <dir_salida>/{mc,data}.root y sus logs. Para comparar dos ejecuciones:
 #   root -l -b -q 'test/regression/compare.C+("ref/mc.root","new/mc.root")'

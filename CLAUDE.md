@@ -58,7 +58,8 @@ Pendiente:
 `test/regression/` (override `regression.parameters.dat`, `run_regression.sh`, `compare.C`). Usar minitrees **sin filtrar**: los de candidatos (`minitree_candidates_*`) no traen las hijas de los candidatos y `secondaryKaon.exe` casca en `EventBoxKaon.cxx:52` (`Daughters[0]` con `Daughters` vacío; el bug ya existía antes de la limpieza).
 
 ```bash
-test/regression/run_regression.sh <dir_salida> <mc.root|-> <data.root|-> 10000
+test/regression/run_regression.sh <dir_mc>   <mc.root> -          0       # todo el MC, ~12-14 min
+test/regression/run_regression.sh <dir_data> -         <data.root> 10000  # ~1,5 min
 root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 ```
 
@@ -66,9 +67,9 @@ root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 - Datos: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/data/6GeV_prod4a_reco2_minitree_2023-01-27.root` (42 GB, 446.262 eventos). Con 10.000 eventos: ~1,7 min, 2.929 eventos guardados. En datos los toys no varían (los sistemáticos solo actúan en MC) y `truth` está vacío.
 - Fase 1 validada (13-nov-2026): con 10.000 eventos de MC, la salida de `archive/pre-cleanup` y la de la rama son idénticas en todos los árboles (`ana`, `all_syst`, `truth`, `header`). En el log solo cambian los prints de depuración quitados.
 - El override activa también `RecombinationVariation`, el único sistemático del análisis de kaones que usa `Calorimetry`.
-- Referencias en `~/Public/highland/backup/regression_ref/`:
+- Referencias en `~/Public/highland/backup/regression_ref/`. **Actual: `full/`** (todo el MC: 16.113 entradas, 62 con variables de toys; datos: 10.000 eventos), generada tras los pasos 3 y 4 del SCE; frente a `archive/pre-cleanup` en todo el MC, `ana` idéntico y `all_syst` a 1 ULP de float. Anteriores:
   - `recomb/{mc,data}.root`: generadas con `archive/pre-cleanup`. El servicio de SCE y calorimetría da idéntico.
-  - `sce_scaling/{mc,data}.root`: **referencia actual**, tras el paso 2. Frente a `recomb`, `ana` y datos son idénticos y `all_syst` en MC difiere en 1 ULP de float (`compare.C+(a,b,true,1e-6)` pasa). La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
+  - `sce_scaling/{mc,data}.root`: tras el paso 2 (10.000 eventos de MC). Frente a `recomb`, `ana` y datos son idénticos y `all_syst` en MC difiere en 1 ULP de float (`compare.C+(a,b,true,1e-6)` pasa). La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
 
 ## Servicios de calorimetría y SCE (en curso, 13-nov-2026)
 
@@ -86,15 +87,23 @@ Decidido con el usuario (primero el bloque de diseño, antes que los bugs suelto
   - Modo con `pdSystematics.SCE.VariationMode` en `src/pdSystematics/parameters/pdSystematics.parameters.dat`: 0 global (`data/SCE.dat`, sigma 8 %), 1 por vóxel (`data/SCE2.dat`, 21.793 cajas con sigma 5 % de prueba). El modo por vóxel usa un lector propio porque `BinnedParams` tiene `NMAXSYSTSOURCEBINS = 50`.
   - Por vóxel, `SpaceCharge` evalúa el spline con la base cardinal (`_basis`) y los factores de cada nodo, sin copias. Validado con `root -l -b -q test/sce/run_test_sce_voxel.C` frente al método antiguo (copia escalada y splines nuevos): diferencias relativas <= 4e-8.
   - Coste del modo por vóxel en `secondaryKaon.exe` (1000 eventos, 10 toys): 52 s frente a 22 s en global; memoria igual.
-  - **Pendiente de decisión del usuario:** `SCE2.dat` solo tiene cajas para x < 10 (la malla del mapa negativo). En el mapa positivo solo se varían los 1.147 nodos de x ≈ 0. La implementación antigua repartía los factores por índice de bin, de modo que el nodo positivo de x ≈ 0 recibía el factor del negativo de x ≈ -360; casi seguro no era intencionado. Opciones: añadir cajas para x > 0 (independientes) o simetrizar.
-- Limitación del test de regresión: las variables de toys solo se rellenan en eventos con super candidato (corte 3), unos 30 de cada 10.000, así que los sistemáticos se cubren con pocos eventos.
+  - `SCE2.dat` tiene cajas independientes para los dos volúmenes (42.439); los nodos de x = 0 (cátodo) comparten caja. La implementación antigua repartía los factores por índice de bin entre volúmenes, casi seguro sin querer.
+- Las variables de toys solo se rellenan en eventos con super candidato (el corte 3 borra los candidatos si no lo hay): por eso el test usa todo el MC.
 - Hecho: quitadas las 6 clases muertas (`CalorimetryCalibration`, `RecombinationMCCorrection`, `dQdx{Cal,Norm,XCal,YZCal}Variation`) y sus `.dat`. Copia en el backup.
 
 Encontrado en la auditoría, pendiente:
 
-- `LifetimeCorrection` (solo en las calibraciones) nunca llama a `SetLifetime`: aplica la lifetime de MC (35 ms) también a datos. Los sistemáticos solo corren en MC, donde la lifetime es fija, así que ahí no afecta; la duda es la corrección sobre datos. Preguntar si las calibraciones se corren sobre datos.
+- `LifetimeCorrection` (solo en las calibraciones) usa siempre la lifetime de MC. Según el usuario, las calibraciones no se corren sobre datos (solo hay un rastro comentado en `dQdxXCalibration.cxx:90`), así que no se cambia.
 - Campo E: `Calorimetry` usa 0,4867 kV/cm y `RecombinationDataCorrection` usa 0,553 (con sus propios ModBox). El usuario no recuerda si es a propósito. Al pasarlos a parámetros, mantener los dos valores con nombres distintos para no cambiar resultados.
 - `dQdxXCalibration` lee `$HIGHLANDPDPATH/yz_corrections_mc_lifetime_mypc.root`, un fichero personal que no está en el repo.
+
+## Servicios y ficheros de datos
+
+- `pd::services()` (`pdUtils/src/pdServiceManager`): `SCE()`, `Calo()` y `PID()` (`PIDTables`: plantillas de dE/dx por PDG, energía cinética frente a rango por partícula y tablas NIST de muón y protón; un único servicio porque todo depende de la hipótesis de partícula). Se crean la primera vez que se piden, también dentro del bucle de eventos; el guardia restaura `gDirectory` y evita que los histogramas se cuelguen del directorio actual.
+- `pd::DataFile(paquete, fichero)` y `pd::DataDir(paquete)` (`pdUtils/src/pdDataFiles`): único punto para las rutas de datos. `$<PKG>ROOT/data`, o antes `$HIGHLANDPD_DATADIR/<paquete>` si está definida (para tener los datos fuera del repo). Error claro y `exit(1)` si falta algo. No usar `getenv` para rutas de datos.
+- Nombres de fichero en `pdUtils.parameters.dat`: `pdUtils.SCE.MapFile`, `pdUtils.Calorimetry.{Norm,XCal,YZCal}File`, `pdUtils.PID.{dEdxTemplatesFile,KEvsRangeFile}`.
+- En highland y psyche no hay nada equivalente (solo los singletons `ND::params()` y `ND::versioning()`, y `BinnedParams`). `BinnedParams` hace `exit(0)` si no encuentra su fichero: anotar para la reestructuración de highland. El gestor de servicios y `pd::DataFile` podrían subir a highland como algo genérico.
+- Pendiente: las masas difieren según la función (muón 105,7 en el momento por rango, 105,66 en las likelihoods); unificarlas cambia resultados. `dQdxXCalibration` lee `$HIGHLANDPDPATH/yz_corrections_mc_lifetime_mypc.root`, que no está en el repo. Las macros de `dEdxCalibrationAnalysis` tienen rutas personales de Fermilab.
 
 ## Fase 2 (después del test de regresión): bugs que cambian resultados
 
