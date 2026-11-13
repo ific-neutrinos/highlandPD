@@ -22,7 +22,7 @@ defecto se guarda solo ~0,2 % de los eventos y el test no cubre casi nada.
 
 --- Systematics ------------
  < secondaryKaonAnalysis.ApplydQdxSystematic                   = 1 >
- < secondaryKaonAnalysis.ApplyRecombinationSystematic          = 0 >
+ < secondaryKaonAnalysis.ApplyRecombinationSystematic          = 1 >
  < secondaryKaonAnalysis.ApplySCESystematic                    = 1 >
  < secondaryKaonAnalysis.ApplyBrokenTracksSystematic           = 1 >
  < secondaryKaonAnalysis.ApplyBeamPIDEfficiencySystematic      = 0 >
