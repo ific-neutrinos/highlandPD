@@ -104,5 +104,3 @@
  < pdUtils.AnalysisUtils.BeamQualityCuts.Data.7.sigmaz = 1.57  >
  < pdUtils.AnalysisUtils.BeamQualityCuts.Data.7.cos    = 0.95  >	
 
---- CNN --------------
- < pdUtils.CNN.PBfile              = cnn_emtrkmichl_pitch_5_wire_48_drift_48_down_6_mean_notes_protoduneBeamAndCosmicsMCC11.pb >
