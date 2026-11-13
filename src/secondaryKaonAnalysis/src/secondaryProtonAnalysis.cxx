@@ -14,7 +14,6 @@
 #include "PDSPAnalyzerTreeConverter.hxx"
 
 #include "RecombinationVariation.hxx"
-#include "ResidualRangeVariation.hxx"
 #include "BeamPartIdEffWeight.hxx"
 #include "BrokenTrackWeight.hxx"
 #include "SCECalorimetricVariation.hxx"
