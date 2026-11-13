@@ -58,7 +58,6 @@ link_directories(${HIGHLAND_LIBRARY_DIR})
 
 file(GLOB highlandPD_inc ${CMAKE_SOURCE_DIR}/src/*/src
 #                         ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit
-#                         ${LARSOFTREADER_DIR} ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}
                          ${CMAKE_BINARY_DIR}/dict)
 
 include_directories(${highlandPD_inc})
@@ -89,16 +88,6 @@ foreach(file0 ${dict_src})
   INSTALL(FILES "${CMAKE_BINARY_DIR}/lib${file3}.rootmap"   DESTINATION ${CMAKE_SOURCE_DIR}/lib)
 endforeach(file0)
 
-#  root_generate_dictionary(dict/LArSoftReaderProjectDict
-##                           NODEPHEADERS LArSoftReaderProjectHeaders.h
-#                           ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/LArSoftReaderProjectHeaders.h
-#                           LINKDEF ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/LArSoftReaderLinkDef.h
-#                           MODULE LArSoftReader
-#                           DEPENDENCIES ${ROOT_LIBRARIES})
-#  list(APPEND dict_list ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/LArSoftReaderProjectSource.cxx dict/LArSoftReaderProjectDict.cxx)
-#  INSTALL(FILES "${CMAKE_BINARY_DIR}/libLArSoftReader_rdict.pcm" DESTINATION ${CMAKE_SOURCE_DIR}/lib)
-#  INSTALL(FILES "${CMAKE_BINARY_DIR}/libLArSoftReader.rootmap"   DESTINATION ${CMAKE_SOURCE_DIR}/lib)
-
 
 #-------------------------------------------------------
 #-------- the highlandPD library -------------------------
@@ -106,8 +95,6 @@ endforeach(file0)
 
 file(GLOB highlandPD_src  ${CMAKE_SOURCE_DIR}/src/*/src/*.cxx)
 #                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.cxx)
-#                          ${LARSOFTREADER_DIR}/LArSoft*.cxx
-#                          ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/LArSoftReaderProjectSource.cxx)    
 
 add_library(highlandPD SHARED ${dict_src} ${highlandPD_src} )
 target_include_directories(highlandPD PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
@@ -128,8 +115,6 @@ set(HIGHLAND_PD_LIBRARIES "-L${CMAKE_BINARY_DIR} -lhighlandPD")
 
 file(GLOB highlandPD_inc2 ${CMAKE_SOURCE_DIR}/src/*/src/*.hxx)
 #                          ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/*.hxx)
-#                          ${LARSOFTREADER_DIR}/*.hxx
-#                          ${LARSOFTREADER_DIR}/${LARSOFT_DATAMC_DIR}/*.h)
 
 foreach(file0 ${highlandPD_inc2})
    INSTALL(FILES ${file0} DESTINATION ${CMAKE_SOURCE_DIR}/include)
