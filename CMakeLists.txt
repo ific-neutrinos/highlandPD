@@ -1,5 +1,5 @@
 # -*- cmake -*-
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
 PROJECT(HighLANDPD)
 
 # ---- create folders ----------
@@ -15,7 +15,7 @@ file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/dict")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "-g -pipe -Wall -ansi -Wnon-virtual-dtor -fpic -Woverloaded-virtual -std=c++17")
+set(CMAKE_CXX_FLAGS "-g -pipe -Wall -Wnon-virtual-dtor -fpic -Woverloaded-virtual -std=c++17")
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}")
 
@@ -124,92 +124,37 @@ endforeach(file0)
 #-------------- executable -----------------------------
 #-------------------------------------------------------
 
-#add_executable(CreateMiniTree ${CMAKE_SOURCE_DIR}/src/highland2/highlandIO/app/RunCreateMiniTree.cxx)
-#target_include_directories(CreateMiniTree PRIVATE ${highlandPD_inc})
-#target_link_libraries(CreateMiniTree ${ROOT_LIBRARIES} "-L${CMAKE_BINARY_DIR} -lhighlandPD")
-#INSTALL(TARGETS CreateMiniTree DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+# Cada ejecutable se compila a partir de un único Run*.cxx y enlaza con
+# libhighlandPD. Solo dependen de la librería, no entre ellos, así que
+# pueden compilarse en paralelo.
+function(highlandpd_add_executable name source)
+  add_executable(${name} ${CMAKE_SOURCE_DIR}/${source})
+  target_include_directories(${name} PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
+  target_link_libraries(${name} ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
+  add_dependencies(${name} highlandPD)
+  # Mantiene -rdynamic, que CMake < 3.4 añadía siempre (política CMP0065)
+  set_target_properties(${name} PROPERTIES ENABLE_EXPORTS ON)
+  INSTALL(TARGETS ${name} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+endfunction()
 
-add_executable(secondaryKaon.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryKaonAnalysis.cxx)
-target_include_directories(secondaryKaon.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS secondaryKaon.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+highlandpd_add_executable(secondaryKaon.exe                 src/secondaryKaonAnalysis/app/RunSecondaryKaonAnalysis.cxx)
+highlandpd_add_executable(secondaryProton.exe               src/secondaryKaonAnalysis/app/RunSecondaryProtonAnalysis.cxx)
+highlandpd_add_executable(secondaryKaonXS.exe               src/secondaryKaonAnalysis/app/RunSecondaryKaonXSAnalysis.cxx)
+highlandpd_add_executable(CreateMiniTreeKaon.exe            src/secondaryKaonAnalysis/app/RunCreateMiniTreeKaon.cxx)
+highlandpd_add_executable(CreateMiniTreeEventCandidates.exe src/secondaryKaonAnalysis/app/RunCreateMiniTreeEventCandidates.cxx)
+highlandpd_add_executable(CreateMiniTreeCandidates.exe      src/secondaryKaonAnalysis/app/RunCreateMiniTreeCandidates.cxx)
+highlandpd_add_executable(pdExampleAnalysis.exe             src/pdExampleAnalysis/app/RunpdExampleAnalysis.cxx)
+highlandpd_add_executable(dEdxCalibration.exe               src/dEdxCalibrationAnalysis/app/RundEdxCalibration.cxx)
+highlandpd_add_executable(dQdxYZCalibration.exe             src/dEdxCalibrationAnalysis/app/RundQdxYZCalibration.cxx)
+highlandpd_add_executable(dQdxXCalibration.exe              src/dEdxCalibrationAnalysis/app/RundQdxXCalibration.cxx)
+highlandpd_add_executable(CreateMichelRemovingMiniTree.exe  src/dEdxCalibrationAnalysis/app/RunCreateMichelRemovingMiniTree.cxx)
+highlandpd_add_executable(BrokenTracks.exe                  src/BrokenTracksAnalysis/app/RunBrokenTracks.cxx)
+highlandpd_add_executable(BeamWeights.exe                   src/BeamWeightsAnalysis/app/RunBeamWeights.cxx)
+highlandpd_add_executable(StoppingProton.exe                src/StoppingProtonAnalysis/app/RunStoppingProtonAnalysis.cxx)
 
-add_executable(secondaryProton.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryProtonAnalysis.cxx)
-target_include_directories(secondaryProton.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS secondaryProton.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(secondaryKaonXS.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunSecondaryKaonXSAnalysis.cxx)
-target_include_directories(secondaryKaonXS.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(secondaryKaonXS.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS secondaryKaonXS.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(CreateMiniTreeKaon.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeKaon.cxx)
-target_include_directories(CreateMiniTreeKaon.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeKaon.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS CreateMiniTreeKaon.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(CreateMiniTreeEventCandidates.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeEventCandidates.cxx)
-target_include_directories(CreateMiniTreeEventCandidates.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeEventCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS CreateMiniTreeEventCandidates.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(CreateMiniTreeCandidates.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/app/RunCreateMiniTreeCandidates.cxx)
-target_include_directories(CreateMiniTreeCandidates.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMiniTreeCandidates.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS CreateMiniTreeCandidates.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-#add_executable(CreateMiniTreePD.exe ${CMAKE_SOURCE_DIR}/src/pdIO/app/RunCreateMiniTreePD.cxx)
-#target_include_directories(CreateMiniTreePD.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-#target_link_libraries(CreateMiniTreePD.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-#INSTALL(TARGETS CreateMiniTreePD.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-#add_executable(CoherentFit.exe ${CMAKE_SOURCE_DIR}/src/secondaryKaonAnalysis/src/coherentfit/RunCoherentFit.cxx)
-#target_include_directories(CoherentFit.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-#target_link_libraries(CoherentFit.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-#INSTALL(TARGETS CoherentFit.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(pdExampleAnalysis.exe ${CMAKE_SOURCE_DIR}/src/pdExampleAnalysis/app/RunpdExampleAnalysis.cxx)
-target_include_directories(pdExampleAnalysis.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(pdExampleAnalysis.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS pdExampleAnalysis.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(dEdxCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundEdxCalibration.cxx)
-target_include_directories(dEdxCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dEdxCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS dEdxCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(dQdxYZCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundQdxYZCalibration.cxx)
-target_include_directories(dQdxYZCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dQdxYZCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS dQdxYZCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(dQdxXCalibration.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RundQdxXCalibration.cxx)
-target_include_directories(dQdxXCalibration.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(dQdxXCalibration.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS dQdxXCalibration.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(CreateMichelRemovingMiniTree.exe ${CMAKE_SOURCE_DIR}/src/dEdxCalibrationAnalysis/app/RunCreateMichelRemovingMiniTree.cxx)
-target_include_directories(CreateMichelRemovingMiniTree.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(CreateMichelRemovingMiniTree.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS CreateMichelRemovingMiniTree.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(BrokenTracks.exe ${CMAKE_SOURCE_DIR}/src/BrokenTracksAnalysis/app/RunBrokenTracks.cxx)
-target_include_directories(BrokenTracks.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(BrokenTracks.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS BrokenTracks.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(BeamWeights.exe ${CMAKE_SOURCE_DIR}/src/BeamWeightsAnalysis/app/RunBeamWeights.cxx)
-target_include_directories(BeamWeights.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(BeamWeights.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS BeamWeights.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-add_executable(StoppingProton.exe ${CMAKE_SOURCE_DIR}/src/StoppingProtonAnalysis/app/RunStoppingProtonAnalysis.cxx)
-target_include_directories(StoppingProton.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(StoppingProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS StoppingProton.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-
-
+# Desactivados:
+#highlandpd_add_executable(CreateMiniTreePD.exe src/pdIO/app/RunCreateMiniTreePD.cxx)
+#highlandpd_add_executable(CoherentFit.exe      src/secondaryKaonAnalysis/src/coherentfit/RunCoherentFit.cxx)
 
 #-------------------------------------------------------
 #------- custom targets --------------------------------
@@ -228,22 +173,6 @@ add_custom_target(include ALL SOURCES ${highlandPD_inc2} ${CMAKE_SOURCE_DIR})
 #------- dependencies ----------------------------------
 #-------------------------------------------------------
 
-add_dependencies(StoppingProton.exe                BeamWeights.exe)
-add_dependencies(BeamWeights.exe                   BrokenTracks.exe)
-add_dependencies(BrokenTracks.exe                  CreateMichelRemovingMiniTree.exe)
-add_dependencies(CreateMichelRemovingMiniTree.exe  dEdxCalibration.exe)
-add_dependencies(dEdxCalibration.exe               dQdxXCalibration.exe)
-add_dependencies(dQdxXCalibration.exe              dQdxYZCalibration.exe)
-add_dependencies(dQdxYZCalibration.exe             pdExampleAnalysis.exe)
-#add_dependencies(pdExampleAnalysis.exe             CoherentFit.exe)
-#add_dependencies(CoherentFit.exe                   CreateMiniTreeCandidates.exe)
-add_dependencies(pdExampleAnalysis.exe             CreateMiniTreeCandidates.exe)
-add_dependencies(CreateMiniTreeCandidates.exe      CreateMiniTreeEventCandidates.exe)
-add_dependencies(CreateMiniTreeEventCandidates.exe CreateMiniTreeKaon.exe)
-add_dependencies(CreateMiniTreeKaon.exe            secondaryKaonXS.exe)
-add_dependencies(secondaryKaonXS.exe               secondaryProton.exe)
-add_dependencies(secondaryProton.exe               secondaryKaon.exe)
-add_dependencies(secondaryKaon.exe                 highlandPD)
 add_dependencies(highlandPD                        ch_rootmap)
 add_dependencies(ch_rootmap                        highlandPD_dicts)
 add_dependencies(highlandPD_dicts                  include)
