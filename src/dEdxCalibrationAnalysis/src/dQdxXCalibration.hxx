@@ -91,7 +91,8 @@ private:
   
   const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
 
-  const SpaceCharge* GetSCE();
+  /// Scaling of the nominal SCE map for the current configuration and toy
+  SCEScaling GetSCEScaling();
   
 public:
 

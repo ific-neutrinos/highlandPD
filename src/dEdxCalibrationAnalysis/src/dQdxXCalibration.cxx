@@ -199,10 +199,11 @@ void dQdxXCalibration::FillMicroTrees(bool addBase){
       zbin = part->Hits[2][ihit].Position.Z()/STEP;
       ybin = part->Hits[2][ihit].Position.Y()/STEP;
       double yzcorr = yz_correction->GetBinContent(zbin+1,ybin+1);
-      double efield = dEdxUtils::ElectricField(GetSCE(),
+      double efield = dEdxUtils::ElectricField(_sce,
 					       part->Hits[2][ihit].Position.X(),
 					       part->Hits[2][ihit].Position.Y(),
-					       part->Hits[2][ihit].Position.Z());
+					       part->Hits[2][ihit].Position.Z(),
+					       GetSCEScaling());
       double recfact = dEdxUtils::Recombination(efield);
       //fill global histogram
       h_global_x->Fill(part->Hits[2][ihit].dQdx_elife*yzcorr*recfact);
@@ -239,10 +240,11 @@ void dQdxXCalibration::FillToyVarsInMicroTrees(bool addBase){
       zbin = part->Hits[2][ihit].Position.Z()/STEP;
       ybin = part->Hits[2][ihit].Position.Y()/STEP;
       double yzcorr = yz_correction->GetBinContent(zbin+1,ybin+1,itoy+1);
-      double efield = dEdxUtils::ElectricField(GetSCE(),
+      double efield = dEdxUtils::ElectricField(_sce,
 					       part->Hits[2][ihit].Position.X(),
 					       part->Hits[2][ihit].Position.Y(),
-					       part->Hits[2][ihit].Position.Z());
+					       part->Hits[2][ihit].Position.Z(),
+					       GetSCEScaling());
       double recfact = dEdxUtils::Recombination(efield);
       //fill global histogram
       h_global_x_toy->Fill(itoy+1,part->Hits[2][ihit].dQdx_elife*yzcorr*recfact);
@@ -254,16 +256,17 @@ void dQdxXCalibration::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-const SpaceCharge* dQdxXCalibration::GetSCE(){
+SCEScaling dQdxXCalibration::GetSCEScaling(){
 //********************************************************************
 
-  if(conf().GetCurrentConfigurationIndex() == 0)return _sce;
+  if(conf().GetCurrentConfigurationIndex() == 0)return SCEScaling();
   else{
     if(_ApplySCESystematic){
       Int_t itoy = conf().GetToyIndex();
-      return static_cast<SCEVariation*>(evar().GetEventVariation("SCE variation"))->GetToySCE(itoy);
+      const ToyExperiment* toy = conf().GetCurrentConfiguration()->GetToyMaker().GetToyExperiment(itoy);
+      return static_cast<SCEVariation*>(evar().GetEventVariation("SCE variation"))->GetToyScaling(*toy);
     }
-    else return _sce;
+    else return SCEScaling();
   }
 }
 

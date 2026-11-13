@@ -1,5 +1,6 @@
 #include "SCEGeometricVariation.hxx"
 #include "pdAnalysisUtils.hxx"
+#include "pdServiceManager.hxx"
 
 //********************************************************************
 SCEGeometricVariation::SCEGeometricVariation():EventVariationBase(),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","SCE", BinnedParams::k1D_SYMMETRIC_NOMEAN){
@@ -18,26 +19,14 @@ SCEGeometricVariation::SCEGeometricVariation():EventVariationBase(),BinnedParams
     std::exit(1);
   }
 
-  //Initialize SCE object to apply variations
-  for(int i = 0; i < 100; i++)_sce[i] = NULL;
+  //Toys use the nominal map scaled on the fly, there are no per-toy copies
+  _sce = &pd::services().SCE();
 }
 
 //********************************************************************
 SCEGeometricVariation::~SCEGeometricVariation(){
 //********************************************************************
-  
-  for(int i = 0; i < 100; i++)delete _sce[i];
-}
 
-//********************************************************************
-void SCEGeometricVariation::Initialize(){
-//********************************************************************
-  
-  std::cout << "SCEGeometricVariation::Initialize(). Initializing toy SCE" << std::endl;
-  for(int i = 0; i < 100; i++){
-    _sce[i] = new SpaceCharge();
-    _sce[i]->Initialize();
-  }
 }
 
 //********************************************************************
@@ -48,16 +37,8 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   // In this way the loop over objects is restricted to the ones that really matter
   SystBoxB* box = GetSystBox(event);
 
-  //initialize the SCE for this toy if it has not been initialized yet 
-  int toy_index = toy.GetToyIndex();
-  if(!_sce[toy_index]){
-    _sce[toy_index] = new SpaceCharge();
-    _sce[toy_index]->Initialize();
-  }
-  
-  //Vary SCE map if it has not been varied yet
-  if(!_sce[toy_index]->IsVaried())
-    VarySCEMap(toy);
+  //scaling of the nominal SCE map for this toy
+  SCEScaling scale = GetToyScaling(toy);
 
   // Loop over all relevant tracks for this variation
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
@@ -70,8 +51,8 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     // Apply variation to TrajectoryPoints
     int ntps = part->TrjPoints.size();
     if(ntps > 0){
-      _sce[toy_index]->ApplyTrjPointPositionCorrection(part);
-      _sce[toy_index]->ApplyTrjPointDirectionCorrection(part);
+      _sce->ApplyTrjPointPositionCorrection(part, scale);
+      _sce->ApplyTrjPointDirectionCorrection(part);
      
       //recompute length
       part->Length = pdAnaUtils::ComputeTrackLengthFromTrajectoryPoints(part);
@@ -80,14 +61,14 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
       pdAnaUtils::ComputeParticlePositionAndDirection(part);
     }
     else //if no trjpoints, modify at least particle position start/end
-      _sce[toy_index]->ApplyParticlePositionCorrection(part);
+      _sce->ApplyParticlePositionCorrection(part, scale);
    
     //apply variation to hits
     //We don't have yet the hit-trjp relationship, this is redundant
     //but there is no other way so far
     if(!part->Hits[2].empty()){
-      _sce[toy_index]->ApplyPositionCorrection(part);
-      _sce[toy_index]->ApplyPitchCorrection(part);
+      _sce->ApplyPositionCorrection(part, scale);
+      _sce->ApplyPitchCorrection(part, scale);
       pdAnaUtils::ComputeResidualRange(part);
     }
    
@@ -158,53 +139,15 @@ bool SCEGeometricVariation::UndoSystematic(AnaEventC& event){
 }
 
 //********************************************************************
-void SCEGeometricVariation::VarySCEMap(const ToyExperiment& toy){
+SCEScaling SCEGeometricVariation::GetToyScaling(const ToyExperiment& toy){
 //********************************************************************
-  
-  int toy_index = toy.GetToyIndex();
-
-  if(toy_index==0)std::cout << "SCEGeometricVariation::VarySCEMap(). Varying toy maps" << std::endl;
-  if(toy_index==99)std::cout << "SCEGeometricVariation::VarySCEMap(). Toy maps varied" << std::endl;
 
   Float_t sigma;
   GetSigmaValueForBin(0, sigma); //only 1 bin
-  _sce[toy_index]->ApplyGlobalVariation(1 + sigma*toy.GetToyVariations(_index)->Variations[0]);    
-}
 
-//********************************************************************
-void SCEGeometricVariation::VarySCEMapLocally(const ToyExperiment& toy){
-//********************************************************************
-  
-  int toy_index = toy.GetToyIndex();
-
-  if(toy_index==0)std::cout << "SCEVariation::VarySCEMap(). Varying toy maps" << std::endl;
-  if(toy_index==99)std::cout << "SCEVariation::VarySCEMap(). Toy maps Varied" << std::endl;
-
-  //get map binning
-  int nbinsx = _sce[toy_index]->GetNbinsX();
-  int nbinsy = _sce[toy_index]->GetNbinsY();
-  int nbinsz = _sce[toy_index]->GetNbinsZ();
-
-  //loop over voxels
-  Float_t xcenter,ycenter,zcenter;
-  for(int ix = 0; ix < nbinsx; ix++){
-    xcenter = _sce[toy_index]->GetBinCenterX(ix+1);
-    for(int iy = 0; iy < nbinsy; iy++){
-      ycenter = _sce[toy_index]->GetBinCenterY(iy+1);
-      for(int iz = 0; iz < nbinsz; iz++){
-	zcenter = _sce[toy_index]->GetBinCenterZ(iz+1);
-	Int_t index = 0;
-	Float_t sigma = 0;
-	if(!GetBinSigmaValue(xcenter,ycenter,zcenter,sigma,index))
-	  continue;
-	_sce[toy_index]->ApplyVoxelVariation(ix+1,iy+1,iz+1,
-					     1 + sigma*toy.GetToyVariations(_index)->Variations[index],
-					     false); //do not reset splines now, only at the end
-      }
-    }
-  }
-  _sce[toy_index]->ResetSplines(); //now recompute splines;
-  
+  SCEScaling scale;
+  scale.Global = 1 + sigma*toy.GetToyVariations(_index)->Variations[0];
+  return scale;
 }
 
 //**************************************************

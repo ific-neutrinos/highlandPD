@@ -47,6 +47,7 @@ CaloContext Calorimetry::NominalContext() const{
   ctx.ModBoxA  = _ModBoxA;
   ctx.ModBoxB  = _ModBoxB;
   ctx.SCE      = &_sce;
+  ctx.SCEScale = SCEScaling();
   return ctx;
 }
 
@@ -304,7 +305,7 @@ void Calorimetry::ApplyRecombination(AnaHitPD &hit, const CaloContext& ctx) cons
   double Efield = _Efield;                                       //kV/cm
 
   //the -1 is added ad hoc. I don't know the reason but there is a -1 difference wrt the larsoft calculation
-  TVector3 offset = -1*(ctx.SCE->GetCalEfieldOffsets(hit.Position,hit.TPCid)); 
+  TVector3 offset = -1*(ctx.SCE->GetCalEfieldOffsets(hit.Position,hit.TPCid,ctx.SCEScale)); 
   Efield = sqrt(pow(Efield*(1+offset.X()),2) + pow(Efield*offset.Y(),2) + pow(Efield*offset.Z(),2));
 
   //calculate recombination factors
@@ -414,8 +415,8 @@ void Calorimetry::ApplySCECorrection(AnaHitPD &hit, const CaloContext& ctx) cons
   
   //correct pitch by SCE effect
   TVector3 dirProjection(hitpos.X()+pitch*hitdir.X(),hitpos.Y()+pitch*hitdir.Y(),hitpos.Z()+pitch*hitdir.Z());
-  TVector3 dirOffset = ctx.SCE->GetCalPosOffsets(dirProjection, hit.TPCid);
-  TVector3 posOffset = ctx.SCE->GetCalPosOffsets(hitpos, hit.TPCid);
+  TVector3 dirOffset = ctx.SCE->GetCalPosOffsets(dirProjection, hit.TPCid, ctx.SCEScale);
+  TVector3 posOffset = ctx.SCE->GetCalPosOffsets(hitpos, hit.TPCid, ctx.SCEScale);
   TVector3 dirCorrection(pitch*hitdir.X() - dirOffset.X() + posOffset.X(),
 			 pitch*hitdir.Y() + dirOffset.Y() - posOffset.Y(),
 			 pitch*hitdir.Z() + dirOffset.Z() - posOffset.Z());

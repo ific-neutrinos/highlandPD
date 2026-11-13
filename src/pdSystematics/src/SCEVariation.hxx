@@ -11,18 +11,15 @@ public:
   SCEVariation();
   virtual ~SCEVariation(); 
 
-  void Initialize();
-  
   /// Apply the systematic
   virtual void Apply(const ToyExperiment& toy, AnaEventC& event);
   
   /// Undo  the systematic variations done by ApplyVariation. This is faster tha reseting the full Spill
   bool UndoSystematic(AnaEventC& event);
 
-  void VarySCEMapGlobally(const ToyExperiment& toy); //apply a single variation to all the map
-  void VarySCEMapLocally(const ToyExperiment& toy);  //apply an independent variation to each voxel
-
-  SpaceCharge* GetToySCE(int itoy) const {return _sce[itoy];}
+  /// Scaling of the nominal SCE map for this toy (global variation).
+  /// Use it with the nominal map, pd::services().SCE().
+  SCEScaling GetToyScaling(const ToyExperiment& toy);
   
 protected:
   
@@ -30,7 +27,7 @@ protected:
   bool IsRelevantRecObject(const AnaEventC& event, const AnaRecObjectC& part) const;
   
   const Calorimetry* _cal; ///< owned by pd::services()
-  SpaceCharge* _sce[100]; //a better way to set the number of toys is clearly needed :)
+  const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
 };
 
 #endif

@@ -19,10 +19,10 @@ SCEVariation::SCEVariation():EventVariationBase(),BinnedParams(std::string(geten
     std::exit(1);
   }
   
-  //Initialize SCE object to apply variations
-  for(int i = 0; i < 100; i++)_sce[i] = NULL;
+  //Toys use the nominal map scaled on the fly, there are no per-toy copies
+  _sce = &pd::services().SCE();
 
-  // Shared calorimetry; the toy SCE map is passed in the CaloContext
+  // Shared calorimetry; the toy SCE scaling is passed in the CaloContext
   _cal = &pd::services().Calo();
 }
 
@@ -30,18 +30,6 @@ SCEVariation::SCEVariation():EventVariationBase(),BinnedParams(std::string(geten
 SCEVariation::~SCEVariation(){
 //********************************************************************
 
-  for(int i = 0; i < 100; i++)delete _sce[i];
-}
-
-//********************************************************************
-void SCEVariation::Initialize(){
-//********************************************************************
-  
-  std::cout << "SCEVariation::Initialize(). Initializing toy SCE" << std::endl;
-  for(int i = 0; i < 100; i++){
-    _sce[i] = new SpaceCharge();
-    _sce[i]->Initialize();
-  }
 }
 
 //********************************************************************
@@ -53,15 +41,12 @@ void SCEVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   SystBoxB* box = GetSystBox(event);
   const AnaEventPD* eventpd = static_cast<const AnaEventPD*>(&event);
   
-  //initialize the SCE for this toy if it has not been initialized yet 
-  int toy_index = toy.GetToyIndex();
-  //Vary SCE map if it hasn't been varied yet
-  if(!_sce[toy_index]->IsVaried())
-    VarySCEMapGlobally(toy);
+  //scaling of the nominal SCE map for this toy
+  SCEScaling scale = GetToyScaling(toy);
 
-  //calorimetry with the toy SCE map and the appropiate lifetime depending on mc/data and run
+  //calorimetry with the toy SCE scaling and the appropiate lifetime depending on mc/data and run
   CaloContext ctx = _cal->NominalContext();
-  ctx.SCE      = _sce[toy_index];
+  ctx.SCEScale = scale;
   ctx.Lifetime = _cal->GetLifetime(*eventpd);
   
   // Loop over all relevant tracks for this variation
@@ -77,7 +62,7 @@ void SCEVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     //important, two things are varied: XYZ position of the hit and pitch
     //loop here to avoid looping more than once
     for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
-      _sce[toy_index]->ApplyPositionCorrection(part->Hits[2][ihit]);
+      _sce->ApplyPositionCorrection(part->Hits[2][ihit], scale);
       _cal->ApplySCECorrection(part->Hits[2][ihit], ctx);
       //_cal->ApplyLifetimeCorrection(part->Hits[2][ihit]);
     }
@@ -113,53 +98,15 @@ bool SCEVariation::UndoSystematic(AnaEventC& event){
 }
 
 //********************************************************************
-void SCEVariation::VarySCEMapGlobally(const ToyExperiment& toy){
+SCEScaling SCEVariation::GetToyScaling(const ToyExperiment& toy){
 //********************************************************************
-  
-  int toy_index = toy.GetToyIndex();
-
-  if(toy_index==0)std::cout << "SCEVariation::VarySCEMap(). Varying toy maps" << std::endl;
-  if(toy_index==99)std::cout << "SCEVariation::VarySCEMap(). Toy maps varied" << std::endl;
 
   Float_t sigma;
   GetSigmaValueForBin(0, sigma); //only 1 bin
-  _sce[toy_index]->ApplyGlobalVariation(1 + sigma*toy.GetToyVariations(_index)->Variations[0]);
-}
 
-//********************************************************************
-void SCEVariation::VarySCEMapLocally(const ToyExperiment& toy){
-//********************************************************************
-  
-  int toy_index = toy.GetToyIndex();
-
-  if(toy_index==0)std::cout << "SCEVariation::VarySCEMap(). Varying toy maps" << std::endl;
-  if(toy_index==99)std::cout << "SCEVariation::VarySCEMap(). Toy maps Varied" << std::endl;
-
-  //get map binning
-  int nbinsx = _sce[toy_index]->GetNbinsX();
-  int nbinsy = _sce[toy_index]->GetNbinsY();
-  int nbinsz = _sce[toy_index]->GetNbinsZ();
-
-  //loop over voxels
-  Float_t xcenter,ycenter,zcenter;
-  for(int ix = 0; ix < nbinsx; ix++){
-    xcenter = _sce[toy_index]->GetBinCenterX(ix+1);
-    for(int iy = 0; iy < nbinsy; iy++){
-      ycenter = _sce[toy_index]->GetBinCenterY(iy+1);
-      for(int iz = 0; iz < nbinsz; iz++){
-	zcenter = _sce[toy_index]->GetBinCenterZ(iz+1);
-	Int_t index = 0;
-	Float_t sigma = 0;
-	if(!GetBinSigmaValue(xcenter,ycenter,zcenter,sigma,index))
-	  continue;
-	_sce[toy_index]->ApplyVoxelVariation(ix+1,iy+1,iz+1,
-					     1 + sigma*toy.GetToyVariations(_index)->Variations[index],
-					     false); //do not reset splines now, only at the end
-      }
-    }
-  }
-  _sce[toy_index]->ResetSplines(); //now recompute splines;
-  
+  SCEScaling scale;
+  scale.Global = 1 + sigma*toy.GetToyVariations(_index)->Variations[0];
+  return scale;
 }
 
 //**************************************************

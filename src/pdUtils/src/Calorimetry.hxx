@@ -21,6 +21,7 @@ struct CaloContext{
   double ModBoxA;           ///< ModBox alpha
   double ModBoxB;           ///< ModBox beta
   const SpaceCharge* SCE;   ///< space charge map (not owned)
+  SCEScaling SCEScale;      ///< scaling of the space charge map (nominal by default)
 };
 
 /// Calorimetry calibration. It holds only fixed configuration (constants

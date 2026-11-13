@@ -19,6 +19,14 @@
 
 #include "pdDataClasses.hxx"
 
+/// How the nominal space charge map is scaled, e.g. for a systematic toy.
+/// The map interpolation is linear in the map values, so scaling the
+/// offsets is equivalent to scaling the whole map, without copying it.
+/// Global: a single factor for the whole map (1 = nominal).
+struct SCEScaling{
+  double Global = 1.;
+};
+
 class SpaceCharge{
 public:
   
@@ -29,26 +37,20 @@ public:
 
   TVector3 GetPosOffsets(TVector3 const& point) const;
   TVector3 GetEfieldOffsets(TVector3 const& point) const;
-  TVector3 GetCalPosOffsets(TVector3 const& point, int const& TPCid) const;
-  TVector3 GetCalEfieldOffsets(TVector3 const& point, int const& TPCid) const;
+  /// The optional SCEScaling argument scales the map (default: nominal)
+  TVector3 GetCalPosOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale = SCEScaling()) const;
+  TVector3 GetCalEfieldOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale = SCEScaling()) const;
 
-  void ApplyParticlePositionCorrection(AnaParticlePD* part) const;
+  void ApplyParticlePositionCorrection(AnaParticlePD* part, const SCEScaling& scale = SCEScaling()) const;
 
-  void ApplyPositionCorrection(AnaParticlePD* part) const;
-  void ApplyPositionCorrection(AnaHitPD& hit) const;
-  void ApplyPitchCorrection(AnaParticlePD* part) const;
-  void ApplyPitchCorrection(AnaHitPD& hit) const;
+  void ApplyPositionCorrection(AnaParticlePD* part, const SCEScaling& scale = SCEScaling()) const;
+  void ApplyPositionCorrection(AnaHitPD& hit, const SCEScaling& scale = SCEScaling()) const;
+  void ApplyPitchCorrection(AnaParticlePD* part, const SCEScaling& scale = SCEScaling()) const;
+  void ApplyPitchCorrection(AnaHitPD& hit, const SCEScaling& scale = SCEScaling()) const;
 
-  void ApplyTrjPointPositionCorrection(AnaParticlePD* part) const;
-  void ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp) const;
+  void ApplyTrjPointPositionCorrection(AnaParticlePD* part, const SCEScaling& scale = SCEScaling()) const;
+  void ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp, const SCEScaling& scale = SCEScaling()) const;
   void ApplyTrjPointDirectionCorrection(AnaParticlePD* part) const;
-
-  void ApplyGlobalVariation(const double var);
-  void ApplyVoxelVariation(UInt_t xbin, UInt_t ybin, UInt_t zbin, double var, bool reset_splines = true);
-  void ResetToNominal();
-  void ResetSplines();
-
-  bool IsVaried() const {return _IsVaried;}
 
   UInt_t GetNbinsX() const;
   UInt_t GetNbinsY() const;
@@ -58,9 +60,9 @@ public:
   double GetBinCenterY(UInt_t bin) const;
   double GetBinCenterZ(UInt_t bin) const;
 
-  double GetEFieldXAtPoint(double x, double y, double z) const;
-  double GetEFieldYAtPoint(double x, double y, double z) const;
-  double GetEFieldZAtPoint(double x, double y, double z) const;
+  double GetEFieldXAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
+  double GetEFieldYAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
+  double GetEFieldZAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
   
 protected:
   
@@ -136,23 +138,6 @@ protected:
   std::vector<std::vector<TSpline3*>> spline_dEx_pos;
   std::vector<std::vector<TSpline3*>> spline_dEy_pos;
   std::vector<std::vector<TSpline3*>> spline_dEz_pos;
-
-  //for systematic propagation: save a copy of the nominal histograms to easily reset SCE
-  TH3F* nominal_hDx_cal_pos;
-  TH3F* nominal_hDy_cal_pos;
-  TH3F* nominal_hDz_cal_pos;
-  TH3F* nominal_hEx_cal_pos;
-  TH3F* nominal_hEy_cal_pos;
-  TH3F* nominal_hEz_cal_pos;
-
-  TH3F* nominal_hDx_cal_neg;
-  TH3F* nominal_hDy_cal_neg;
-  TH3F* nominal_hDz_cal_neg;
-  TH3F* nominal_hEx_cal_neg;
-  TH3F* nominal_hEy_cal_neg;
-  TH3F* nominal_hEz_cal_neg;
-
-  bool _IsVaried;
 };
   
 #endif

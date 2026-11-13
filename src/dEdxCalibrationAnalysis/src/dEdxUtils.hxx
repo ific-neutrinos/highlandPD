@@ -14,7 +14,7 @@ namespace dEdxUtils{
 
   Double_t Recombination(Double_t E);
 
-  Double_t ElectricField(const SpaceCharge* sce, Double_t x, Double_t y, Double_t z);
+  Double_t ElectricField(const SpaceCharge* sce, Double_t x, Double_t y, Double_t z, const SCEScaling& scale = SCEScaling());
 
   bool IsInterestingHit(AnaHitPD& hit);
 }

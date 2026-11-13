@@ -34,19 +34,7 @@ SpaceCharge::SpaceCharge(){
   hEy_cal_neg = NULL;
   hEz_cal_neg = NULL;
 
-  nominal_hDx_cal_pos = NULL;
-  nominal_hDy_cal_pos = NULL;
-  nominal_hDz_cal_pos = NULL;
-  nominal_hEx_cal_pos = NULL;
-  nominal_hEy_cal_pos = NULL;
-  nominal_hEz_cal_pos = NULL;
 
-  nominal_hDx_cal_neg = NULL;
-  nominal_hDy_cal_neg = NULL;
-  nominal_hDz_cal_neg = NULL;
-  nominal_hEx_cal_neg = NULL;
-  nominal_hEy_cal_neg = NULL;
-  nominal_hEz_cal_neg = NULL;
 
   spline_dx_fwd_neg.clear();
   spline_dy_fwd_neg.clear();
@@ -74,7 +62,6 @@ SpaceCharge::SpaceCharge(){
   
   SCEhistograms.clear();
 
-  _IsVaried = false;
 }
 
 //********************************************************************
@@ -95,19 +82,7 @@ SpaceCharge::~SpaceCharge(){
   delete hEy_cal_neg;
   delete hEz_cal_neg;
 
-  delete nominal_hDx_cal_pos;
-  delete nominal_hDy_cal_pos;
-  delete nominal_hDz_cal_pos;
-  delete nominal_hEx_cal_pos;
-  delete nominal_hEy_cal_pos;
-  delete nominal_hEz_cal_pos;
 
-  delete nominal_hDx_cal_neg;
-  delete nominal_hDy_cal_neg;
-  delete nominal_hDz_cal_neg;
-  delete nominal_hEx_cal_neg;
-  delete nominal_hEy_cal_neg;
-  delete nominal_hEz_cal_neg;
 
   ClearSplines();
 
@@ -212,19 +187,7 @@ void SpaceCharge::InitializeHistograms(){
   hEy_cal_neg = (TH3F*)hEy_cal_neg_orig->Clone("hEy_neg");
   hEz_cal_neg = (TH3F*)hEz_cal_neg_orig->Clone("hEz_neg");
 
-  nominal_hDx_cal_pos = (TH3F*)hDx_cal_pos_orig->Clone("nom_hDx_pos");
-  nominal_hDy_cal_pos = (TH3F*)hDy_cal_pos_orig->Clone("nom_hDy_pos");
-  nominal_hDz_cal_pos = (TH3F*)hDz_cal_pos_orig->Clone("nom_hDz_pos");
-  nominal_hEx_cal_pos = (TH3F*)hEx_cal_pos_orig->Clone("nom_hEx_pos");
-  nominal_hEy_cal_pos = (TH3F*)hEy_cal_pos_orig->Clone("nom_hEy_pos");
-  nominal_hEz_cal_pos = (TH3F*)hEz_cal_pos_orig->Clone("nom_hEz_pos");
 
-  nominal_hDx_cal_neg = (TH3F*)hDx_cal_neg_orig->Clone("nom_hDx_neg");
-  nominal_hDy_cal_neg = (TH3F*)hDy_cal_neg_orig->Clone("nom_hDy_neg");
-  nominal_hDz_cal_neg = (TH3F*)hDz_cal_neg_orig->Clone("nom_hDz_neg");
-  nominal_hEx_cal_neg = (TH3F*)hEx_cal_neg_orig->Clone("nom_hEx_neg");
-  nominal_hEy_cal_neg = (TH3F*)hEy_cal_neg_orig->Clone("nom_hEy_neg");
-  nominal_hEz_cal_neg = (TH3F*)hEz_cal_neg_orig->Clone("nom_hEz_neg");
 
   hDx_cal_pos->SetDirectory(0);
   hDy_cal_pos->SetDirectory(0);
@@ -240,19 +203,7 @@ void SpaceCharge::InitializeHistograms(){
   hEy_cal_neg->SetDirectory(0);
   hEz_cal_neg->SetDirectory(0);
   
-  nominal_hDx_cal_pos->SetDirectory(0);
-  nominal_hDy_cal_pos->SetDirectory(0);
-  nominal_hDz_cal_pos->SetDirectory(0);
-  nominal_hEx_cal_pos->SetDirectory(0);
-  nominal_hEy_cal_pos->SetDirectory(0);
-  nominal_hEz_cal_pos->SetDirectory(0);
 
-  nominal_hDx_cal_neg->SetDirectory(0);
-  nominal_hDy_cal_neg->SetDirectory(0);
-  nominal_hDz_cal_neg->SetDirectory(0);
-  nominal_hEx_cal_neg->SetDirectory(0);
-  nominal_hEy_cal_neg->SetDirectory(0);
-  nominal_hEz_cal_neg->SetDirectory(0);  
 }
 
 //********************************************************************
@@ -789,7 +740,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
 }
 
 //********************************************************************
-void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
@@ -798,54 +749,54 @@ void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part) const {
   
   //position start
   TVector3 pos(part->PositionStart[0],part->PositionStart[1],part->PositionStart[2]);
-  TVector3 offset = GetCalPosOffsets(pos,1);
+  TVector3 offset = GetCalPosOffsets(pos,1,scale);
   part->PositionStart[0] -= offset.X();
   part->PositionStart[1] += offset.Y();
   part->PositionStart[2] += offset.Z();
 
   //position end
   pos.SetXYZ(part->PositionEnd[0],part->PositionEnd[1],part->PositionEnd[2]);
-  offset = GetCalPosOffsets(pos,1);
+  offset = GetCalPosOffsets(pos,1,scale);
   part->PositionEnd[0] -= offset.X();
   part->PositionEnd[1] += offset.Y();
   part->PositionEnd[2] += offset.Z();
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyPositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyPositionCorrection(part->Hits[2][ihit]);
+    ApplyPositionCorrection(part->Hits[2][ihit], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPositionCorrection(AnaHitPD& hit) const {
+void SpaceCharge::ApplyPositionCorrection(AnaHitPD& hit, const SCEScaling& scale) const {
 //********************************************************************
 
-  TVector3 offset = GetCalPosOffsets(hit.Position_NoSCE, hit.TPCid); //*-1 check this
+  TVector3 offset = GetCalPosOffsets(hit.Position_NoSCE, hit.TPCid, scale); //*-1 check this
   hit.Position.SetX(hit.Position_NoSCE.X() - offset.X());
   hit.Position.SetY(hit.Position_NoSCE.Y() + offset.Y());
   hit.Position.SetZ(hit.Position_NoSCE.Z() + offset.Z());
 }
 
 //********************************************************************
-void SpaceCharge::ApplyTrjPointPositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyTrjPointPositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int itp = 0; itp < (int)part->TrjPoints.size(); itp++)
-    ApplyTrjPointPositionCorrection(part->TrjPoints[itp]);
+    ApplyTrjPointPositionCorrection(part->TrjPoints[itp], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp) const {
+void SpaceCharge::ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp, const SCEScaling& scale) const {
 //********************************************************************
 
   int TPCid = pdAnaUtils::GetPosTPCid(tp.Position_NoSCE);
   
-  TVector3 offset = GetCalPosOffsets(tp.Position_NoSCE, TPCid); //*-1 check this
+  TVector3 offset = GetCalPosOffsets(tp.Position_NoSCE, TPCid, scale); //*-1 check this
   tp.Position.SetX(tp.Position_NoSCE.X() - offset.X());
   tp.Position.SetY(tp.Position_NoSCE.Y() + offset.Y());
   tp.Position.SetZ(tp.Position_NoSCE.Z() + offset.Z());
@@ -887,16 +838,16 @@ void SpaceCharge::ApplyTrjPointDirectionCorrection(AnaParticlePD* part) const {
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPitchCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyPitchCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyPitchCorrection(part->Hits[2][ihit]);
+    ApplyPitchCorrection(part->Hits[2][ihit], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
+void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit, const SCEScaling& scale) const {
 //********************************************************************
 
   TVector3 hitpos = hit.Position_NoSCE;
@@ -909,8 +860,8 @@ void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
   
   //correct pitch by SCE effect
   TVector3 dirProjection(hitpos.X()+pitch*hitdir.X(),hitpos.Y()+pitch*hitdir.Y(),hitpos.Z()+pitch*hitdir.Z());
-  TVector3 dirOffset = GetCalPosOffsets(dirProjection, hit.TPCid);
-  TVector3 posOffset = GetCalPosOffsets(hitpos, hit.TPCid);
+  TVector3 dirOffset = GetCalPosOffsets(dirProjection, hit.TPCid, scale);
+  TVector3 posOffset = GetCalPosOffsets(hitpos, hit.TPCid, scale);
   TVector3 dirCorrection(pitch*hitdir.X() - dirOffset.X() + posOffset.X(),
 			 pitch*hitdir.Y() + dirOffset.Y() - posOffset.Y(),
 			 pitch*hitdir.Z() + dirOffset.Z() - posOffset.Z());
@@ -967,146 +918,45 @@ double SpaceCharge::GetBinCenterZ(UInt_t bin) const {
 }
 
 //********************************************************************
-double SpaceCharge::GetEFieldXAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldXAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEx_cal_neg)return -1;
-    else return hEx_cal_neg->GetBinContent(hEx_cal_neg->FindBin(x,y,z));
+    else return scale.Global*hEx_cal_neg->GetBinContent(hEx_cal_neg->FindBin(x,y,z));
   }
   else{
     if(!hEx_cal_pos)return -1;
-    else return hEx_cal_pos->GetBinContent(hEx_cal_pos->FindBin(x,y,z));
+    else return scale.Global*hEx_cal_pos->GetBinContent(hEx_cal_pos->FindBin(x,y,z));
   }
 }
 
 //********************************************************************
-double SpaceCharge::GetEFieldYAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldYAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEy_cal_neg)return -1;
-    else return hEy_cal_neg->GetBinContent(hEy_cal_neg->FindBin(x,y,z));
+    else return scale.Global*hEy_cal_neg->GetBinContent(hEy_cal_neg->FindBin(x,y,z));
   }
   else{
     if(!hEy_cal_pos)return -1;
-    else return hEy_cal_pos->GetBinContent(hEy_cal_pos->FindBin(x,y,z));
+    else return scale.Global*hEy_cal_pos->GetBinContent(hEy_cal_pos->FindBin(x,y,z));
   }
 }
 
 //********************************************************************
-double SpaceCharge::GetEFieldZAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldZAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEz_cal_neg)return -1;
-    else return hEz_cal_neg->GetBinContent(hEz_cal_neg->FindBin(x,y,z));
+    else return scale.Global*hEz_cal_neg->GetBinContent(hEz_cal_neg->FindBin(x,y,z));
   }
   else{
     if(!hEz_cal_pos)return -1;
-    else return hEz_cal_pos->GetBinContent(hEz_cal_pos->FindBin(x,y,z));
+    else return scale.Global*hEz_cal_pos->GetBinContent(hEz_cal_pos->FindBin(x,y,z));
   }
-}
-
-//********************************************************************
-void SpaceCharge::ApplyGlobalVariation(const double var){
-//********************************************************************
-    
-  hDx_cal_pos->Scale(var);
-  hDy_cal_pos->Scale(var);
-  hDz_cal_pos->Scale(var);
-
-  hDx_cal_neg->Scale(var);
-  hDy_cal_neg->Scale(var);
-  hDz_cal_neg->Scale(var);
-
-  hEx_cal_pos->Scale(var);
-  hEy_cal_pos->Scale(var);
-  hEz_cal_pos->Scale(var);
-                          
-  hEx_cal_neg->Scale(var);
-  hEy_cal_neg->Scale(var);
-  hEz_cal_neg->Scale(var);
-  
-  //prepare new splines
-  ResetSplines();
-
-  //set true
-  _IsVaried = true;
-}
-
-//********************************************************************
-void SpaceCharge::ApplyVoxelVariation(UInt_t xbin, UInt_t ybin, UInt_t zbin, double var, bool reset_splines){
-//********************************************************************
-    
-  hDx_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDx_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hDy_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDy_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hDz_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDz_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-
-  hDx_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDx_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hDy_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDy_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hDz_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDz_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-
-  hEx_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEx_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hEy_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEy_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hEz_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEz_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-
-  hEx_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEx_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hEy_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEy_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hEz_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEz_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-      
-  //prepare new splines
-  if(reset_splines)ResetSplines();
-
-  //set true
-  _IsVaried = true;
-}
-
-//********************************************************************
-void SpaceCharge::ResetToNominal(){
-//********************************************************************
-    
-  delete hDx_cal_pos;
-  delete hDy_cal_pos;
-  delete hDz_cal_pos;
-  delete hEx_cal_pos;
-  delete hEy_cal_pos;
-  delete hEz_cal_pos;
-
-  delete hDx_cal_neg;
-  delete hDy_cal_neg;
-  delete hDz_cal_neg;
-  delete hEx_cal_neg;
-  delete hEy_cal_neg;
-  delete hEz_cal_neg;
-
-  hDx_cal_pos = (TH3F*)nominal_hDx_cal_pos->Clone("hDx_pos");
-  hDy_cal_pos = (TH3F*)nominal_hDy_cal_pos->Clone("hDy_pos");
-  hDz_cal_pos = (TH3F*)nominal_hDz_cal_pos->Clone("hDz_pos");
-  hEx_cal_pos = (TH3F*)nominal_hEx_cal_pos->Clone("hEx_pos");
-  hEy_cal_pos = (TH3F*)nominal_hEy_cal_pos->Clone("hEy_pos");
-  hEz_cal_pos = (TH3F*)nominal_hEz_cal_pos->Clone("hEz_pos");
-
-  hDx_cal_neg = (TH3F*)nominal_hDx_cal_neg->Clone("hDx_neg");
-  hDy_cal_neg = (TH3F*)nominal_hDy_cal_neg->Clone("hDy_neg");
-  hDz_cal_neg = (TH3F*)nominal_hDz_cal_neg->Clone("hDz_neg");
-  hEx_cal_neg = (TH3F*)nominal_hEx_cal_neg->Clone("hEx_neg");
-  hEy_cal_neg = (TH3F*)nominal_hEy_cal_neg->Clone("hEy_neg");
-  hEz_cal_neg = (TH3F*)nominal_hEz_cal_neg->Clone("hEz_neg");
-
-  //reset splines
-  ResetSplines();
-
-  //set varied to false since it is nominal once again
-  _IsVaried = false;
-}
-
-//********************************************************************
-void SpaceCharge::ResetSplines(){
-//********************************************************************
-    
-  ClearSplines();
-  InitializeSplines();
 }
 
 //********************************************************************
@@ -1180,7 +1030,7 @@ TVector3 SpaceCharge::GetPosOffsets(TVector3 const& point) const {
 }
 
 //********************************************************************
-TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid) const {
+TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale) const {
 //********************************************************************
 
   TVector3 Offsets(0,0,0);
@@ -1202,7 +1052,7 @@ TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid) 
     Offsets[0] = -1.0*Offsets[0];
   } 
 
-  return Offsets;
+  return scale.Global*Offsets;
 }
 
 //********************************************************************
@@ -1235,7 +1085,7 @@ TVector3 SpaceCharge::GetEfieldOffsets(TVector3 const& point) const {
 }
 
 //********************************************************************
-TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCid) const { 
+TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale) const { 
 //********************************************************************
  
  TVector3 Offsets(0,0,0);
@@ -1257,7 +1107,7 @@ TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCi
  Offsets.SetY(-1.0*Offsets.Y());
  Offsets.SetZ(-1.0*Offsets.Z());
  
- return Offsets;
+ return scale.Global*Offsets;
 }
 
 
