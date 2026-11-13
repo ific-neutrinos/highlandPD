@@ -1,0 +1,30 @@
+###############################################################################
+Override de parámetros para el test de regresión de secondaryKaon.exe.
+Se pasa con -p. Solo contiene lo que cambia respecto a los .parameters.dat
+por defecto. Activa los sistemáticos y las variables de toys para que los
+cambios en correcciones y sistemáticos se vean en el micro-tree.
+###############################################################################
+
+--- Output tree ------------
+ < secondaryKaonAnalysis.FillBestKaonCandidateInfo             = 1 >
+ < secondaryKaonAnalysis.FillBestKaonCandidatePIDInfo          = 1 >
+ < secondaryKaonAnalysis.FillToyVariablesInfo                  = 1 >
+
+--- Corrections ------------
+ < secondaryKaonAnalysis.ApplySCECorrection                    = 1 >
+ < secondaryKaonAnalysis.ApplydEdxCorrection                   = 0 >
+ < secondaryKaonAnalysis.ApplyRecombinationCorrection          = 1 >
+
+--- Systematics ------------
+ < secondaryKaonAnalysis.ApplydQdxSystematic                   = 1 >
+ < secondaryKaonAnalysis.ApplyRecombinationSystematic          = 0 >
+ < secondaryKaonAnalysis.ApplySCESystematic                    = 1 >
+ < secondaryKaonAnalysis.ApplyBrokenTracksSystematic           = 1 >
+ < secondaryKaonAnalysis.ApplyBeamPIDEfficiencySystematic      = 0 >
+ < secondaryKaonAnalysis.ApplyBeamPartWeightSystematic         = 0 >
+ < secondaryKaonAnalysis.ApplyBeamMomWeightSystematic          = 0 >
+ < secondaryKaonAnalysis.ApplyProtonBackgroundWeightSystematic = 1 >
+
+ < baseAnalysis.Systematics.NumberOfToys = 10 >
+ < baseAnalysis.Systematics.RandomSeed   = 1 >
+ < baseAnalysis.Configurations.EnableAllSystematics = 1 >

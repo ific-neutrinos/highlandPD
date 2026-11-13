@@ -15,3 +15,8 @@ nohup.out
 
 # Código retirado del repo que se conserva solo en local
 /src/secondaryKaonAnalysis/macros/tesis/
+
+# Productos de ACLiC (root macro.C+)
+*_C.so
+*_C.d
+*_C_ACLiC_dict_rdict.pcm
