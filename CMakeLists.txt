@@ -209,10 +209,6 @@ target_include_directories(StoppingProton.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} $
 target_link_libraries(StoppingProton.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
 INSTALL(TARGETS StoppingProton.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(QPIX.exe ${CMAKE_SOURCE_DIR}/src/QPIXAnalysis/app/RunQPIXAnalysis.cxx)
-target_include_directories(QPIX.exe PRIVATE ${HIGHLAND_INCLUDE_DIRS} ${highlandPD_inc})
-target_link_libraries(QPIX.exe ${ROOT_LIBRARIES} ${HIGHLAND_LIBRARIES} ${HIGHLAND_PD_LIBRARIES})
-INSTALL(TARGETS QPIX.exe DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 
 
 #-------------------------------------------------------
@@ -232,7 +228,6 @@ add_custom_target(include ALL SOURCES ${highlandPD_inc2} ${CMAKE_SOURCE_DIR})
 #------- dependencies ----------------------------------
 #-------------------------------------------------------
 
-add_dependencies(QPIX.exe                          StoppingProton.exe)
 add_dependencies(StoppingProton.exe                BeamWeights.exe)
 add_dependencies(BeamWeights.exe                   BrokenTracks.exe)
 add_dependencies(BrokenTracks.exe                  CreateMichelRemovingMiniTree.exe)
