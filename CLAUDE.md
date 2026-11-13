@@ -53,6 +53,19 @@ Pendiente:
 
 1. **Ficheros de datos de las utilidades** (`pdUtils/data/`, varios MB): decidir cómo gestionarlos (git-lfs, área externa...). El usuario quiere pensarlo más adelante.
 
+## Test de regresión
+
+`test/regression/` (override `regression.parameters.dat`, `run_regression.sh`, `compare.C`). Usar minitrees **sin filtrar**: los de candidatos (`minitree_candidates_*`) no traen las hijas de los candidatos y `secondaryKaon.exe` casca en `EventBoxKaon.cxx:52` (`Daughters[0]` con `Daughters` vacío; el bug ya existía antes de la limpieza).
+
+```bash
+test/regression/run_regression.sh <dir_salida> <mc.root|-> <data.root|-> 10000
+root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
+```
+
+- MC: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/mc/6GeV_prod4a_00_minitree_2023-01-27.root` (5 GB, 47.906 eventos). Con 10.000 eventos: ~3 min, 3.371 eventos guardados. Datos: pendiente de descarga.
+- Fase 1 validada (13-nov-2026): con 10.000 eventos de MC, la salida de `archive/pre-cleanup` y la de la rama son idénticas en todos los árboles (`ana`, `all_syst`, `truth`, `header`). En el log solo cambian los prints de depuración quitados.
+- Referencia actual: `~/Public/highland/backup/regression_ref/fase1/mc.root`. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
+
 ## Fase 2 (después del test de regresión): bugs que cambian resultados
 
 Cada uno en su propio commit, comparando micro-trees antes y después.
