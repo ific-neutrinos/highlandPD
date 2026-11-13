@@ -64,7 +64,8 @@ root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 
 - MC: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/mc/6GeV_prod4a_00_minitree_2023-01-27.root` (5 GB, 47.906 eventos). Con 10.000 eventos: ~3 min, 3.371 eventos guardados. Datos: pendiente de descarga.
 - Fase 1 validada (13-nov-2026): con 10.000 eventos de MC, la salida de `archive/pre-cleanup` y la de la rama son idénticas en todos los árboles (`ana`, `all_syst`, `truth`, `header`). En el log solo cambian los prints de depuración quitados.
-- Referencia actual: `~/Public/highland/backup/regression_ref/fase1/mc.root`. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
+- El override activa también `RecombinationVariation`, el único sistemático del análisis de kaones que usa `Calorimetry`.
+- Referencia actual: `~/Public/highland/backup/regression_ref/recomb/mc.root`, generada con `archive/pre-cleanup`. La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
 
 ## Servicios de calorimetría y SCE (en curso, 13-nov-2026)
 
@@ -75,15 +76,13 @@ Decidido con el usuario (primero el bloque de diseño, antes que los bugs suelto
 - **SCE en los toys sin copias del mapa.** La interpolación (spline natural `"b2e2"` en un eje y bilineal en los otros) es lineal en los valores de los nodos. Variación global: `D_toy = f·D_nominal`. Por vóxel: funciones base del spline (`B_i(x)`, calculadas una vez por eje) por los factores del toy, que ya guarda `ToyExperiment`. Hay que mantener los dos modos (por vóxel era el objetivo; nunca se midieron incertidumbres por vóxel, por eso se usa la global). El sistemático de SCE cuesta hoy ~2 GB y ~10 s (100 mapas de ~20 MB).
 - **Validación:** el servicio debe dar salida idéntica bit a bit. El SCE global por factor no saldrá idéntico (hoy el mapa escalado se guarda en `TH3F` float); se acepta con tolerancia, enseñando antes al usuario el tamaño de las diferencias.
 - Pasos: (1) servicio con SCE y Calorimetry nominales + contexto, migrando las clases vivas; (2) SCE global por factor; (3) SCE por vóxel; (4) unificar `SCEVariation` y `SCEGeometricVariation`.
+- **Paso 1 hecho** (commit `9f8d1d9`): `pdServiceManager` con `pd::services().SCE()` y `pd::services().Calo()`. El método se llama `Calo()` y no `Calorimetry()` porque un método con el nombre de la clase la oculta dentro de `pdServiceManager`. `Calorimetry` es inmutable, recibe un `CaloContext` (`NominalContext()` + cambios) y lee sus constantes de `pdUtils.parameters.dat`. Test idéntico. Las clases que solo usan las calibraciones (`SCECorrection`, `HitPositionSCECorrection`, `HitPitchSCECorrection`, `LifetimeCorrection`, `LifetimeVariation`, `SCEVariation`, `dQdxXCalibration`) solo se han validado compilando: no hay minitree para `dEdxCalibration.exe`.
 - Hecho: quitadas las 6 clases muertas (`CalorimetryCalibration`, `RecombinationMCCorrection`, `dQdx{Cal,Norm,XCal,YZCal}Variation`) y sus `.dat`. Copia en el backup.
 
 Encontrado en la auditoría, pendiente:
 
-- `SCEVariation` (calibraciones) borra dos veces el mapa del último toy al salir y crea un mapa 101 que no libera.
-- `dEdxVariation` crea una `Calorimetry` (con su SCE) que no usa.
 - `LifetimeCorrection` (solo en las calibraciones) nunca llama a `SetLifetime`: aplica la lifetime de MC (35 ms) también a datos. Los sistemáticos solo corren en MC, donde la lifetime es fija, así que ahí no afecta; la duda es la corrección sobre datos. Preguntar si las calibraciones se corren sobre datos.
 - Campo E: `Calorimetry` usa 0,4867 kV/cm y `RecombinationDataCorrection` usa 0,553 (con sus propios ModBox). El usuario no recuerda si es a propósito. Al pasarlos a parámetros, mantener los dos valores con nombres distintos para no cambiar resultados.
-- `ResetLifetime()` pone 35000 a mano en lugar de leer el parámetro.
 - `dQdxXCalibration` lee `$HIGHLANDPDPATH/yz_corrections_mc_lifetime_mypc.root`, un fichero personal que no está en el repo.
 
 ## Fase 2 (después del test de regresión): bugs que cambian resultados
