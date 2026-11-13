@@ -1190,9 +1190,7 @@ Float_t pdAnaUtils::GetdEdxLikelihood(AnaParticlePD* part, Int_t PDG){
 //   TGraph* tg = new TGraph(189,rr,dedx);
 
 
-  std::cout << "MIGUEEEEEEEEEEEEEEEEEEEE" << std::endl;
   Float_t result = dEdxLikelihood(tg,tg_ke,mass);
-  std::cout << "MIGUEEEEEEEEEEEEEEEEEEEE END" << std::endl;
 
   delete tg;
   file_ke->Close("R");
