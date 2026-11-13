@@ -1107,7 +1107,7 @@ TF1* CoherentFitUtils::LangausPlusConstantFit(TH1F* h, bool use_poisson){
   f->SetParNames("#sigma_{L,B}","MPV_{B}","N_{B}","#sigma_{G,B}","C");
   
   h->Fit("f","LNQ");
-  h->Fit("f","WLQ");
+  h->Fit("f","WLNQ");
 
   // h->Draw();
   // gPad->Update();gPad->WaitPrimitive();
@@ -1144,11 +1144,11 @@ TF1* CoherentFitUtils::DoubleLangausFit(TH1F* h, bool use_poisson){
 
   f->SetParNames("#sigma_{L,S}","MPV_{S}","N_{S}","#sigma_{G,S}","#sigma_{L,RE}","MPV_{RE}","N_{RE}","#sigma_{G,RE}");
   
-  //h->Fit(fname.c_str(),"LNQ");
-  // h->Draw();
-  // gPad->Update();gPad->WaitPrimitive();
+  h->Fit(fname.c_str(),"LNQ");
+  //h->Draw();
+  //gPad->Update();gPad->WaitPrimitive();
 
-   h->Fit(fname.c_str(),"WLQ");
+  h->Fit(fname.c_str(),"WLNQ");
   // h->Draw();
   // gPad->Update();//gPad->WaitPrimitive();
   
@@ -1390,8 +1390,8 @@ void CoherentFitUtils::GetSignalLWEstimation(double &p1, double &p2,
   error_p1 = f->GetParError(0);
   error_p2 = f->GetParError(1);
 
-  // tg->Draw("ap");
-  // gPad->Update();gPad->WaitPrimitive();
+  // tg->Draw("ap"); //!!!!
+  // gPad->Update();gPad->WaitPrimitive(); //!!!!
 }
 
 //********************************************
@@ -1422,8 +1422,8 @@ void CoherentFitUtils::GetSignalMPVEstimation(double &p1, double &p2, double &p3
   error_p2 = f->GetParError(1);
   error_p3 = f->GetParError(2);
 
-  // tg->Draw("ap");
-  // gPad->Update();gPad->WaitPrimitive();
+  // tg->Draw("ap"); //!!!!
+  // gPad->Update();gPad->WaitPrimitive(); //!!!!
 }
 
 //********************************************
@@ -1445,14 +1445,15 @@ void CoherentFitUtils::GetSignalGWEstimation(double &p1, double &p2,
   f->SetParameters(3.86,0.07);
 
   tg->Fit("f","WWQ");
+  //tg->Fit("f","Q");
   
   p1 = f->GetParameter(0);
   p2 = f->GetParameter(1);
   error_p1 = f->GetParError(0);
   error_p2 = f->GetParError(1);
 
-  // tg->Draw("ap");
-  // gPad->Update();gPad->WaitPrimitive();
+  // tg->Draw("ap"); //!!!!
+  // gPad->Update();gPad->WaitPrimitive(); //!!!!
 }
 
 //********************************************

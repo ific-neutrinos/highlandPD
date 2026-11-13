@@ -72,7 +72,7 @@ public:
   void CoherentFitBackground();
   void CoherentFitSignalPlusBackground(bool minos = true, double step = 0.001);
   void CoherentFitSignalPlusBackgroundToy(bool &result);
-  void TrySoloPeaks(bool &result);
+  bool TrySoloPeaks(bool &result);
   void EstimateWhatIsLeft();
   
   void StoreCoherentFits();
@@ -322,12 +322,20 @@ private:
 
   std::pair<double,double> fCconst;
 
+  double fClwA_error_neg;
+  double fClwA_error_pos;
+  double fClwB_error_neg;
+  double fClwB_error_pos;
   double fCmpvA_error_neg;
   double fCmpvA_error_pos;
   double fCmpvB_error_neg;
   double fCmpvB_error_pos;
   double fCmpvC_error_neg;
   double fCmpvC_error_pos;
+  double fCgwA_error_neg;
+  double fCgwA_error_pos;
+  double fCgwB_error_neg;
+  double fCgwB_error_pos;
 
   double fLikelihood;
   std::vector<double> fPartialLikelihood;

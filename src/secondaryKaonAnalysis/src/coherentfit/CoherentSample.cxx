@@ -437,7 +437,12 @@ void CoherentSample::StoreCoherentFits(){
       ssgw   = GetBackground()->GetSemiBackground()->GetCgwA().first;
       double params[] = {slw,smpv,snorm,sgw,blw,bmpv,bnorm,bgw,sslw,ssmpv,ssnorm,ssgw,bC};
       f->SetParameters(params);
+      f->SetNpx(1000);
+      // f->Draw();gPad->Update();gPad->WaitPrimitive();
       fCFit.push_back(f);
+      // fh[i]->Draw();
+      // f->Draw("same");
+      // gPad->Update();gPad->WaitPrimitive();
       // fCIntegral.push_back(CoherentFitUtils::GetFunctionNormalizationInsideHistogramBoundaries(fh[i],f));
     }
   }
@@ -1095,9 +1100,8 @@ TRatioPlot* CoherentSample::GetFitRatio(const int ibin){
   TH1F* hdummy = (TH1F*)fh[ibin]->Clone("hdummy");
   hdummy->GetXaxis()->SetTitle("dE/dx [MeV/cm]");
   for(int i = 0; i < 13; i++)fCFit[ibin]->FixParameter(i,fCFit[ibin]->GetParameter(i));
-
-  std::string name = fCFit[ibin]->GetTitle();
-  hdummy->Fit(name.c_str(),"");
+  std::cout << fCFit[ibin]->GetParameter(0) << std::endl;
+  hdummy->Fit(fCFit[ibin]);
 
   return new TRatioPlot(hdummy,"errasym");
 }
@@ -1600,10 +1604,10 @@ void CoherentSample::CoherentFitSignalPlusBackground(bool minos, double step){
   fMinuit->mnparm(11, "bgw"     , bgw      , step, 0   , 0   , ierflg);
   fMinuit->mnparm(12, "bnorm"   , bnorm    , step, 0   , 0   , ierflg);
   fMinuit->mnparm(13, "bconst"  , bC       , step, 0   , 1   , ierflg);
-  fMinuit->mnparm(14, "sslw A"  , sslwA    , step, 0   , 0   , ierflg);
-  fMinuit->mnparm(15, "sslw B"  , sslwB    , step, 0   , 2   , ierflg);
-  fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , step, 0   , 0   , ierflg);
-  fMinuit->mnparm(17, "ssgw"    , ssgw     , step, 0   , 0   , ierflg);
+  fMinuit->mnparm(14, "sslw A"  , sslwA    , step, 0   , 0   , ierflg); //!!!      0   , 2  
+  fMinuit->mnparm(15, "sslw B"  , sslwB    , step, 0   , 2   , ierflg);	//!!!	   0   , 0.1
+  fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , step, 0   , 0   , ierflg); //!!!//!!!!0   , 2.7
+  fMinuit->mnparm(17, "ssgw"    , ssgw     , step, 0   , 0   , ierflg); //!!!	   0   , 1  
   fMinuit->mnparm(18, "ssnorm"  , ssnorm   , step, 0   , 0   , ierflg);
   fMinuit->FixParameter(13);
   fMinuit->FixParameter(18);
@@ -1616,6 +1620,28 @@ void CoherentSample::CoherentFitSignalPlusBackground(bool minos, double step){
   fMinuit->mnexcm("HESSE", arglist, 1, ierflg);
   fMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
 
+  // Print results
+  Double_t amin,edm,errdef;
+  Int_t nvpar,nparx,icstat;
+  fMinuit->mnstat(amin,edm,errdef,nvpar,nparx,icstat);
+  fMinuit->mnprin(3,amin);
+
+  //if first attempt didn't work, try solopeaks
+  bool   result = false;
+  bool   solopk = false;
+  double conv = 0.005;
+  if(TMath::IsNaN(edm))
+    result = false;
+  if(edm < conv)
+    result = true;
+  if(!result){
+    solopk = TrySoloPeaks(result);
+    //if it worked, repeat all standard rutine and break just after
+    //if it didn't, simply break
+    if(solopk)CoherentFitSignalPlusBackground(minos); // a little bit of recursiveness
+    return;
+  }
+  
   if(minos){
     // // fMinuit->mnfree(0);
     // arglist[0] = 2;
@@ -1624,20 +1650,53 @@ void CoherentSample::CoherentFitSignalPlusBackground(bool minos, double step){
     // arglist[1] = 1.;
     fMinuit->mnexcm("HESSE", arglist, 1, ierflg);
     // fMinuit->mnexcm("MIGRAD", arglist, 2, ierflg);
-  
+
     arglist[0] = 500000;
-    arglist[1] = 3;
-    arglist[2] = 4;
-    arglist[3] = 5;
-    fMinuit->mnexcm("MINOS", arglist, 4, ierflg);
+    arglist[1] = 1;
+    arglist[2] = 2;
+    arglist[3] = 3;
+    arglist[4] = 4;
+    arglist[5] = 5;
+    arglist[6] = 6;
+    fMinuit->mnexcm("MINOS", arglist, 7, ierflg);
+
+    arglist[0] = 5000000;
+    arglist[1] = 7;
+    arglist[2] = 8;
+    fMinuit->mnexcm("MINOS", arglist, 3, ierflg);
+
+    arglist[0] = 5000000;
+    arglist[1] = 9;
+    arglist[2] = 10;
+    arglist[3] = 11;
+    arglist[4] = 12;
+    arglist[5] = 13;
+    fMinuit->mnexcm("MINOS", arglist, 6, ierflg);
+
+    arglist[0] = 5000000;
+    arglist[1] = 15;
+    arglist[2] = 16;
+    arglist[3] = 17;
+    arglist[4] = 18;
+    fMinuit->mnexcm("MINOS", arglist, 5, ierflg);
+    
+    // arglist[0] = 500000;
+    // arglist[1] = 1;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 2;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 3;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 4;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 5;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 6;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
+    // arglist[1] = 7;
+    // fMinuit->mnexcm("MINOS", arglist, 2, ierflg);
   }
   
-  // Print results
-  Double_t amin,edm,errdef;
-  Int_t nvpar,nparx,icstat;
-  fMinuit->mnstat(amin,edm,errdef,nvpar,nparx,icstat);
-  fMinuit->mnprin(3,amin);
-
   //retrieve parameters for next stage
 
   //SIGNAL
@@ -1652,12 +1711,22 @@ void CoherentSample::CoherentFitSignalPlusBackground(bool minos, double step){
 
   if(minos){
     double dummy;
+    fMinuit->mnerrs(0,fClwA_error_pos,fClwA_error_neg,slwA_error,dummy);
+    fMinuit->mnerrs(1,fClwB_error_pos,fClwB_error_neg,slwB_error,dummy);
     fMinuit->mnerrs(2,fCmpvA_error_pos,fCmpvA_error_neg,smpvA_error,dummy);
     fMinuit->mnerrs(3,fCmpvB_error_pos,fCmpvB_error_neg,smpvB_error,dummy);
     fMinuit->mnerrs(4,fCmpvC_error_pos,fCmpvC_error_neg,smpvC_error,dummy);
+    fMinuit->mnerrs(5,fCgwA_error_pos,fCgwA_error_neg,sgwA_error,dummy);
+    fMinuit->mnerrs(6,fCgwB_error_pos,fCgwB_error_neg,sgwB_error,dummy);
+    std::cout << fCgwB_error_pos << " " << fCgwB_error_neg << " " << sgwB_error << std::endl;
+    slwA_error = (fClwA_error_pos-fClwA_error_neg)/2;
+    slwB_error = (fClwB_error_pos-fClwB_error_neg)/2;
     smpvA_error = (fCmpvA_error_pos-fCmpvA_error_neg)/2;
     smpvB_error = (fCmpvB_error_pos-fCmpvB_error_neg)/2;
     smpvC_error = (fCmpvC_error_pos-fCmpvC_error_neg)/2;
+    sgwA_error = (fCgwA_error_pos-fCgwA_error_neg)/2;
+    if(fCgwB_error_pos!=0 && fCgwB_error_neg!=0)
+      sgwB_error = (fCgwB_error_pos-fCgwB_error_neg)/2;
   }
 
   fSignal->SetClwA(std::make_pair(slwA  ,slwA_error ));
@@ -1698,14 +1767,16 @@ void CoherentSample::CoherentFitSignalPlusBackground(bool minos, double step){
   fBackground->fSemiBackground->SetCnorm(std::make_pair(1-snorm-bnorm ,ssnorm_error));
 
   //Print covariance matrix
-  fMinuit->mnmatu(1);
+  //fMinuit->mnmatu(1);
 
   //get correlation matrix
   double cov[18][18] = {0};
   fMinuit->mnemat(&cov[0][0],18);
   for(int i = 0; i < 18; i++)
-    for(int j = 0; j < 18; j++)
+    for(int j = 0; j < 18; j++){
       fcorr_matrix[i][j] = cov[i][j]/sqrt(cov[i][i]*cov[j][j]);
+      //std::cout << i << " " << j << " " << cov[i][j] << " " << fcorr_matrix[i][j] << std::endl;
+    }
   
   StoreCoherentFits();  
 }
@@ -1834,7 +1905,7 @@ void CoherentSample::EstimateWhatIsLeft(){
   fMinuit->mnparm(12, "bnorm"   , bnorm     , 0.1, 0   , 0   , ierflg);
   fMinuit->mnparm(13, "bconst"  , bC        , 0.1, 0   , 1   , ierflg);
   fMinuit->mnparm(14, "sslw A"  , 2.2       , 0.1, 0   , 0   , ierflg);
-  fMinuit->mnparm(15, "sslw B"  , 0.09      , 0.1, 0   , 2   , ierflg);
+  fMinuit->mnparm(15, "sslw B"  , 0.09      , 0.1, 0   , 2   , ierflg); //0.1,0,0
   fMinuit->mnparm(16, "ssmpv A" , 2.4       , 0.1, 0   , 2.2 , ierflg);
   fMinuit->mnparm(17, "ssgw"    , 0.43      , 0.1, 0   , 0   , ierflg);
   fMinuit->mnparm(18, "ssnorm"  , 0.0945    , 0.1, 0   , 1-snorm-bnorm, ierflg);
@@ -2298,7 +2369,7 @@ void CoherentSample::CoherentFitSignalPlusBackgroundToy(bool &result){
 }
 
 //********************************************************************
-void CoherentSample::TrySoloPeaks(bool &result){
+bool CoherentSample::TrySoloPeaks(bool &result){
 //********************************************************************
 
   std::cout << "-------------------------------------" << std::endl;
@@ -2364,11 +2435,11 @@ void CoherentSample::TrySoloPeaks(bool &result){
   fMinuit->mnparm(11, "bgw"     , bgw      , 1, 0   , 0   , ierflg);
   fMinuit->mnparm(12, "bnorm"   , bnorm    , 1, 0   , 0   , ierflg);
   fMinuit->mnparm(13, "bconst"  , bC       , 1, 0   , 1   , ierflg);
-  fMinuit->mnparm(14, "sslw A"  , sslwA    , 1, 0   , 0   , ierflg);
-  fMinuit->mnparm(15, "sslw B"  , sslwB    , 1, 0   , 2   , ierflg);
-  fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , 1, 0   , 0   , ierflg);
-  fMinuit->mnparm(17, "ssgw"    , ssgw     , 1, 0   , 0   , ierflg);
-  fMinuit->mnparm(18, "ssnorm"  , ssnorm   , 1, 0   , 0   , ierflg);
+  fMinuit->mnparm(14, "sslw A"  , sslwA    , 1, 0   , 0   , ierflg); //!!!!  0   , 2  
+  fMinuit->mnparm(15, "sslw B"  , sslwB    , 1, 0   , 2   , ierflg); //!!!!  0   , 0.1
+  fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , 1, 0   , 0   , ierflg); //!!!!  0   , 2.7
+  fMinuit->mnparm(17, "ssgw"    , ssgw     , 1, 0   , 0   , ierflg); //!!!!  0   , 1  
+  fMinuit->mnparm(18, "ssnorm"  , ssnorm   , 1, 0   , 0   , ierflg); //!!!!
 
   fMinuit->FixParameter(0);
   fMinuit->FixParameter(1);
@@ -2381,6 +2452,7 @@ void CoherentSample::TrySoloPeaks(bool &result){
   fMinuit->FixParameter(13);
   fMinuit->FixParameter(14);
   fMinuit->FixParameter(15);
+  //fMinuit->FixParameter(16);//!!!
   fMinuit->FixParameter(17);
   fMinuit->FixParameter(18);
     
@@ -2404,7 +2476,7 @@ void CoherentSample::TrySoloPeaks(bool &result){
   if(!result){
     std::cout << "SOLO PEAKS DID NOT WORK, SKIPPING TOY" << std::endl;
     std::cout << "-------------------------------------" << std::endl;
-    return;
+    return result;
   }
 
   std::cout << "SOLO PEAKS WORKED! GOING FOR FULL FIT" << std::endl;
@@ -2424,25 +2496,25 @@ void CoherentSample::TrySoloPeaks(bool &result){
   for(int i = 0; i < 4; i++){
     fMinuit->mncler();
     fMinuit->mnfree(0);
-    fMinuit->mnparm(0,  "slw A"   , slwA     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(1,  "slw A"   , slwB     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(2,  "smpv A"  , smpvA    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(3,  "smpv B"  , smpvB    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(4,  "smpv C"  , smpvC    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(5,  "sgw A"   , sgwA     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(6,  "sgw B"   , sgwB     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(7,  "snorm"   , snorm    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(8,  "blwA"    , blwA     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(9,  "bmpvA"   , bmpvA    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(10, "bmpvB"   , bmpvB    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(11, "bgw"     , bgw      , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(12, "bnorm"   , bnorm    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(13, "bconst"  , bC       , 0.1, 0   , 1   , ierflg);
-    fMinuit->mnparm(14, "sslw A"  , sslwA    , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(15, "sslw B"  , sslwB    , 0.1, 0   , 2   , ierflg);
-    fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(17, "ssgw"    , ssgw     , 0.1, 0   , 0   , ierflg);
-    fMinuit->mnparm(18, "ssnorm"  , ssnorm   , 0.1, 0   , 0   , ierflg);
+    fMinuit->mnparm(0,  "slw A"   , slwA     , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(1,  "slw A"   , slwB     , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(2,  "smpv A"  , smpvA    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(3,  "smpv B"  , smpvB    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(4,  "smpv C"  , smpvC    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(5,  "sgw A"   , sgwA     , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(6,  "sgw B"   , sgwB     , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(7,  "snorm"   , snorm    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(8,  "blwA"    , blwA     , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(9,  "bmpvA"   , bmpvA    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(10, "bmpvB"   , bmpvB    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(11, "bgw"     , bgw      , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(12, "bnorm"   , bnorm    , 0.1*precision[i], 0   , 0   , ierflg);
+    fMinuit->mnparm(13, "bconst"  , bC       , 0.1*precision[i], 0   , 1   , ierflg);
+    fMinuit->mnparm(14, "sslw A"  , sslwA    , 0.1*precision[i], 0   , 0   , ierflg);//!!0   , 0 2  
+    fMinuit->mnparm(15, "sslw B"  , sslwB    , 0.1*precision[i], 0   , 2   , ierflg);//!!0   , 2 0.1
+    fMinuit->mnparm(16, "ssmpv A" , ssmpvA   , 0.1*precision[i], 0   , 0   , ierflg);//!!0   , 0 2.7
+    fMinuit->mnparm(17, "ssgw"    , ssgw     , 0.1*precision[i], 0   , 0   , ierflg);//!!0   , 0 1  
+    fMinuit->mnparm(18, "ssnorm"  , ssnorm   , 0.1*precision[i], 0   , 0   , ierflg);
     
     fMinuit->FixParameter(13);
     fMinuit->FixParameter(18);
@@ -2470,14 +2542,65 @@ void CoherentSample::TrySoloPeaks(bool &result){
     else{
       std::cout << "SOLO PEAKS FULL FIT DID WORK! RETRIEVING PARAMETERS" << std::endl;
       //retrieve parameters for next stage
+      // fMinuit->GetParameter(2 , smpvA, smpvA_error);
+      // fMinuit->GetParameter(3 , smpvB, smpvB_error);
+      // fMinuit->GetParameter(4 , smpvC, smpvC_error);
+      
+      // fSignal->SetCmpvA(std::make_pair(smpvA,smpvA_error));
+      // fSignal->SetCmpvB(std::make_pair(smpvB,smpvB_error));
+      // fSignal->SetCmpvC(std::make_pair(smpvC,smpvC_error));
+      
+      //retrieve parameters for next stage
+
+      //SIGNAL
+      fMinuit->GetParameter(0 , slwA , slwA_error );
+      fMinuit->GetParameter(1 , slwB , slwB_error );
       fMinuit->GetParameter(2 , smpvA, smpvA_error);
       fMinuit->GetParameter(3 , smpvB, smpvB_error);
       fMinuit->GetParameter(4 , smpvC, smpvC_error);
-      
+      fMinuit->GetParameter(5 , sgwA , sgwA_error );
+      fMinuit->GetParameter(6 , sgwB , sgwB_error );
+      fMinuit->GetParameter(7, snorm, snorm_error);
+
+      fSignal->SetClwA(std::make_pair(slwA  ,slwA_error ));
+      fSignal->SetClwB(std::make_pair(slwB  ,slwB_error ));
       fSignal->SetCmpvA(std::make_pair(smpvA,smpvA_error));
       fSignal->SetCmpvB(std::make_pair(smpvB,smpvB_error));
       fSignal->SetCmpvC(std::make_pair(smpvC,smpvC_error));
+      fSignal->SetCgwA(std::make_pair(sgwA  ,sgwA_error ));
+      fSignal->SetCgwB(std::make_pair(sgwB  ,sgwB_error ));
+      fSignal->SetCnorm(std::make_pair(snorm,snorm_error));
+
+      //BACKGROUND
+      fMinuit->GetParameter(8 , blwA  , blwA_error);
+      fMinuit->GetParameter(9 , bmpvA,bmpvA_error);
+      fMinuit->GetParameter(10 , bmpvB,bmpvB_error);
+      fMinuit->GetParameter(11, bgw  , bgw_error);
+      fMinuit->GetParameter(12, bnorm, bnorm_error);
+      fMinuit->GetParameter(13, bC   , bC_error);
+
+      fBackground->SetClwA(std::make_pair(blwA   ,blwA_error));
+      fBackground->SetCmpvA(std::make_pair(bmpvA ,bmpvA_error));
+      fBackground->SetCmpvB(std::make_pair(bmpvB ,bmpvB_error));
+      fBackground->SetCgwA(std::make_pair(bgw   ,bgw_error));
+      fBackground->SetCnorm(std::make_pair(bnorm,bnorm_error));
+      fBackground->SetCconst(std::make_pair(bC  ,bC_error));
+  
+      fMinuit->GetParameter(14, sslwA  ,sslwA_error);
+      fMinuit->GetParameter(15, sslwB  ,sslwB_error);
+      fMinuit->GetParameter(16, ssmpvA  ,ssmpvA_error);
+      fMinuit->GetParameter(17, ssgw   ,ssgw_error);
+      fMinuit->GetParameter(18, ssnorm ,ssnorm_error);
+
+      fBackground->fSemiBackground->SetClwA(std::make_pair(sslwA  ,sslwA_error));
+      fBackground->fSemiBackground->SetClwB(std::make_pair(sslwB  ,sslwB_error));
+      fBackground->fSemiBackground->SetCmpvA(std::make_pair(ssmpvA ,ssmpvA_error));
+      fBackground->fSemiBackground->SetCgwA(std::make_pair(ssgw,ssgw_error));
+      //fBackground->fSemiBackground->SetCnorm(std::make_pair(ssnorm ,ssnorm_error));
+      fBackground->fSemiBackground->SetCnorm(std::make_pair(1-snorm-bnorm ,ssnorm_error));
+      
       break;
     }
   }
+  return result; //redundant but needed for the moment
 }

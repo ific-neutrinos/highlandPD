@@ -30,9 +30,13 @@ CoherentFit::CoherentFit(){
   fTrueSemiBackground = NULL;
   fToySample = NULL;
   fNTOYS = -999;
-  h_toy_A = NULL;
-  h_toy_B = NULL;
-  h_toy_C = NULL;
+  h_toy_lw_A = NULL;
+  h_toy_lw_B = NULL;
+  h_toy_mpv_A = NULL;
+  h_toy_mpv_B = NULL;
+  h_toy_mpv_C = NULL;
+  h_toy_gw_A = NULL;
+  h_toy_gw_B = NULL;
   h_toy_Eff = NULL;
   h_toy_dEdx_RR = NULL;
 }
@@ -72,9 +76,13 @@ CoherentFit::CoherentFit(const std::string& filename, bool IsMC){
   fTrueSemiBackground = NULL;
   fToySample = NULL;
 
-  h_toy_A = NULL;
-  h_toy_B = NULL;
-  h_toy_C = NULL;
+  h_toy_lw_A = NULL;
+  h_toy_lw_B = NULL;
+  h_toy_mpv_A = NULL;
+  h_toy_mpv_B = NULL;
+  h_toy_mpv_C = NULL;
+  h_toy_gw_A = NULL;
+  h_toy_gw_B = NULL;
   h_toy_Eff = NULL;
   h_toy_dEdx_RR = NULL;
 }
@@ -423,7 +431,7 @@ void CoherentFit::ComputeSelfSystematicError(){
 //********************************************************************
 
   //InitializeHistogramsForSystematicErrors();
-  std::vector<double> a,b,c,eff;
+  std::vector<double> lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff;
   
   TRandom3* r = new TRandom3();
   r->SetSeed(1);
@@ -445,19 +453,27 @@ void CoherentFit::ComputeSelfSystematicError(){
     bool result = false;
     fToySample->CoherentFitSignalPlusBackgroundToy(result);
     //store results
-    a.push_back(fToySample->GetSignal()->GetCmpvA().first);
-    b.push_back(fToySample->GetSignal()->GetCmpvB().first);
-    c.push_back(fToySample->GetSignal()->GetCmpvC().first);
+    lw_a.push_back(fToySample->GetSignal()->GetClwA().first);
+    lw_b.push_back(fToySample->GetSignal()->GetClwB().first);
+    mpv_a.push_back(fToySample->GetSignal()->GetCmpvA().first);
+    mpv_b.push_back(fToySample->GetSignal()->GetCmpvB().first);
+    mpv_c.push_back(fToySample->GetSignal()->GetCmpvC().first);
+    gw_a.push_back(fToySample->GetSignal()->GetCgwA().first);
+    gw_b.push_back(fToySample->GetSignal()->GetCgwB().first);
     eff.push_back(result);
   }
 
-  InitializeHistogramsForSystematicErrors(a,b,c,eff);
-  FillSystematicHistograms(a,b,c,eff);
+  InitializeHistogramsForSystematicErrors(lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff);
+  FillSystematicHistograms(lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff);
   
   TFile* rfile = new TFile("selfsyst.root","NEW");
-  h_toy_A->Write();
-  h_toy_B->Write();
-  h_toy_C->Write();
+  h_toy_lw_A->Write();
+  h_toy_lw_B->Write();
+  h_toy_mpv_A->Write();
+  h_toy_mpv_B->Write();
+  h_toy_mpv_C->Write();
+  h_toy_gw_A->Write();
+  h_toy_gw_B->Write();
   h_toy_Eff->Write();
   rfile->Close();
 }
@@ -518,45 +534,73 @@ void CoherentFit::GenerateToyHistograms(CoherentSample* ToySample, const bool ap
 void CoherentFit::InitializeHistogramsForSystematicErrors(){
 //********************************************************************
 
+  double lwA_mean = fSignalPlusBackground->GetSignal()->GetClwA().first;
+  double lwB_mean = fSignalPlusBackground->GetSignal()->GetClwB().first;
   double mpvA_mean = fSignalPlusBackground->GetSignal()->GetCmpvA().first;
   double mpvB_mean = fSignalPlusBackground->GetSignal()->GetCmpvB().first;
   double mpvC_mean = fSignalPlusBackground->GetSignal()->GetCmpvC().first;
-  h_toy_A = new TH1F("h_toy_A","h_toy_A",500,0.1*mpvA_mean,1.9*mpvA_mean);
-  h_toy_B = new TH1F("h_toy_B","h_toy_B",5000,0.1*mpvB_mean,1.9*mpvB_mean);
-  h_toy_C = new TH1F("h_toy_C","h_toy_C",500,0.1*mpvC_mean,1.9*mpvC_mean);
+  double gwA_mean = fSignalPlusBackground->GetSignal()->GetCgwA().first;
+  double gwB_mean = fSignalPlusBackground->GetSignal()->GetCgwB().first;
+  h_toy_lw_A = new TH1F("h_toy_lw_A","h_toy_lw_A",500,0.1*lwA_mean,1.9*lwA_mean);
+  h_toy_lw_B = new TH1F("h_toy_lw_B","h_toy_lw_B",5000,0.1*lwB_mean,1.9*lwB_mean);
+  h_toy_mpv_A = new TH1F("h_toy_mpv_A","h_toy_mpv_A",500,0.1*mpvA_mean,1.9*mpvA_mean);
+  h_toy_mpv_B = new TH1F("h_toy_mpv_B","h_toy_mpv_B",5000,0.1*mpvB_mean,1.9*mpvB_mean);
+  h_toy_mpv_C = new TH1F("h_toy_mpv_C","h_toy_mpv_C",500,0.1*mpvC_mean,1.9*mpvC_mean);
+  h_toy_gw_A = new TH1F("h_toy_gw_A","h_toy_gw_A",500,0.1*gwA_mean,1.9*gwA_mean);
+  h_toy_gw_B = new TH1F("h_toy_gw_B","h_toy_gw_B",5000,0.1*gwB_mean,1.9*gwB_mean);
   h_toy_Eff = new TH1F("h_toy_Eff","h_toy_Eff",2,0,2);
   h_toy_dEdx_RR = new TH2F("h_toy_dEdx_RR","h_toy_dEdx_RR",5900,1,60,2000,0,20);
 }
 
 //********************************************************************
-void CoherentFit::InitializeHistogramsForSystematicErrors(std::vector<double> a, std::vector<double> b, std::vector<double> c, std::vector<double> eff){
+void CoherentFit::InitializeHistogramsForSystematicErrors(std::vector<double> lw_a, std::vector<double> lw_b, std::vector<double> mpv_a, std::vector<double> mpv_b, std::vector<double> mpv_c, std::vector<double> gw_a, std::vector<double> gw_b, std::vector<double> eff){
 //********************************************************************
 
-  double amin = *std::min_element(a.begin(), a.end())*1.2; //a is negative
-  double amax = *std::max_element(a.begin(), a.end())*0.8; //a is negative
-  h_toy_A = new TH1F("h_toy_A","h_toy_A",5000,amin,amax); 
+  double lw_amin = *std::min_element(lw_a.begin(), lw_a.end())*0.8; 
+  double lw_amax = *std::max_element(lw_a.begin(), lw_a.end())*1.2; 
+  h_toy_lw_A = new TH1F("h_toy_lw_A","h_toy_lw_A",5000,lw_amin,lw_amax); 
 
-  double bmin = *std::min_element(b.begin(), b.end())*0.8;
-  double bmax = *std::max_element(b.begin(), b.end())*1.2;
-  h_toy_B = new TH1F("h_toy_B","h_toy_B",5000,bmin,bmax);
+  double lw_bmin = *std::min_element(lw_b.begin(), lw_b.end())*0.8;
+  double lw_bmax = *std::max_element(lw_b.begin(), lw_b.end())*1.2;
+  h_toy_lw_B = new TH1F("h_toy_lw_B","h_toy_lw_B",5000,lw_bmin,lw_bmax);
+  
+  double mpv_amin = *std::min_element(mpv_a.begin(), mpv_a.end())*1.2; //a is negative
+  double mpv_amax = *std::max_element(mpv_a.begin(), mpv_a.end())*0.8; //a is negative
+  h_toy_mpv_A = new TH1F("h_toy_mpv_A","h_toy_mpv_A",5000,mpv_amin,mpv_amax); 
 
-  double cmin = *std::min_element(c.begin(), c.end())*1.2; //c is negative
-  double cmax = *std::max_element(c.begin(), c.end())*0.8; //c is negative
-  h_toy_C = new TH1F("h_toy_C","h_toy_C",5000,cmin,cmax);
+  double mpv_bmin = *std::min_element(mpv_b.begin(), mpv_b.end())*0.8;
+  double mpv_bmax = *std::max_element(mpv_b.begin(), mpv_b.end())*1.2;
+  h_toy_mpv_B = new TH1F("h_toy_mpv_B","h_toy_mpv_B",5000,mpv_bmin,mpv_bmax);
+
+  double mpv_cmin = *std::min_element(mpv_c.begin(), mpv_c.end())*1.2; //c is negative
+  double mpv_cmax = *std::max_element(mpv_c.begin(), mpv_c.end())*0.8; //c is negative
+  h_toy_mpv_C = new TH1F("h_toy_mpv_C","h_toy_mpv_C",5000,mpv_cmin,mpv_cmax);
+
+  double gw_amin = *std::min_element(gw_a.begin(), gw_a.end())*0.8; 
+  double gw_amax = *std::max_element(gw_a.begin(), gw_a.end())*1.2; 
+  h_toy_gw_A = new TH1F("h_toy_gw_A","h_toy_gw_A",5000,gw_amin,gw_amax);
+
+  double gw_bmin = *std::min_element(gw_b.begin(), gw_b.end())*0.8;
+  double gw_bmax = *std::max_element(gw_b.begin(), gw_b.end())*1.2;
+  h_toy_gw_B = new TH1F("h_toy_gw_B","h_toy_gw_B",5000,gw_bmin,gw_bmax);
 
   h_toy_Eff = new TH1F("h_toy_Eff","h_toy_Eff",2,0,2);
 }
 
 //********************************************************************
-void CoherentFit::FillSystematicHistograms(std::vector<double> a, std::vector<double> b, std::vector<double> c, std::vector<double> eff){
+void CoherentFit::FillSystematicHistograms(std::vector<double> lw_a, std::vector<double> lw_b, std::vector<double> mpv_a, std::vector<double> mpv_b, std::vector<double> mpv_c, std::vector<double> gw_a, std::vector<double> gw_b, std::vector<double> eff){
 //********************************************************************
 
-  for(int i = 0; i < (int)a.size(); i++){
+  for(int i = 0; i < (int)lw_a.size(); i++){
     h_toy_Eff->Fill(eff[i]);
     if(eff[i] == 1){
-      h_toy_A->Fill(a[i]);
-      h_toy_B->Fill(b[i]);
-      h_toy_C->Fill(c[i]);
+      h_toy_lw_A->Fill(lw_a[i]);
+      h_toy_lw_B->Fill(lw_b[i]);
+      h_toy_mpv_A->Fill(mpv_a[i]);
+      h_toy_mpv_B->Fill(mpv_b[i]);
+      h_toy_mpv_C->Fill(mpv_c[i]);
+      h_toy_gw_A->Fill(gw_a[i]);
+      h_toy_gw_B->Fill(gw_b[i]);
     }
   }
 }
@@ -581,7 +625,7 @@ void CoherentFit::NormalizeHistograms(CoherentSample* cs){
 }
 
 //********************************************************************
-void CoherentFit::FitToySample(std::vector<double> &a, std::vector<double> &b, std::vector<double> &c, std::vector<double> &eff){
+void CoherentFit::FitToySample(std::vector<double> &lw_a, std::vector<double> &lw_b, std::vector<double> &mpv_a, std::vector<double> &mpv_b, std::vector<double> &mpv_c, std::vector<double> &gw_a, std::vector<double> &gw_b, std::vector<double> &eff){
 //********************************************************************
 
   //create toy signal and background
@@ -603,9 +647,13 @@ void CoherentFit::FitToySample(std::vector<double> &a, std::vector<double> &b, s
   fToySample->CoherentFitSignalPlusBackgroundToy(result);
 
   //store results
-  a.push_back(fToySample->GetSignal()->GetCmpvA().first);
-  b.push_back(fToySample->GetSignal()->GetCmpvB().first);
-  c.push_back(fToySample->GetSignal()->GetCmpvC().first);
+  lw_a.push_back(fToySample->GetSignal()->GetClwA().first);
+  lw_b.push_back(fToySample->GetSignal()->GetClwB().first);
+  mpv_a.push_back(fToySample->GetSignal()->GetCmpvA().first);
+  mpv_b.push_back(fToySample->GetSignal()->GetCmpvB().first);
+  mpv_c.push_back(fToySample->GetSignal()->GetCmpvC().first);
+  gw_a.push_back(fToySample->GetSignal()->GetCgwA().first);
+  gw_b.push_back(fToySample->GetSignal()->GetCgwB().first);
   eff.push_back(result);
   
   std::cout << fSignalPlusBackground->GetSignal()->GetCmpvA().first << " " << fToySample->GetSignal()->GetCmpvA().first << std::endl;
@@ -623,12 +671,12 @@ void CoherentFit::SequentialCoherentFit(bool minos){
 }
 
 //********************************************************************
-void CoherentFit::DataCoherentFit(const CoherentFit* c){
+void CoherentFit::DataCoherentFit(const CoherentFit* c, const bool minos){
 //********************************************************************
   
   SetParametersFromMCFit(c);
   ScaleParameters();
-  fSignalPlusBackground->CoherentFitSignalPlusBackground(true,1);
+  fSignalPlusBackground->CoherentFitSignalPlusBackground(minos,1);
 }
 
 //********************************************************************
@@ -639,6 +687,7 @@ void CoherentFit::ScaleParameters(){
   fSignal->SetClwA(std::make_pair(fSignal->GetClwA().first*scale,fSignal->GetClwA().second*scale));
   fSignal->SetCgwA(std::make_pair(fSignal->GetCgwA().first*scale,fSignal->GetCgwA().second*scale));
   fBackground->SetClwA(std::make_pair(fBackground->GetClwA().first*scale,fBackground->GetClwA().second*scale));
+  fBackground->GetSemiBackground()->SetClwA(std::make_pair(fBackground->GetSemiBackground()->GetClwA().first*scale,fBackground->GetSemiBackground()->GetClwA().second*scale));
 }
 
 //********************************************************************
@@ -646,8 +695,8 @@ void CoherentFit::ToyLoop(const bool apply_toy_weights, const bool apply_toy_var
 //********************************************************************
 
   //create vectors for storing results
-  std::vector<double> a, b, c, eff;
-  a.clear(); b.clear(); c.clear(); eff.clear();
+  std::vector<double> lw_a, lw_b, mpv_a, mpv_b, mpv_c, gw_a, gw_b, eff;
+  lw_a.clear(); lw_b.clear(); mpv_a.clear(); mpv_b.clear(); mpv_c.clear(); gw_a.clear(); gw_b.clear(); eff.clear();
   
   //loop over toys
   for(int itoy = 0; itoy < fNTOYS; itoy++){
@@ -655,11 +704,11 @@ void CoherentFit::ToyLoop(const bool apply_toy_weights, const bool apply_toy_var
     std::cout << "TOY " << itoy << std::endl;
     std::cout << "---------------------" << std::endl;
     GenerateToySample(apply_toy_weights, apply_toy_variations, itoy);
-    FitToySample(a,b,c,eff);
+    FitToySample(lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff);
   }
 
-  InitializeHistogramsForSystematicErrors(a,b,c,eff);
-  FillSystematicHistograms(a,b,c,eff);
+  InitializeHistogramsForSystematicErrors(lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff);
+  FillSystematicHistograms(lw_a,lw_b,mpv_a,mpv_b,mpv_c,gw_a,gw_b,eff);
 }
 
 //********************************************************************
@@ -667,9 +716,13 @@ void CoherentFit::WriteSystematicHistograms(const std::string& filename){
 //********************************************************************
 
   TFile* rfile = new TFile(filename.c_str(),"NEW");
-  h_toy_A->Write();
-  h_toy_B->Write();
-  h_toy_C->Write();
+  h_toy_lw_A->Write();
+  h_toy_lw_B->Write();
+  h_toy_mpv_A->Write();
+  h_toy_mpv_B->Write();
+  h_toy_mpv_C->Write();
+  h_toy_gw_A->Write();
+  h_toy_gw_B->Write();
   h_toy_Eff->Write();
   // h_toy_dEdx_RR->Write();
   rfile->Close();

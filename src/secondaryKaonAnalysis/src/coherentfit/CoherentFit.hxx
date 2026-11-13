@@ -56,13 +56,13 @@ public:
   void GenerateToyHistograms(CoherentSample* ToySample,
 			     bool apply_toy_weights = true, bool apply_toy_variations = true, const int itoy = -1);
   void InitializeHistogramsForSystematicErrors();
-  void InitializeHistogramsForSystematicErrors(std::vector<double> a, std::vector<double> b, std::vector<double> c, std::vector<double> eff);
-  void FillSystematicHistograms(std::vector<double> a, std::vector<double> b, std::vector<double> c, std::vector<double> eff);
+  void InitializeHistogramsForSystematicErrors(std::vector<double> lw_a, std::vector<double> lw_b, std::vector<double> mpv_a, std::vector<double> mpv_b, std::vector<double> mpv_c, std::vector<double> gw_a, std::vector<double> gw_b, std::vector<double> eff);
+  void FillSystematicHistograms(std::vector<double> lw_a, std::vector<double> lw_b, std::vector<double> mpv_a, std::vector<double> mpv_b,std::vector<double> mpv_c, std::vector<double> gw_a, std::vector<double> gw_b, std::vector<double> eff);
   void WriteSystematicHistograms(const std::string& filename);
-  void FitToySample(std::vector<double> &a, std::vector<double> &b, std::vector<double> &c, std::vector<double> &eff);
+  void FitToySample(std::vector<double> &lw_a, std::vector<double> &lw_b, std::vector<double> &mpv_a, std::vector<double> &mpv_b, std::vector<double> &mpv_c, std::vector<double> &gw_a, std::vector<double> &gw_b, std::vector<double> &eff);
   
   void SequentialCoherentFit(bool minos = true);
-  void DataCoherentFit(const CoherentFit* c);
+  void DataCoherentFit(const CoherentFit* c, const bool minos = true);
   void ScaleParameters();
 
   void SetParametersFromMCFit(const CoherentFit* c);
@@ -110,9 +110,13 @@ public:
 
   int GetNToys(TTree* t);
 
-  TH1F* GetmpvASystHisto() const {return h_toy_A;}
-  TH1F* GetmpvBSystHisto() const {return h_toy_B;}
-  TH1F* GetmpvCSystHisto() const {return h_toy_C;}
+  TH1F* GetlwASystHisto()  const {return h_toy_lw_A;}
+  TH1F* GetlwBSystHisto()  const {return h_toy_lw_B;}
+  TH1F* GetmpvASystHisto() const {return h_toy_mpv_A;}
+  TH1F* GetmpvBSystHisto() const {return h_toy_mpv_B;}
+  TH1F* GetmpvCSystHisto() const {return h_toy_mpv_C;}
+  TH1F* GetgwASystHisto()  const {return h_toy_gw_A;}
+  TH1F* GetgwBSystHisto()  const {return h_toy_gw_B;}
   
 private:
 
@@ -140,10 +144,14 @@ private:
   CoherentSample* fToySample;
 
   int fNTOYS;
-  
-  TH1F* h_toy_A;
-  TH1F* h_toy_B;
-  TH1F* h_toy_C;
+
+  TH1F* h_toy_lw_A;
+  TH1F* h_toy_lw_B;
+  TH1F* h_toy_mpv_A;
+  TH1F* h_toy_mpv_B;
+  TH1F* h_toy_mpv_C;
+  TH1F* h_toy_gw_A;
+  TH1F* h_toy_gw_B;
   TH1F* h_toy_Eff;
   TH2F* h_toy_dEdx_RR;
 };
