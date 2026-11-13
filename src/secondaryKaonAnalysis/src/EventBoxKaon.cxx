@@ -35,10 +35,10 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
     if(part->isPandora)continue;
     //look for candidates
     if(part->DaughtersIDs.size() == 1){
-      //check this particle hasn't been added before
+      //check this particle hasn't been added before (e.g. as the daughter of another candidate)
       bool added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == part){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == part){
 	  added = true;
 	  break;
 	}
@@ -53,8 +53,8 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
       AnaParticleB* dau = static_cast<AnaParticleB*>(part->Daughters[0]);
       if(!dau)continue;
       added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == dau){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == dau){
 	  added = true;
 	  break;
 	}
@@ -159,10 +159,10 @@ void boxUtils::FillProtonCandidates(AnaEventB& event, SubDetId::SubDetEnum det){
     if(part->isPandora)continue;
     //look for candidates
     if(part->DaughtersIDs.size() == 0){
-      //check this particle hasn't been added before
+      //check this particle hasn't been added before (e.g. as the daughter of another candidate)
       bool added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == part){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == part){
 	  added = true;
 	  break;
 	}
