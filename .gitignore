@@ -1,0 +1,14 @@
+# Productos de compilación (scripts/INSTALL.sh)
+/build/
+/bin/
+/lib/
+/include/
+/HIGHLAND_PDConfig.cmake
+
+# Autosaves y backups de emacs
+*~
+\#*\#
+.\#*
+
+# Salida de nohup
+nohup.out
