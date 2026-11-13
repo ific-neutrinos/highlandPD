@@ -62,10 +62,11 @@ test/regression/run_regression.sh <dir_salida> <mc.root|-> <data.root|-> 10000
 root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 ```
 
-- MC: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/mc/6GeV_prod4a_00_minitree_2023-01-27.root` (5 GB, 47.906 eventos). Con 10.000 eventos: ~3 min, 3.371 eventos guardados. Datos: pendiente de descarga.
+- MC: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/mc/6GeV_prod4a_00_minitree_2023-01-27.root` (5 GB, 47.906 eventos). Con 10.000 eventos: ~3 min, 3.371 eventos guardados.
+- Datos: `~/Documents/Work/DUNE/analysis/PDSP/secondary_kaon_analysis/files/minitrees/data/6GeV_prod4a_reco2_minitree_2023-01-27.root` (42 GB, 446.262 eventos). Con 10.000 eventos: ~1,7 min, 2.929 eventos guardados. En datos los toys no varían (los sistemáticos solo actúan en MC) y `truth` está vacío.
 - Fase 1 validada (13-nov-2026): con 10.000 eventos de MC, la salida de `archive/pre-cleanup` y la de la rama son idénticas en todos los árboles (`ana`, `all_syst`, `truth`, `header`). En el log solo cambian los prints de depuración quitados.
 - El override activa también `RecombinationVariation`, el único sistemático del análisis de kaones que usa `Calorimetry`.
-- Referencia actual: `~/Public/highland/backup/regression_ref/recomb/mc.root`, generada con `archive/pre-cleanup`. La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
+- Referencia actual: `~/Public/highland/backup/regression_ref/recomb/{mc,data}.root`, generada con `archive/pre-cleanup`. Tras el servicio de SCE y calorimetría, la rama da idéntico en MC y en datos. La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
 
 ## Servicios de calorimetría y SCE (en curso, 13-nov-2026)
 
