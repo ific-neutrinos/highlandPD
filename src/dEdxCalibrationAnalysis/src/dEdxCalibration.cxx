@@ -24,7 +24,7 @@
 #include "LifetimeCorrection.hxx"
 
 //systematics
-#include "SCEVariation.hxx"
+#include "SCECalorimetricVariation.hxx"
 #include "LifetimeVariation.hxx"
 
 //********************************************************************
@@ -103,7 +103,7 @@ void dEdxCalibration::DefineSystematics(){
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
   baseAnalysis::DefineSystematics();
 
-  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCEVariation());
+  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCECalorimetricVariation());
   if(_ApplyLifetimeSystematic)evar().AddEventVariation(kLifetime_syst, "lifetime variation", new LifetimeVariation());
 }
 

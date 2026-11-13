@@ -1,15 +1,18 @@
-#ifndef SCEVariation_h
-#define SCEVariation_h
+#ifndef SCECalorimetricVariation_h
+#define SCECalorimetricVariation_h
 
-#include "EventVariationBase.hxx"
-#include "BinnedParams.hxx"
+#include "SCEVariationBase.hxx"
 #include "Calorimetry.hxx"
 
-class SCEVariation: public EventVariationBase, public BinnedParams{
+/// SCE systematic on hit positions and on the pitch correction of dQ/dx
+/// (dQdx_SCE), used by the dE/dx calibration analyses. It does not change
+/// the track geometry (see SCEGeometricVariation).
+/// See SCEVariationBase for the variation modes.
+class SCECalorimetricVariation: public SCEVariationBase{
 public:
 
-  SCEVariation();
-  virtual ~SCEVariation(); 
+  SCECalorimetricVariation();
+  virtual ~SCECalorimetricVariation(); 
 
   /// Apply the systematic
   virtual void Apply(const ToyExperiment& toy, AnaEventC& event);
@@ -17,9 +20,6 @@ public:
   /// Undo  the systematic variations done by ApplyVariation. This is faster tha reseting the full Spill
   bool UndoSystematic(AnaEventC& event);
 
-  /// Scaling of the nominal SCE map for this toy (global variation).
-  /// Use it with the nominal map, pd::services().SCE().
-  SCEScaling GetToyScaling(const ToyExperiment& toy);
   
 protected:
   
@@ -27,7 +27,6 @@ protected:
   bool IsRelevantRecObject(const AnaEventC& event, const AnaRecObjectC& part) const;
   
   const Calorimetry* _cal; ///< owned by pd::services()
-  const SpaceCharge* _sce; ///< nominal map, owned by pd::services()
 };
 
 #endif

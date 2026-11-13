@@ -3,24 +3,8 @@
 #include "pdServiceManager.hxx"
 
 //********************************************************************
-SCEGeometricVariation::SCEGeometricVariation():EventVariationBase(),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","SCE", BinnedParams::k1D_SYMMETRIC_NOMEAN){
+SCEGeometricVariation::SCEGeometricVariation():SCEVariationBase(){
 //********************************************************************
-
-  // Read the systematic source parameters from the data files
-  SetNParameters(GetNBins());
-
-  //check we have enough bins to run this systematic, otherwise exit
-  if(GetNBins() > (int)NMAXSYSTSOURCEBINS){
-    std::cout << "SCEVariation::SCEVariation()." << std::endl;
-    std::cout << "the source files has more bins than allowed for the systematic propagation!" << std::endl;
-    std::cout << "N MAX BINS allowed " << NMAXSYSTSOURCEBINS << std::endl;
-    std::cout << "N BINS on source   " << GetNBins() << std::endl;
-    std::cout << "if you need more bins, look at psyckeUtils/src/BinnedParams.hxx" << std::endl;
-    std::exit(1);
-  }
-
-  //Toys use the nominal map scaled on the fly, there are no per-toy copies
-  _sce = &pd::services().SCE();
 }
 
 //********************************************************************
@@ -136,18 +120,6 @@ bool SCEGeometricVariation::UndoSystematic(AnaEventC& event){
   
   // Don't reset the spill to corrected
   return false;
-}
-
-//********************************************************************
-SCEScaling SCEGeometricVariation::GetToyScaling(const ToyExperiment& toy){
-//********************************************************************
-
-  Float_t sigma;
-  GetSigmaValueForBin(0, sigma); //only 1 bin
-
-  SCEScaling scale;
-  scale.Global = 1 + sigma*toy.GetToyVariations(_index)->Variations[0];
-  return scale;
 }
 
 //**************************************************

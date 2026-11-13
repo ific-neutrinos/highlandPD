@@ -25,7 +25,7 @@
 #include "SCECorrection.hxx"
 #include "LifetimeCorrection.hxx"
 
-#include "SCEVariation.hxx"
+#include "SCECalorimetricVariation.hxx"
 #include "LifetimeVariation.hxx"
 
 //********************************************************************
@@ -147,7 +147,7 @@ void dQdxXCalibration::DefineSystematics(){
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
   baseAnalysis::DefineSystematics();
 
-  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCEVariation());
+  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCECalorimetricVariation());
   if(_ApplyLifetimeSystematic)evar().AddEventVariation(kLifetime_syst, "lifetime variation", new LifetimeVariation());
 }
 
@@ -264,7 +264,7 @@ SCEScaling dQdxXCalibration::GetSCEScaling(){
     if(_ApplySCESystematic){
       Int_t itoy = conf().GetToyIndex();
       const ToyExperiment* toy = conf().GetCurrentConfiguration()->GetToyMaker().GetToyExperiment(itoy);
-      return static_cast<SCEVariation*>(evar().GetEventVariation("SCE variation"))->GetToyScaling(*toy);
+      return static_cast<SCEVariationBase*>(evar().GetEventVariation("SCE variation"))->GetToyScaling(*toy);
     }
     else return SCEScaling();
   }

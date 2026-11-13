@@ -17,7 +17,7 @@
 #include "ResidualRangeVariation.hxx"
 #include "BeamPartIdEffWeight.hxx"
 #include "BrokenTrackWeight.hxx"
-#include "SCEVariation.hxx"
+#include "SCECalorimetricVariation.hxx"
 #include "SCEGeometricVariation.hxx"
 #include "NominalBeamMomWeight.hxx"
 #include "BeamCompositionWeight.hxx"
