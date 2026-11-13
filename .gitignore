@@ -12,3 +12,6 @@
 
 # Salida de nohup
 nohup.out
+
+# Código retirado del repo que se conserva solo en local
+/src/unusedCodeToRevisit/
