@@ -9,6 +9,12 @@
 // fichero de entrada...) que cambian entre instalaciones aunque los
 // resultados sean los mismos. Para incluirlo: compare.C+("a","b",false).
 //
+// Tolerancia relativa (cuarto argumento, 0 por defecto = igualdad exacta):
+//   compare.C+("a","b",true,1e-5)
+// Un valor numérico cuenta como distinto solo si
+// |a-b| > tol*max(|a|,|b|). Siempre se informa de la diferencia relativa
+// máxima, también de las hojas que quedan dentro de la tolerancia.
+//
 // Para cada hoja compara los bytes del valor (igualdad exacta) y, si es
 // numérica, la diferencia absoluta máxima. Devuelve el número de hojas con
 // diferencias (0 = ficheros equivalentes).
@@ -32,10 +38,12 @@ struct LeafPair {
   TLeaf* b;
   Long64_t ndiff = 0;     // entradas con alguna diferencia
   double   maxdiff = 0;   // diferencia absoluta máxima (si es numérica)
+  double   maxrel  = 0;   // diferencia relativa máxima (si es numérica)
+  Long64_t nbytediff = 0; // entradas no idénticas bit a bit (aunque estén dentro de la tolerancia)
   Long64_t firstdiff = -1;
 };
 
-int CompareTree(TTree* ta, TTree* tb){
+int CompareTree(TTree* ta, TTree* tb, double reltol){
   const std::string name = ta->GetName();
   int nbad = 0;
 
@@ -88,12 +96,18 @@ int CompareTree(TTree* ta, TTree* tb){
         void* va = p.a->GetValuePointer();
         void* vb = p.b->GetValuePointer();
         if(va && vb && nbytes > 0 && std::memcmp(va, vb, nbytes) != 0){
-          differs = true;
-          // Diferencia numérica máxima (no aplica a cadenas de caracteres)
-          if(std::string(p.a->GetTypeName()) != "Char_t"){
+          p.nbytediff++;
+          if(std::string(p.a->GetTypeName()) == "Char_t") differs = true;
+          else{
+            // Diferencias numéricas, con tolerancia relativa
             for(int k = 0; k < lenA; k++){
-              double d = TMath::Abs(p.a->GetValue(k) - p.b->GetValue(k));
+              double x = p.a->GetValue(k), y = p.b->GetValue(k);
+              double d = TMath::Abs(x - y);
+              double m = TMath::Max(TMath::Abs(x), TMath::Abs(y));
+              double r = (m > 0) ? d/m : 0;
               if(d > p.maxdiff) p.maxdiff = d;
+              if(r > p.maxrel)  p.maxrel  = r;
+              if(d > reltol*m) differs = true;
             }
           }
         }
@@ -105,29 +119,43 @@ int CompareTree(TTree* ta, TTree* tb){
     }
   }
 
+  int ntol = 0;
   for(auto& p : pairs){
-    if(p.ndiff == 0) continue;
+    if(p.ndiff == 0){
+      if(p.nbytediff > 0){
+        std::cout << "  [" << name << "] " << p.a->GetFullName() << ": dentro de la tolerancia ("
+                  << p.nbytediff << "/" << n << " entradas no idénticas, |dif| máx " << p.maxdiff
+                  << ", dif. relativa máx " << p.maxrel << ")" << std::endl;
+        ntol++;
+      }
+      continue;
+    }
     std::cout << "  [" << name << "] " << p.a->GetFullName() << ": " << p.ndiff << "/" << n
               << " entradas distintas, primera " << p.firstdiff
-              << ", |dif| máx " << p.maxdiff << std::endl;
+              << ", |dif| máx " << p.maxdiff << ", dif. relativa máx " << p.maxrel << std::endl;
     nbad++;
   }
-  if(nbad == 0)
+  if(nbad == 0 && ntol == 0)
     std::cout << "  [" << name << "] idéntico (" << n << " entradas, "
               << pairs.size() << " hojas)" << std::endl;
+  else if(nbad == 0)
+    std::cout << "  [" << name << "] equivalente dentro de la tolerancia (" << n << " entradas, "
+              << pairs.size() << " hojas, " << ntol << " no idénticas)" << std::endl;
   return nbad;
 }
 
 } // namespace
 
-int compare(const char* fileA, const char* fileB, bool skipConfig = true){
+int compare(const char* fileA, const char* fileB, bool skipConfig = true, double reltol = 0){
   TFile* fa = TFile::Open(fileA);
   TFile* fb = TFile::Open(fileB);
   if(!fa || fa->IsZombie() || !fb || fb->IsZombie()){
     std::cout << "No se pueden abrir los ficheros" << std::endl;
     return -1;
   }
-  std::cout << "Comparando " << fileA << " con " << fileB << std::endl;
+  std::cout << "Comparando " << fileA << " con " << fileB;
+  if(reltol > 0) std::cout << " (tolerancia relativa " << reltol << ")";
+  std::cout << std::endl;
 
   int nbad = 0;
   std::set<std::string> seen;
@@ -146,7 +174,7 @@ int compare(const char* fileA, const char* fileB, bool skipConfig = true){
       nbad++;
       continue;
     }
-    nbad += CompareTree(ta, tb);
+    nbad += CompareTree(ta, tb, reltol);
   }
   for(TObject* obj : *fb->GetListOfKeys()){
     TKey* key = static_cast<TKey*>(obj);
