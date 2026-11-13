@@ -19,12 +19,35 @@
 
 #include "pdDataClasses.hxx"
 
+/// Relative uncertainty of each node of the calibration maps, for the
+/// voxel variation of the space charge map. Index 0 is the x<0 drift
+/// volume and 1 the x>0 one; each vector is indexed by the TH3 global bin
+/// of the maps of that volume (the six maps of a volume share binning).
+/// Index = -1 means the node is not varied.
+struct SCEVoxelSigmas{
+  std::vector<Int_t>   Index[2];  ///< systematic parameter of each node
+  std::vector<Float_t> Sigma[2];  ///< relative uncertainty of each node
+};
+
 /// How the nominal space charge map is scaled, e.g. for a systematic toy.
-/// The map interpolation is linear in the map values, so scaling the
-/// offsets is equivalent to scaling the whole map, without copying it.
-/// Global: a single factor for the whole map (1 = nominal).
+/// The map interpolation is linear in the map values, so scaling the map
+/// is done on the fly, without copying it:
+/// - Global: a single factor for the whole map (1 = nominal).
+/// - Voxel: if Voxels and ToyVariations are set, each node of the map is
+///   scaled by 1 + Sigma*ToyVariations[Index] (Global is then ignored).
 struct SCEScaling{
   double Global = 1.;
+  const SCEVoxelSigmas* Voxels = nullptr;
+  const Float_t* ToyVariations = nullptr;
+
+  bool IsVoxel() const {return Voxels && ToyVariations;}
+
+  /// Scaling factor of a node (TH3 global bin) of drift volume dv (0: x<0, 1: x>0)
+  double NodeFactor(int dv, int bin) const{
+    Int_t i = Voxels->Index[dv][bin];
+    if(i < 0) return 1.;
+    return 1 + Voxels->Sigma[dv][bin]*ToyVariations[i];
+  }
 };
 
 class SpaceCharge{
@@ -63,6 +86,9 @@ public:
   double GetEFieldXAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
   double GetEFieldYAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
   double GetEFieldZAtPoint(double x, double y, double z, const SCEScaling& scale = SCEScaling()) const;
+
+  /// Calibration (backward) maps: 0-5 x>0 volume (Dx,Dy,Dz,Ex,Ey,Ez), 6-11 x<0 volume
+  const TH3F* GetCalHistogram(int i) const {return CalSCEhistograms.at(i);}
   
 protected:
   
@@ -97,6 +123,24 @@ protected:
 
   TSpline3* MakeSpline(TH3F* spline_hist, int dim1, int dim2_bin, int dim3_bin, int maptype, int driftvol) const;
   double InterpolateSplines(TH3F* interp_hist, double xVal, double yVal, double zVal, int dim, int maptype, int driftvol) const;
+
+  /// Voxel variation: same interpolation as InterpolateSplines, with each
+  /// node of the map scaled by its factor. ihist is the index in
+  /// CalSCEhistograms. Uses the cardinal basis of the spline (_basis).
+  double InterpolateVoxel(int ihist, double xVal, double yVal, double zVal, int dim, const SCEScaling& scale) const;
+  TVector3 GetOffsetsVoxel(TVector3 const& point, int ihist0, const SCEScaling& scale) const;
+
+  /// Cardinal basis of the natural cubic spline along the spline axis of each
+  /// calibration map: _basis[ihist][i] is the spline through the unit vector e_i.
+  /// The map spline through values y_i is sum_i y_i*_basis[ihist][i].
+  void InitializeBasis();
+  std::vector<TSpline3*> _basis[12];
+  /// Same basis as plain arrays, for speed: knot positions, and coefficients
+  /// (y,b,c,d) of basis i in interval k at _basisCoef[ih][4*(i*n+k)]
+  std::vector<double> _basisKnots[12];
+  std::vector<double> _basisCoef[12];
+  /// Map values by TH3 global bin, for speed
+  std::vector<double> _mapContent[12];
   
   std::string fInputFilename;
   TFile* fInputFile;

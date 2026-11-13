@@ -85,6 +85,8 @@ SpaceCharge::~SpaceCharge(){
 
 
   ClearSplines();
+  for(int i = 0; i < 12; i++)
+    for(TSpline3* b : _basis[i]) delete b;
 
   for(int i = 0; i < (int)SCEhistograms.size(); i++)
     delete SCEhistograms[i]; //redundant, they have been deleted above, but just in case
@@ -122,6 +124,8 @@ void SpaceCharge::Initialize(){
   InitializeSplines();
     
   CalSCEhistograms = {hDx_cal_pos, hDy_cal_pos, hDz_cal_pos, hEx_cal_pos, hEy_cal_pos, hEz_cal_pos, hDx_cal_neg, hDy_cal_neg, hDz_cal_neg, hEx_cal_neg, hEy_cal_neg, hEz_cal_neg};
+
+  InitializeBasis();
 
   fInputFile->Close();
 }
@@ -923,11 +927,19 @@ double SpaceCharge::GetEFieldXAtPoint(double x, double y, double z, const SCESca
     
   if(x < 0){
     if(!hEx_cal_neg)return -1;
-    else return scale.Global*hEx_cal_neg->GetBinContent(hEx_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEx_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEx_cal_neg->GetBinContent(bin);
+      return scale.Global*hEx_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEx_cal_pos)return -1;
-    else return scale.Global*hEx_cal_pos->GetBinContent(hEx_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEx_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEx_cal_pos->GetBinContent(bin);
+      return scale.Global*hEx_cal_pos->GetBinContent(bin);
+    }
   }
 }
 
@@ -937,11 +949,19 @@ double SpaceCharge::GetEFieldYAtPoint(double x, double y, double z, const SCESca
     
   if(x < 0){
     if(!hEy_cal_neg)return -1;
-    else return scale.Global*hEy_cal_neg->GetBinContent(hEy_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEy_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEy_cal_neg->GetBinContent(bin);
+      return scale.Global*hEy_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEy_cal_pos)return -1;
-    else return scale.Global*hEy_cal_pos->GetBinContent(hEy_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEy_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEy_cal_pos->GetBinContent(bin);
+      return scale.Global*hEy_cal_pos->GetBinContent(bin);
+    }
   }
 }
 
@@ -951,11 +971,19 @@ double SpaceCharge::GetEFieldZAtPoint(double x, double y, double z, const SCESca
     
   if(x < 0){
     if(!hEz_cal_neg)return -1;
-    else return scale.Global*hEz_cal_neg->GetBinContent(hEz_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEz_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEz_cal_neg->GetBinContent(bin);
+      return scale.Global*hEz_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEz_cal_pos)return -1;
-    else return scale.Global*hEz_cal_pos->GetBinContent(hEz_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEz_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEz_cal_pos->GetBinContent(bin);
+      return scale.Global*hEz_cal_pos->GetBinContent(bin);
+    }
   }
 }
 
@@ -1043,15 +1071,18 @@ TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid, 
   
   if((TPCid == 2 || TPCid == 6 || TPCid == 10) && p.X()>-20.){
     if(p.X()<0.) p = {0.00001, p.Y(), p.Z()};
-    Offsets = GetOffsets(p, CalSCEhistograms.at(0), CalSCEhistograms.at(1), CalSCEhistograms.at(2), 2, 2);
+    if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 0, scale);
+    else                Offsets = GetOffsets(p, CalSCEhistograms.at(0), CalSCEhistograms.at(1), CalSCEhistograms.at(2), 2, 2);
     Offsets[0] = -1.0*Offsets[0];
   } 
   else if((TPCid == 1 || TPCid == 5 || TPCid == 9) && p.X()<20.) {
     if(p.X()>0.) p= {-0.00001, p.Y(), p.Z()};
-    Offsets = GetOffsets(p, CalSCEhistograms.at(6), CalSCEhistograms.at(7), CalSCEhistograms.at(8), 2, 1);
+    if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 6, scale);
+    else                Offsets = GetOffsets(p, CalSCEhistograms.at(6), CalSCEhistograms.at(7), CalSCEhistograms.at(8), 2, 1);
     Offsets[0] = -1.0*Offsets[0];
   } 
 
+  if(scale.IsVoxel()) return Offsets;
   return scale.Global*Offsets;
 }
 
@@ -1097,16 +1128,19 @@ TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCi
   
  if((TPCid == 2 || TPCid == 6 || TPCid == 10) && p.X()>-20.){
    if(p.X()<0.) p = {0.00001, p.Y(), p.Z()};
-   Offsets= GetOffsets(p, CalSCEhistograms.at(3), CalSCEhistograms.at(4), CalSCEhistograms.at(5), 3, 2);
+   if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 3, scale);
+   else                Offsets = GetOffsets(p, CalSCEhistograms.at(3), CalSCEhistograms.at(4), CalSCEhistograms.at(5), 3, 2);
  }
  else if((TPCid == 1 || TPCid == 5 || TPCid == 9) && p.X()<20.){
    if(p.X()>0.) p = {-0.00001, p.Y(), p.Z()};
-   Offsets = GetOffsets(p, CalSCEhistograms.at(9), CalSCEhistograms.at(10), CalSCEhistograms.at(11), 3, 1);
+   if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 9, scale);
+   else                Offsets = GetOffsets(p, CalSCEhistograms.at(9), CalSCEhistograms.at(10), CalSCEhistograms.at(11), 3, 1);
  } 
  Offsets.SetX(-1.0*Offsets.X());
  Offsets.SetY(-1.0*Offsets.Y());
  Offsets.SetZ(-1.0*Offsets.Z());
  
+ if(scale.IsVoxel()) return Offsets;
  return scale.Global*Offsets;
 }
 
@@ -1192,4 +1226,118 @@ TVector3 SpaceCharge::ElectronDiverterPosOffsets(TVector3 const& point) const {
     }
   }
   return Offsets;
+}
+
+//********************************************************************
+void SpaceCharge::InitializeBasis(){
+//********************************************************************
+
+  // Cardinal basis of the natural cubic spline ("b2e2", 0, 0, as in MakeSpline)
+  // along the spline axis of each calibration map: Dx/Ex along x, Dy/Ey along y,
+  // Dz/Ez along z. The spline through values y_i is sum_i y_i*B_i, so a map whose
+  // nodes are scaled can be interpolated without building new splines.
+  for(int ih = 0; ih < 12; ih++){
+    TH3F* h = CalSCEhistograms.at(ih);
+    int dim = ih%3 + 1;
+    TAxis* axis = (dim == 1) ? h->GetXaxis() : (dim == 2) ? h->GetYaxis() : h->GetZaxis();
+    int n = axis->GetNbins();
+    std::vector<double> a(n), b(n);
+    for(int i = 0; i < n; i++) a[i] = axis->GetBinCenter(i+1);
+    for(int i = 0; i < n; i++){
+      for(int j = 0; j < n; j++) b[j] = (i == j) ? 1. : 0.;
+      _basis[ih].push_back(new TSpline3(Form("basis_%d_%d", ih, i), &a[0], &b[0], n, "b2e2", 0, 0));
+    }
+
+    // the same, as plain arrays
+    _basisKnots[ih].resize(n);
+    _basisCoef[ih].resize(4*n*n);
+    for(int i = 0; i < n; i++)
+      for(int k = 0; k < n; k++){
+        double xk, y, bb, c, d;
+        _basis[ih][i]->GetCoeff(k, xk, y, bb, c, d);
+        if(i == 0) _basisKnots[ih][k] = xk;
+        double* coef = &_basisCoef[ih][4*(i*n+k)];
+        coef[0] = y; coef[1] = bb; coef[2] = c; coef[3] = d;
+      }
+
+    int nbins = (h->GetNbinsX()+2)*(h->GetNbinsY()+2)*(h->GetNbinsZ()+2);
+    _mapContent[ih].resize(nbins);
+    for(int bin = 0; bin < nbins; bin++) _mapContent[ih][bin] = h->GetBinContent(bin);
+  }
+}
+
+//********************************************************************
+TVector3 SpaceCharge::GetOffsetsVoxel(TVector3 const& point, int ihist0, const SCEScaling& scale) const {
+//********************************************************************
+
+  return {InterpolateVoxel(ihist0  , point.X(), point.Y(), point.Z(), 1, scale),
+          InterpolateVoxel(ihist0+1, point.X(), point.Y(), point.Z(), 2, scale),
+          InterpolateVoxel(ihist0+2, point.X(), point.Y(), point.Z(), 3, scale)};
+}
+
+namespace{
+  // Neighbour bins used for the bilinear interpolation, as in
+  // SpaceCharge::InterpolateSplines (including the int bin center).
+  void SelectNeighbours(const TAxis* axis, double val, int& low, int& high){
+    int bin = axis->FindBin(val);
+    int bincenter = axis->GetBinCenter(bin);
+    int max = axis->GetNbins();
+    if(bin <= 1)            {low = 1;     high = 2;}
+    else if(bin >= max)     {low = max-1; high = max;}
+    else if(val > bincenter){low = bin;   high = bin+1;}
+    else                    {low = bin-1; high = bin;}
+  }
+}
+
+//********************************************************************
+double SpaceCharge::InterpolateVoxel(int ihist, double xVal, double yVal, double zVal, int dim, const SCEScaling& scale) const {
+//********************************************************************
+
+  TH3F* h = CalSCEhistograms.at(ihist);
+  int dv = (ihist < 6) ? 1 : 0; // CalSCEhistograms: 0-5 x>0, 6-11 x<0
+
+  // the two axes interpolated linearly, and the coordinate along the spline axis
+  const TAxis *axisA, *axisB;
+  double valA, valB, valS;
+  if(dim == 1)     {axisA = h->GetYaxis(); axisB = h->GetZaxis(); valA = yVal; valB = zVal; valS = xVal;}
+  else if(dim == 2){axisA = h->GetXaxis(); axisB = h->GetZaxis(); valA = xVal; valB = zVal; valS = yVal;}
+  else             {axisA = h->GetXaxis(); axisB = h->GetYaxis(); valA = xVal; valB = yVal; valS = zVal;}
+
+  int lowA, highA, lowB, highB;
+  SelectNeighbours(axisA, valA, lowA, highA);
+  SelectNeighbours(axisB, valB, lowB, highB);
+
+  // basis weights along the spline axis, as TSpline3::Eval: same interval
+  // for all the basis splines, since they share the knots
+  int n = _basisKnots[ihist].size();
+  int k = _basis[ihist][0]->FindX(valS);
+  if(k >= n-1 && n > 1) k = n-2;
+  double dx = valS - _basisKnots[ihist][k];
+  std::vector<double> w(n);
+  for(int i = 0; i < n; i++){
+    const double* c = &_basisCoef[ihist][4*(i*n+k)];
+    w[i] = c[0]+dx*(c[1]+dx*(c[2]+dx*c[3]));
+  }
+
+  // spline value at each of the four neighbour lines, with scaled nodes
+  const std::vector<double>& content = _mapContent[ihist];
+  int stride = (dim == 1) ? 1 : (dim == 2) ? h->GetNbinsX()+2 : (h->GetNbinsX()+2)*(h->GetNbinsY()+2);
+  auto line = [&](int iA, int iB){
+    int bin = (dim == 1) ? h->GetBin(1, iA, iB) : (dim == 2) ? h->GetBin(iA, 1, iB) : h->GetBin(iA, iB, 1);
+    double sum = 0;
+    for(int i = 0; i < n; i++, bin += stride)
+      sum += w[i]*scale.NodeFactor(dv, bin)*content[bin];
+    return sum;
+  };
+  double f_11 = line(lowA,  lowB);
+  double f_12 = line(lowA,  highB);
+  double f_21 = line(highA, lowB);
+  double f_22 = line(highA, highB);
+
+  double a_1 = axisA->GetBinCenter(lowA);
+  double a_2 = axisA->GetBinCenter(highA);
+  double b_1 = axisB->GetBinCenter(lowB);
+  double b_2 = axisB->GetBinCenter(highB);
+
+  return (f_11*(a_2-valA)*(b_2-valB) + f_21*(valA-a_1)*(b_2-valB) + f_12*(a_2-valA)*(valB-b_1) + f_22*(valA-a_1)*(valB-b_1))/((a_2-a_1)*(b_2-b_1));
 }
