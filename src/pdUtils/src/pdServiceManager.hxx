@@ -5,9 +5,10 @@
 
 class SpaceCharge;
 class Calorimetry;
+class PIDTables;
 
 /// Owns the services shared by corrections, systematics and analyses
-/// (nominal space charge map, calorimetry). Each service is created the
+/// (nominal space charge map, calorimetry, PID tables). Each service is created the
 /// first time it is requested and lives until the end of the program.
 /// Services are handed out as const: anything that changes per event or
 /// per toy (lifetime, ModBox parameters, varied SCE) is passed as an
@@ -26,6 +27,10 @@ public:
   /// Calorimetry, using the nominal space charge map
   const Calorimetry& Calo();
 
+  /// Tables that depend on the particle hypothesis (dE/dx templates,
+  /// kinetic energy vs range)
+  const PIDTables& PID();
+
   /// Print the services created so far
   void Print() const;
 
@@ -37,6 +42,7 @@ private:
 
   std::unique_ptr<SpaceCharge> _sce;
   std::unique_ptr<Calorimetry> _cal;
+  std::unique_ptr<PIDTables>   _pid;
 };
 
 namespace pd{

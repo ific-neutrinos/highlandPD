@@ -2,61 +2,15 @@
 #include "TSpline.h"
 #include "CategoryManager.hxx"
 #include "standardPDTree.hxx"
+#include "pdServiceManager.hxx"
+#include "PIDTables.hxx"
 #include <TH3F.h>
 #include <TH2F.h>
 #include <TF1.h>
 #include <Math/VavilovAccurate.h>
 
-//data for range-momentum conversion, muons
-//http://pdg.lbl.gov/2012/AtomicNuclearProperties/MUON_ELOSS_TABLES/muonloss_289.pdf divided by LAr density for cm
-
-float Range_grampercm_new[29] = {
-  9.833E-1/1.396, 1.786E0/1.396, 3.321E0/1.396, 6.598E0/1.396, 1.058E1/1.396, 3.084E1/1.396, 4.250E1/1.396, 6.732E1/1.396,
-  1.063E2/1.396,  1.725E2/1.396, 2.385E2/1.396, 4.934E2/1.396, 6.163E2/1.396, 8.552E2/1.396, 1.202E3/1.396, 1.758E3/1.396,
-  2.297E3/1.396,  4.359E3/1.396, 5.354E3/1.396, 7.298E3/1.396, 1.013E4/1.396, 1.469E4/1.396, 1.910E4/1.396, 3.558E4/1.396,
-  4.326E4/1.396,  5.768E4/1.396, 7.734E4/1.396, 1.060E5/1.396, 1.307E5/1.396};
-
-float KE_MeV_new[29]= {
-  10,    14,    20,    30,    40,     80,     100,    140,    200,   300,
-  400,   800,   1000,  1400,  2000,   3000,   4000,   8000,   10000, 14000,
-  20000, 30000, 40000, 80000, 100000, 140000, 200000, 300000, 400000};
-
-//data for range-momentum conversion, protons
-
-double Range_gpercm_P_Nist[31]={
-  1.887E-1/1.396, 3.823E-1/1.396, 6.335E-1/1.396, 1.296/1.396,   2.159/1.396,   7.375/1.396,   1.092E1/1.396, 2.215E1/1.396,
-  3.627E1/1.396,  5.282E1/1.396,  7.144E1/1.396,  9.184E1/1.396, 1.138E2/1.396, 1.370E2/1.396, 1.614E2/1.396, 1.869E2/1.396, 
-  2.132E2/1.396,  2.403E2/1.396,  2.681E2/1.396,  2.965E2/1.396, 3.254E2/1.396, 3.548E2/1.396, 3.846E2/1.396, 4.148E2/1.396, 
-  4.454E2/1.396,  7.626E2/1.396,  1.090E3/1.396,  1.418E3/1.396, 1.745E3/1.396, 2.391E3/1.396, 3.022E3/1.396};
-
-double KE_MeV_P_Nist[31]={
-  10,   15,   20,   30,   40,   80,   100, 150,
-  200,  250,  300,  350,  400,  450,  500, 550, 
-  600,  650,  700,  750,  800,  850,  900, 950, 
-  1000, 1500, 2000, 2500, 3000, 4000, 5000};
-
-TGraph const KEvsR(29, Range_grampercm_new, KE_MeV_new);
-TSpline3 const KEvsR_spline3("KEvsRS", &KEvsR);
-
-TGraph const RvsKE(29, KE_MeV_new, Range_grampercm_new);
-TSpline3 const RvsKE_spline3("RvsKES", &RvsKE);
-
-TGraph const RvsKE_P(31, KE_MeV_P_Nist, Range_gpercm_P_Nist);
-TSpline3 const RvsKE_P_spline3("RvsKE_P_S", &RvsKE_P);
-
-
-TFile* dEdX_template_file = new TFile( (std::string(getenv("PDUTILSROOT"))+"/data/dEdxrestemplates.root").c_str(), "OPEN" );
-std::map< int, TProfile* > templates;
-
-TProfile* ProtonTemplate = (TProfile*)dEdX_template_file->Get( "dedx_range_pro" );
-TProfile* MuonTemplate   = (TProfile*)dEdX_template_file->Get( "dedx_range_mu" );
-TProfile* KaonTemplate   = (TProfile*)dEdX_template_file->Get( "dedx_range_ka" );
-/*
-templates[ 211 ]  = (TProfile*)dEdX_template_file->Get( "dedx_range_pi"  );
-templates[ 321 ]  = (TProfile*)dEdX_template_file->Get( "dedx_range_ka"  );
-templates[ 13 ]   = (TProfile*)dEdX_template_file->Get( "dedx_range_mu"  );
-templates[ 2212 ] = (TProfile*)dEdX_template_file->Get( "dedx_range_pro" );
-*/
+// The dE/dx templates, kinetic energy vs range and NIST range tables are in
+// the PID service: pd::services().PID() (PIDTables)
 
 //*****************************************************************************
 Float_t pdAnaUtils::ComputeRangeMomentum(double trkrange, int pdg){
@@ -131,7 +85,7 @@ Float_t pdAnaUtils::ComputeRangeMomentum(double trkrange, int pdg){
   
   if (abs(pdg) == 13) {
     M = Muon_M;
-    KE = KEvsR_spline3.Eval(trkrange);
+    KE = pd::services().PID().GetMuonKEvsRange().Eval(trkrange);
   } else if (abs(pdg) == 2212) {
     M = Proton_M;
     if (trkrange > 0 && trkrange <= 80)
@@ -175,11 +129,11 @@ Float_t pdAnaUtils::ComputeCSDARange(double beammom, int pdg){
   if (abs(pdg) == 13) {
     M = Muon_M;
     KE = sqrt(beammom * beammom + M * M) - M;
-    CSDARange = RvsKE_spline3.Eval(KE);
+    CSDARange = pd::services().PID().GetMuonRangeVsKE().Eval(KE);
   } else if (abs(pdg) == 2212) {
     M = Proton_M;
     KE = sqrt(beammom * beammom + M * M) - M;
-    CSDARange = RvsKE_P_spline3.Eval(KE);
+    CSDARange = pd::services().PID().GetProtonRangeVsKE().Eval(KE);
   }
   else 
     CSDARange=-1;
@@ -313,9 +267,9 @@ std::pair< double, int > pdAnaUtils::Chi2PID(const AnaParticlePD& part, const in
 
   TProfile* profile;
   
-  if(pdg == 2212)profile = ProtonTemplate;
-  else if(pdg == 13)profile = MuonTemplate;
-  else if(pdg == 321)profile = KaonTemplate;
+  // TH1::FindBin is not const; with fixed axes it does not modify the template
+  if(pdg == 2212 || pdg == 13 || pdg == 321)
+    profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
   else{
     std::cout << "no profile for pdg " << pdg << std::endl;
     return std::make_pair(9999., -1);
@@ -373,9 +327,9 @@ std::pair< double, int > pdAnaUtils::Chi2PID_UpToRR(const AnaParticlePD& part, c
 
   TProfile* profile;
   
-  if(pdg == 2212)profile = ProtonTemplate;
-  else if(pdg == 13)profile = MuonTemplate;
-  else if(pdg == 321)profile = KaonTemplate;
+  // TH1::FindBin is not const; with fixed axes it does not modify the template
+  if(pdg == 2212 || pdg == 13 || pdg == 321)
+    profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
   else{
     std::cout << "no profile for pdg " << pdg << std::endl;
     return std::make_pair(9999., -1);
@@ -1116,7 +1070,7 @@ double pdAnaUtils::dEdxPDF(double *x, double *par){
 }
 
 //***************************************************************
-Float_t pdAnaUtils::dEdxLikelihood(TGraph* tg, TGraph* tg_ke, 
+Float_t pdAnaUtils::dEdxLikelihood(TGraph* tg, const TGraph* tg_ke, 
 				   Float_t mass){
 //***************************************************************
 
@@ -1170,8 +1124,7 @@ Float_t pdAnaUtils::GetdEdxLikelihood(AnaParticlePD* part, Int_t PDG){
     ssparticle = "proton";
     mass = 938.272;
   }
-  TFile* file_ke = TFile::Open((std::string(getenv("PDUTILSROOT"))+"/data/ke_vs_range.root").c_str(),"OPEN");
-  TGraph* tg_ke  = (TGraph*)file_ke->Get(ssparticle.c_str());
+  const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
   std::vector<double> dedx,rr;
@@ -1192,7 +1145,6 @@ Float_t pdAnaUtils::GetdEdxLikelihood(AnaParticlePD* part, Int_t PDG){
   Float_t result = dEdxLikelihood(tg,tg_ke,mass);
 
   delete tg;
-  file_ke->Close("R");
 
   return result;
 }
@@ -1224,8 +1176,7 @@ Float_t pdAnaUtils::GetdEdxLikelihood_UpToRR(AnaParticlePD* part, Int_t PDG, con
     ssparticle = "proton";
     mass = 938.272;
   }
-  TFile* file_ke = TFile::Open((std::string(getenv("PDUTILSROOT"))+"/data/ke_vs_range.root").c_str(),"OPEN");
-  TGraph* tg_ke  = (TGraph*)file_ke->Get(ssparticle.c_str());
+  const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
   std::vector<double> dedx,rr;
@@ -1241,13 +1192,12 @@ Float_t pdAnaUtils::GetdEdxLikelihood_UpToRR(AnaParticlePD* part, Int_t PDG, con
   Float_t result = dEdxLikelihood(tg,tg_ke,mass);
 
   delete tg;
-  file_ke->Close("R");
 
   return result;
 }
 
 //***************************************************************
-std::pair<Float_t,Float_t> pdAnaUtils::dEdxLikelihoodFreeRange(TGraph* tg, TGraph* tg_ke, 
+std::pair<Float_t,Float_t> pdAnaUtils::dEdxLikelihoodFreeRange(TGraph* tg, const TGraph* tg_ke, 
 					    Float_t mass){
 //***************************************************************
 
@@ -1314,8 +1264,7 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange(AnaParticlePD*
     ssparticle = "proton";
     mass = 938.272;
   }
-  TFile* file_ke = TFile::Open((std::string(getenv("PDUTILSROOT"))+"/data/ke_vs_range.root").c_str(),"OPEN");
-  TGraph* tg_ke  = (TGraph*)file_ke->Get(ssparticle.c_str());
+  const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
   std::vector<double> dedx,rr;
@@ -1330,7 +1279,6 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange(AnaParticlePD*
 
   std::pair<Float_t,Float_t>result = dEdxLikelihoodFreeRange(tg,tg_ke,mass);
   delete tg;
-  file_ke->Close("R");
   
   return result;
 }
@@ -1362,8 +1310,7 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR(AnaPart
     ssparticle = "proton";
     mass = 938.272;
   }
-  TFile* file_ke = TFile::Open((std::string(getenv("PDUTILSROOT"))+"/data/ke_vs_range.root").c_str(),"OPEN");
-  TGraph* tg_ke  = (TGraph*)file_ke->Get(ssparticle.c_str());
+  const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
   std::vector<double> dedx,rr;
@@ -1378,7 +1325,6 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR(AnaPart
 
   std::pair<Float_t,Float_t>result = dEdxLikelihoodFreeRange(tg,tg_ke,mass);
   delete tg;
-  file_ke->Close("R");
   
   return result;
 }

@@ -88,11 +88,11 @@ namespace pdAnaUtils{
 
   Float_t GetdEdxLikelihood(AnaParticlePD* part, Int_t PDG);
   Float_t GetdEdxLikelihood_UpToRR(AnaParticlePD* part, Int_t PDG, const double maxRR);
-  Float_t dEdxLikelihood(TGraph* tg, TGraph* tg_ke, 
+  Float_t dEdxLikelihood(TGraph* tg, const TGraph* tg_ke, 
 			 Float_t mass);
   std::pair<Float_t,Float_t> GetdEdxLikelihoodFreeRange(AnaParticlePD* part, Int_t PDG);
   std::pair<Float_t,Float_t> GetdEdxLikelihoodFreeRange_UpToRR(AnaParticlePD* part, Int_t PDG, const double maxRR);
-  std::pair<Float_t,Float_t> dEdxLikelihoodFreeRange(TGraph* tg, TGraph* tg_ke, 
+  std::pair<Float_t,Float_t> dEdxLikelihoodFreeRange(TGraph* tg, const TGraph* tg_ke, 
 				  Float_t mass);
   double GetDensityCorrection(double beta, double gamma);
   double GetdEdxBetheBloch(double KE, double mass);
