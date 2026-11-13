@@ -13,10 +13,6 @@
 #include "HighlandMiniTreeConverter.hxx"
 #include "PDSPAnalyzerTreeConverter.hxx"
 
-#include "dQdxCalVariation.hxx"
-#include "dQdxXCalVariation.hxx"
-#include "dQdxYZCalVariation.hxx"
-#include "dQdxNormVariation.hxx"
 #include "RecombinationVariation.hxx"
 #include "ResidualRangeVariation.hxx"
 #include "BeamPartIdEffWeight.hxx"
@@ -29,7 +25,6 @@
 
 #include "HitPitchSCECorrection.hxx"
 #include "HitPositionSCECorrection.hxx"
-#include "CalorimetryCalibration.hxx"
 #include "ParticlePositionSCECorrection.hxx"
 #include "DaughterFinderCorrection.hxx"
 #include "dEdxMCCorrection.hxx"
