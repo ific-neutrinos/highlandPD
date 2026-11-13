@@ -57,7 +57,6 @@ void DaughterFinderCorrection::Apply(AnaSpillC& spillC){
 	  dis = sqrt(dis);
 	  if(dis<2)_n_dis_below_2++;
 	}
-	std::cout << _n_reco << " (" << _n_dis_below_2 << "), " << _n_abs << std::endl;
 	
       }
     }

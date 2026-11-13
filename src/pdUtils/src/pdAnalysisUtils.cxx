@@ -1138,7 +1138,6 @@ Float_t pdAnaUtils::dEdxLikelihood(TGraph* tg, TGraph* tg_ke,
     if(pdf->Eval(dEdx) == 0)continue;
     else
       likelihood += log(pdf->Eval(dEdx));
-    std::cout << "MASS: " << mass << " RR: " << range << " DEDX: " << dEdx << " KE: " << ke << " KAPPA: " << kappa << " WMAX: " << Wmax << " XI: " << xi << " LKL: " << likelihood << std::endl; 
   }
   delete pdf;
   return likelihood;
