@@ -347,6 +347,7 @@ bool DrawingTestAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   for(int ican = 0; ican < (int)box.Candidates.size(); ican++){
     AnaParticlePD* candidate = box.Candidates[ican];
     //get daughter
+    if(candidate->Daughters.empty())continue;
     AnaParticlePD* dau = static_cast<AnaParticlePD*>(candidate->Daughters[0]);
     //skip if not forced
     if(!candidate->forced_daughter)continue;

@@ -61,7 +61,7 @@ void Calorimetry::CreateNormHistogram(){
   
   //check it exits
   if(!tf){
-    std::cout << "Can't open file " << filename << std::endl;
+    std::cerr << "Calorimetry. Can't open file " << filename << std::endl;
     exit(1);
   }
 
@@ -91,7 +91,7 @@ void Calorimetry::CreateXCalHistogram(){
   
   //check it exits
   if(!tf){
-    std::cout << "Can't open file " << filename << std::endl;
+    std::cerr << "Calorimetry. Can't open file " << filename << std::endl;
     exit(1);
   }
 
@@ -144,7 +144,7 @@ void Calorimetry::CreateYZCalHistogram(){
   
   //check it exits
   if(!tf){
-    std::cout << "Can't open file " << filename << std::endl;
+    std::cerr << "Calorimetry. Can't open file " << filename << std::endl;
     exit(1);
   }
 
@@ -227,7 +227,7 @@ void Calorimetry::CalibratedQdx(AnaHitPD &hit) const {
   
   //check plane ID
   if(hit.PlaneID < 0 || hit.PlaneID > 2){
-    std::cout << "wrong plane!" << std::endl;
+    std::cerr << "Calorimetry::CalibratedQdx(). Wrong plane " << hit.PlaneID << std::endl;
     return;
   }
 
@@ -249,7 +249,7 @@ void Calorimetry::ApplyNormalization(AnaHitPD &hit) const {
 //********************************************************************
 
   if(!_h_norm){
-    std::cout << "normalization histogram does not exist, you should call Initialize method!" << std::endl;
+    std::cerr << "Calorimetry. Normalization histogram does not exist" << std::endl;
     return;
   }
 
@@ -262,7 +262,7 @@ void Calorimetry::ApplyXCalibration(AnaHitPD &hit) const {
 
   for(int i = 0; i < 3; i++){
     if(!_h_XCal[i]){
-      std::cout << "X correction histogram does not exist, you should call Initialize method!" << std::endl;
+      std::cerr << "Calorimetry. X calibration histogram does not exist" << std::endl;
       return;
     } 
   }
@@ -278,7 +278,7 @@ void Calorimetry::ApplyYZCalibration(AnaHitPD &hit) const {
   for(int i = 0; i < 3; i++){
     for(int j = 0; j < 2; j++){
       if(!_h_YZCal[i][j]){
-	std::cout << "X correction histogram does not exist, you should call Initialize method!" << std::endl;
+	std::cerr << "Calorimetry. YZ calibration histogram does not exist" << std::endl;
 	return;
       } 
     }
@@ -338,7 +338,7 @@ double Calorimetry::GetNormalization(AnaHitPD &hit) const {
 //********************************************************************
 
   if(!_h_norm){
-    std::cout << "normalization histogram does not exist, you should call Initialize method!" << std::endl;
+    std::cerr << "Calorimetry. Normalization histogram does not exist" << std::endl;
     return 0.;
   }
 
@@ -351,7 +351,7 @@ double Calorimetry::GetXCalibration(AnaHitPD &hit) const {
 
   for(int i = 0; i < 3; i++){
     if(!_h_XCal[i]){
-      std::cout << "X correction histogram does not exist, you should call Initialize method!" << std::endl;
+      std::cerr << "Calorimetry. X calibration histogram does not exist" << std::endl;
       return 0.;
     } 
   }
@@ -367,7 +367,7 @@ double Calorimetry::GetYZCalibration(AnaHitPD &hit) const {
   for(int i = 0; i < 3; i++){
     for(int j = 0; j < 2; j++){
       if(!_h_YZCal[i][j]){
-	std::cout << "X correction histogram does not exist, you should call Initialize method!" << std::endl;
+	std::cerr << "Calorimetry. YZ calibration histogram does not exist" << std::endl;
 	return 0.;
       } 
     }

@@ -35,7 +35,7 @@ void BeamMomSmearingCorrection::Apply(AnaSpillC& spillC){
   else if(_NominalBeamMom == 2)smearing = 0.124;
   else if(_NominalBeamMom == 3)smearing = 0.210;
   else{
-    std::cout << "beam mom " << _NominalBeamMom << " not contemplated" << std::endl;
+    std::cerr << "BeamMomSmearingCorrection::Apply(). Nominal beam momentum " << _NominalBeamMom << " GeV not contemplated (only 1, 2 or 3)" << std::endl;
     std::exit(1);
   }
 

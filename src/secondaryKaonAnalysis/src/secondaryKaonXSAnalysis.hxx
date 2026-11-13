@@ -103,7 +103,7 @@ public:
   };
 
   enum enumSyst_secondaryKaonXSAnalysis{
-    kdQdxCalibration=0,
+    kdEdxVariation=0,
     kRecombination,
     kSCEGeometric,
     kBrokenTracks,

@@ -120,6 +120,7 @@ bool MuonIsTrackCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   //make sure there is a candidate for this branch
   if(branchesIDs[0] > box.Candidates.size()-1)return false;
 
+  if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   if(!dau)return false;
   if(dau->Type == 2){
@@ -142,6 +143,7 @@ bool MuonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
   //if there is kaon, cut in its daughter chi2
+  if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   if(dau->Chi2Muon / dau->Chi2ndf > _lower_cut && dau->Chi2Muon / dau->Chi2ndf < _upper_cut && dau->Chi2Muon > 0){
     box.UpdateBestCandidateIndex(Index(),branchesIDs[0]);
@@ -163,6 +165,7 @@ bool MuonCNNCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
   //if there is kaon, cut in its daughter CNN score
+  if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   if(dau->CNNscore[0] > _lower_cut && dau->CNNscore[0] < _upper_cut){
     box.UpdateBestCandidateIndex(Index(),branchesIDs[0]);
@@ -184,6 +187,7 @@ bool MuonRangeMomCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
   //if there is kaon, cut in its daughter range mom
+  if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   double mom = pdAnaUtils::ComputeRangeMomentum(dau->Length,13);
   if(mom > _lower_cut && mom < _upper_cut){
@@ -227,6 +231,7 @@ bool KaonMuonAngleCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   //if there is kaon, cut on the angle between it and its daughter muon
   AnaParticlePD* kaon = box.Candidates[branchesIDs[0]];
+  if(kaon->Daughters.empty())return false;
   AnaParticlePD* muon = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   double cos = 0;
   for(int i = 0; i < 3; i++)cos = cos + kaon->DirectionEnd[i] * muon->DirectionStart[i];
@@ -251,6 +256,7 @@ bool KaonMuonDistanceCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   //if there is kaon, cut on the distance between it and its daughter muon
   AnaParticlePD* kaon = box.Candidates[branchesIDs[0]];
+  if(kaon->Daughters.empty())return false;
   AnaParticlePD* muon = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
   double dis = 0;
   for(int i = 0; i < 3; i++)dis = dis + pow(kaon->PositionEnd[i] - muon->PositionStart[i],2);

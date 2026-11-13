@@ -49,6 +49,7 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
 	nCandidatesAndDaughters++;
       }
       //now go for the daughter
+      if(part->Daughters.empty())continue; //daughter not in the event
       AnaParticleB* dau = static_cast<AnaParticleB*>(part->Daughters[0]);
       if(!dau)continue;
       added = false;

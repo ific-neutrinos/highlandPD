@@ -131,7 +131,7 @@ Int_t pdBaseConverter::GetSpill(Long64_t& entry, AnaSpillC*& spill){
     FillInfo(_spill);
   }
   else{
-    std::cout << "Failed in reading entry " << entry << std::endl;
+    std::cerr << "pdBaseConverter::GetSpill(). Failed in reading entry " << entry << std::endl;
   }
 
   entry++;

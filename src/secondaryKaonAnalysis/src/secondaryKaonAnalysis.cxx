@@ -141,7 +141,7 @@ void secondaryKaonAnalysis::DefineSystematics(){
   if(_ApplySCESystematic)
     evar().AddEventVariation(kSCEGeometric     ,"SCE variation",           new SCEGeometricVariation());
   if(_ApplydQdxSystematic)
-    evar().AddEventVariation(kdQdxCalibration  ,"dEdx variation",          new dEdxVariation());
+    evar().AddEventVariation(kdEdxVariation  ,"dEdx variation",          new dEdxVariation());
   if(_ApplyRecombinationSystematic)
     evar().AddEventVariation(kRecombination    ,"Recombination variation", new RecombinationVariation());
   if(_ApplyBrokenTracksSystematic)
@@ -168,7 +168,7 @@ void secondaryKaonAnalysis::DefineConfigurations(){
     if(_ApplySCESystematic)
       conf().EnableEventVariation(kSCEGeometric,all_syst);
     if(_ApplydQdxSystematic)
-      conf().EnableEventVariation(kdQdxCalibration,all_syst);
+      conf().EnableEventVariation(kdEdxVariation,all_syst);
     if(_ApplyRecombinationSystematic)
       conf().EnableEventVariation(kRecombination,all_syst);
     if(_ApplyBrokenTracksSystematic)

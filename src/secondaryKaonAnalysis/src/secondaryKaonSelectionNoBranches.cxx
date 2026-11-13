@@ -71,6 +71,7 @@ bool secondaryKaonSelectionNoBranches::IsSuperCandidate(AnaParticlePD* part){
 bool secondaryKaonSelectionNoBranches::MuonIsTrack(AnaParticlePD* part){
 //**************************************************
 
+  if(part->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(part->Daughters[0]);
   if(!dau)return false;
   if(dau->Type == 2)
@@ -82,6 +83,7 @@ bool secondaryKaonSelectionNoBranches::MuonIsTrack(AnaParticlePD* part){
 bool secondaryKaonSelectionNoBranches::MuonChi2(AnaParticlePD* part){
 //**************************************************
 
+  if(part->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(part->Daughters[0]);
   if(!dau)return false;
   if(dau->Chi2Muon / dau->Chi2ndf > 0.5 && dau->Chi2Muon / dau->Chi2ndf < 6.0 && dau->Chi2Muon > 0)
@@ -93,6 +95,7 @@ bool secondaryKaonSelectionNoBranches::MuonChi2(AnaParticlePD* part){
 bool secondaryKaonSelectionNoBranches::MuonMom(AnaParticlePD* part){
 //**************************************************
 
+  if(part->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(part->Daughters[0]);
   if(!dau)return false;
   double mom = pdAnaUtils::ComputeRangeMomentum(dau->Length,13);
@@ -105,6 +108,7 @@ bool secondaryKaonSelectionNoBranches::MuonMom(AnaParticlePD* part){
 bool secondaryKaonSelectionNoBranches::KaonMuonAngle(AnaParticlePD* part){
 //**************************************************
   
+  if(part->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(part->Daughters[0]);
   if(!dau || !part)return false;
   double cos = 0;
@@ -118,6 +122,7 @@ bool secondaryKaonSelectionNoBranches::KaonMuonAngle(AnaParticlePD* part){
 bool secondaryKaonSelectionNoBranches::KaonMuonDistance(AnaParticlePD* part){
 //**************************************************
   
+  if(part->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(part->Daughters[0]);
   if(!dau || !part)return false;
   double dis = 0;

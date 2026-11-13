@@ -115,7 +115,7 @@ void SpaceCharge::Initialize(){
   
   //check it exits
   if(!fInputFile){
-    std::cout << "Can't open file " << fInputFilename << std::endl;
+    std::cerr << "SpaceCharge::Initialize(). Can't open file " << fInputFilename << std::endl;
     exit(1);
   }
   
@@ -219,7 +219,7 @@ void SpaceCharge::InitializeHistogram(TH3F** h, const char* histo, const char* n
 
   FILE* pFile = fopen(filename.c_str(),"r");
   if(!pFile){
-    std::cout << "cannot open file " << filename << std::endl;
+    std::cerr << "SpaceCharge::InitializeHistogram(). Can't open file " << filename << std::endl;
     std::exit(1);
   }
 
@@ -227,13 +227,13 @@ void SpaceCharge::InitializeHistogram(TH3F** h, const char* histo, const char* n
   double xmin, xmax, ymin, ymax, zmin, zmax;
 
   if(fscanf(pFile,"%d %lf %lf",&nbinsx,&xmin,&xmax)!=3)
-    std::cout << "Can't read X binnng " << std::endl;
+    std::cerr << "SpaceCharge::InitializeHistogram(). Can't read X binning in " << filename << std::endl;
 
   if(fscanf(pFile,"%d %lf %lf",&nbinsy,&ymin,&ymax)!=3)
-    std::cout << "Can't read Y binnng " << std::endl;
+    std::cerr << "SpaceCharge::InitializeHistogram(). Can't read Y binning in " << filename << std::endl;
 
   if(fscanf(pFile,"%d %lf %lf",&nbinsz,&zmin,&zmax)!=3)
-    std::cout << "Can't read Z binnng " << std::endl;
+    std::cerr << "SpaceCharge::InitializeHistogram(). Can't read Z binning in " << filename << std::endl;
 
   //create and fill 3d histogram
   *h = new TH3F(newname, "",
@@ -429,7 +429,7 @@ TSpline3* SpaceCharge::MakeSpline(TH3F* spline_hist, int dim1, int dim2_bin, int
     }
   }
   else {
-    std::cout << "Unkown dimension " << dim1 << std::endl;
+    std::cerr << "SpaceCharge::MakeSpline(). Unknown dimension " << dim1 << std::endl;
     std::exit(1);
   }
 

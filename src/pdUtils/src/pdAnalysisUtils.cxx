@@ -271,7 +271,7 @@ std::pair< double, int > pdAnaUtils::Chi2PID(const AnaParticlePD& part, const in
   if(pdg == 2212 || pdg == 13 || pdg == 321)
     profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
   else{
-    std::cout << "no profile for pdg " << pdg << std::endl;
+    std::cerr << "pdAnaUtils::Chi2PID(). No dE/dx template for pdg " << pdg << std::endl;
     return std::make_pair(9999., -1);
   }
   
@@ -331,7 +331,7 @@ std::pair< double, int > pdAnaUtils::Chi2PID_UpToRR(const AnaParticlePD& part, c
   if(pdg == 2212 || pdg == 13 || pdg == 321)
     profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
   else{
-    std::cout << "no profile for pdg " << pdg << std::endl;
+    std::cerr << "pdAnaUtils::Chi2PID(). No dE/dx template for pdg " << pdg << std::endl;
     return std::make_pair(9999., -1);
   }
   
@@ -663,7 +663,7 @@ Float_t pdAnaUtils::ComputeDistanceMotherDaughter(AnaParticlePD* mother, AnaPart
 //***************************************************************
 
   if(!mother || !daughter){
-    std::cout << "ComputeDistanceMotherDaughter: one of the particles does not exist" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeDistanceMotherDaughter(). One of the particles does not exist" << std::endl;
     std::cout << "Returning -999" << std::endl;
     return -999.;
   }
@@ -679,7 +679,7 @@ Float_t pdAnaUtils::ComputeCosMotherDaughter(AnaParticlePD* mother, AnaParticleP
 //***************************************************************
 
   if(!mother || !daughter){
-    std::cout << "ComputeCosMotherDaughter: one of the particles does not exist" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeCosMotherDaughter(). One of the particles does not exist" << std::endl;
     std::cout << "Returning -999" << std::endl;
     return -999.;
   }
@@ -694,7 +694,7 @@ Float_t pdAnaUtils::ComputeAveragedEdxOverResRange(AnaParticlePD* part, double m
 //***************************************************************
 
   if(!part){
-    std::cout << "ComputeAveragedEdxOverResRange: particle does not exist" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeAveragedEdxOverResRange(). Particle does not exist" << std::endl;
     std::cout << "Returning -999" << std::endl;
     return -999.;
   }
