@@ -33,7 +33,7 @@ namespace standardPDTree{
   // Methods to fill the standard sets of variables in the output tree
   void FillStandardVariables_CountersTrue(OutputManager& output, PDCounters& counters);
   
-  void FillStandardVariables_EventInfo(OutputManager& output, AnaEventInfoPD* info);
+  void FillStandardVariables_EventInfo(OutputManager& output, AnaEventPD* event);
 
   void FillStandardVariables_BeamInstrumentationTrue(OutputManager& output, AnaBeamB* beamB);
   void FillStandardVariables_BeamInstrumentationReco(OutputManager& output, AnaBeamB* beamB);
@@ -242,6 +242,7 @@ namespace standardPDTree{
     beam_trueendproc,
 
     // beam reco info
+    beam_quality,
     beam_endpos,          
     beam_enddir,          
     beam_mom,                                 

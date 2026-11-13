@@ -32,7 +32,7 @@ void RecombinationDataCorrection::Apply(AnaSpillC& spillC){
   double beta_new  = 0.195;
 
   //calibration constant ratio
-  double C_ratio = 0.98;//1.01;//0.98;
+  double C_ratio = 0.995;
 
   // Loop over particles
   for(Int_t ipart = 0; ipart < (Int_t)bunch->Particles.size(); ipart++){

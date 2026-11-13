@@ -148,7 +148,7 @@ void secondaryProtonAnalysis::FillMicroTrees(bool addBase){
   if (addBase) baseAnalysis::FillMicroTreesBase(addBase); 
   
   // Fill standard variables for the PD analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::FillStandardVariables_EventInfo(        output(), static_cast<AnaEventInfoPD*>(GetEvent().EventInfo));
+  standardPDTree::FillStandardVariables_EventInfo(        output(), &GetEvent());
   standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
   standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack);

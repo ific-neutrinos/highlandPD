@@ -36,6 +36,8 @@ public:
 
   void ApplyPositionCorrection(AnaParticlePD* part) const;
   void ApplyPositionCorrection(AnaHitPD& hit) const;
+  void ApplyPitchCorrection(AnaParticlePD* part) const;
+  void ApplyPitchCorrection(AnaHitPD& hit) const;
 
   void ApplyTrjPointPositionCorrection(AnaParticlePD* part) const;
   void ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp) const;

@@ -34,6 +34,7 @@ namespace pdAnaUtils{
 
   // retreieve the BI particle
   AnaParticlePD* GetBeamParticle(const AnaEventC& event);
+  AnaParticlePD* GetBeamParticleInTPC(const AnaEventPD* event);
 
   // retreieve the true BI particle
   AnaTrueParticlePD* GetTrueBeamParticle(const AnaEventC& event);
@@ -79,6 +80,7 @@ namespace pdAnaUtils{
 
   Double_t ComputeDistanceToClosestParticle(AnaParticlePD* part, AnaParticleB** parts, const int nparts);
 
+  bool GetBeamQuality(AnaEventPD* event);
   void GetBeamQualityCuts(AnaEventPD* event, 
 			  double &mean_x, double &mean_y, double &mean_z,
 			  double &sigma_x, double &sigma_y, double &sigma_z,

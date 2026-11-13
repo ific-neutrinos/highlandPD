@@ -112,6 +112,7 @@ void StoppingProtonAnalysis::DefineMicroTrees(bool addBase){
 
   //bestcandidate variables (for comparative with kaons)
   kaonTree::AddKaonVariables_KaonBestCandidateReco    (output());
+  kaonTree::AddKaonVariables_KaonBestCandidateRecoPID    (output());
   kaonTree::AddKaonVariables_KaonBestCandidateTrue    (output());
 }
 
@@ -141,6 +142,7 @@ void StoppingProtonAnalysis::FillMicroTrees(bool addBase){
     standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack, beamPart);
     standardPDTree::FillStandardVariables_BeamParticleTrue(    output(), box().MainTrack);    
     kaonTree::FillKaonVariables_KaonBestCandidateReco    (output(), box().MainTrack);
+    kaonTree::FillKaonVariables_KaonBestCandidateRecoPID    (output(), box().MainTrack);
     kaonTree::FillKaonVariables_KaonBestCandidateTrue    (output(), box().MainTrack);
   }
 }

@@ -21,7 +21,8 @@ namespace kaonTree{
   void AddKaonVariables_KaonBestCandidateTrue(OutputManager& output);
 
   // Methods to fill the kaonAnalysis sets of variables in the output tree
-  void FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart);
+  //void FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart);
+  void FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart, const AnaTrueParticlePD* trueDau);
 
   void FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaParticlePD* part, AnaParticlePD* parent = NULL);
   void FillKaonVariables_KaonCandidatesRecoPID(OutputManager& output, AnaParticlePD* part);

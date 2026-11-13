@@ -264,6 +264,9 @@ protected:
 
 public:
 
+  /// Is this a truth signal object? Quite useful, potentially could be added in CoreDataClasses in AnaTrueObject
+  Bool_t Signal;
+
   /// Vector Pi0 decays IDs
   std::vector<Int_t> Pi0_decay_ID; 
 

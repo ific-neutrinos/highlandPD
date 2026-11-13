@@ -64,7 +64,7 @@ bool secondaryKaonSelectionNoBranches::IsSuperCandidate(AnaParticlePD* part){
 //**************************************************
 
   return (MuonIsTrack(part) && MuonChi2(part) && MuonMom(part) &&
-	  KaonMuonAngle(part) && KaonMuonDistance(part));
+	  KaonMuonAngle(part) && KaonMuonDistance(part) && KaonInFV(part));
 }
 
 //**************************************************
@@ -124,6 +124,15 @@ bool secondaryKaonSelectionNoBranches::KaonMuonDistance(AnaParticlePD* part){
   for(int i = 0; i < 3; i++)dis = dis + pow(part->PositionEnd[i] - dau->PositionStart[i],2);
   dis = sqrt(dis);
   if(dis > 0 && dis < 7.7)
+    return true;  
+  else return false; 
+}
+
+//**************************************************
+bool secondaryKaonSelectionNoBranches::KaonInFV(AnaParticlePD* part){
+//**************************************************
+  
+  if(part->PositionStart[2] > 33 && part->PositionEnd[2] > 33)
     return true;  
   else return false; 
 }

@@ -110,7 +110,7 @@ void BeamWeights::FillMicroTrees(bool addBase){
   // Variables from baseAnalysis (run, event, ...)  (highland/src/highland2/baseAnalysis)
   if(addBase) baseAnalysis::FillMicroTreesBase(addBase); 
 
-  standardPDTree::FillStandardVariables_EventInfo(        output(), static_cast<AnaEventInfoPD*>(GetEvent().EventInfo));
+  standardPDTree::FillStandardVariables_EventInfo(        output(), &GetEvent());
   standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
 }

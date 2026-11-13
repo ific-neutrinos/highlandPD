@@ -34,6 +34,8 @@ void SCECorrection::Apply(AnaSpillC& spillC){
     if (!original) continue; //?
 
     //here position start and end should be modified but tpcid is missing. It could just be estimated. Im lazy right now to do it.
+    //I am really sorry but I don't now if the statement above is trueor false, or if it has any relevance in the analysis. 
+    //I'm gonna ignore it (Migue, 27/03/2025)
 
     for(int ihit = 0; ihit < part->Hits[2].size(); ihit++){
       _sce->ApplyPositionCorrection(part->Hits[2][ihit]);

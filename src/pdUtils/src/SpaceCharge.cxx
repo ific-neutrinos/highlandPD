@@ -887,6 +887,38 @@ void SpaceCharge::ApplyTrjPointDirectionCorrection(AnaParticlePD* part) const {
 }
 
 //********************************************************************
+void SpaceCharge::ApplyPitchCorrection(AnaParticlePD* part) const {
+//********************************************************************
+
+  if(!part)return;
+  for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
+    ApplyPitchCorrection(part->Hits[2][ihit]);
+}
+
+//********************************************************************
+void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
+//********************************************************************
+
+  TVector3 hitpos = hit.Position_NoSCE;
+  TVector3 hitdir = hit.Direction_NoSCE;
+  
+  //compute projection of YZ plane to wire width (Z direction for collection)
+  double AngleToVert = 0; //only for collection plane, which is vertical. 
+  double cosgamma = abs(sin(AngleToVert)*hitdir.Y() + cos(AngleToVert)*hitdir.Z());
+  double pitch = 0.4792 / cosgamma; //collection wire pitch
+  
+  //correct pitch by SCE effect
+  TVector3 dirProjection(hitpos.X()+pitch*hitdir.X(),hitpos.Y()+pitch*hitdir.Y(),hitpos.Z()+pitch*hitdir.Z());
+  TVector3 dirOffset = GetCalPosOffsets(dirProjection, hit.TPCid);
+  TVector3 posOffset = GetCalPosOffsets(hitpos, hit.TPCid);
+  TVector3 dirCorrection(pitch*hitdir.X() - dirOffset.X() + posOffset.X(),
+			 pitch*hitdir.Y() + dirOffset.Y() - posOffset.Y(),
+			 pitch*hitdir.Z() + dirOffset.Z() - posOffset.Z());
+  pitch = dirCorrection.Mag();
+  hit.Pitch = pitch;
+}
+
+//********************************************************************
 UInt_t SpaceCharge::GetNbinsX() const {
 //********************************************************************
     

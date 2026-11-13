@@ -118,4 +118,20 @@ class ProtonChi2Cut: public StepBase{
   StepBase* MakeClone(){return new ProtonChi2Cut();}
 };
 
+class KaonChi2Cut: public StepBase{
+ public:
+  using StepBase::StepBase;
+  using StepBase::Apply;
+  bool Apply(AnaEventC& event, ToyBoxB& box) const;
+  StepBase* MakeClone(){return new KaonChi2Cut();}
+};
+
+class FVCut: public StepBase{
+ public:
+  using StepBase::StepBase;
+  using StepBase::Apply;
+  bool Apply(AnaEventC& event, ToyBoxB& box) const;
+  StepBase* MakeClone(){return new FVCut();}
+};
+
 #endif
