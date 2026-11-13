@@ -1,4 +1,5 @@
 #include "dEdxMCScaleCorrection.hxx"
+#include "pdDataFiles.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,7 +9,7 @@
 dEdxMCScaleCorrection::dEdxMCScaleCorrection(){
 //********************************************************************
 
-  _params = new BinnedParams(std::string(getenv("PDCORRECTIONSROOT"))+"/data","dEdxMCScale", BinnedParams::k1D_SYMMETRIC,"",true);
+  _params = new BinnedParams(pd::DataDir("pdCorrections"),"dEdxMCScale", BinnedParams::k1D_SYMMETRIC,"",true);
 
 }
 

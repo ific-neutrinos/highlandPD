@@ -1,10 +1,11 @@
 #include "BeamCompositionWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
 
 //********************************************************************
-BeamCompositionWeight::BeamCompositionWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","beamComp", BinnedParams::k2D_SYMMETRIC){
+BeamCompositionWeight::BeamCompositionWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"beamComp", BinnedParams::k2D_SYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

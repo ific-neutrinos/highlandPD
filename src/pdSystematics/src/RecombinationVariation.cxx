@@ -1,4 +1,5 @@
 #include "RecombinationVariation.hxx"
+#include "pdDataFiles.hxx"
 #include "pdServiceManager.hxx"
 #include "pdAnalysisUtils.hxx"
 
@@ -6,8 +7,8 @@
 RecombinationVariation::RecombinationVariation():EventVariationBase(),BinnedParams(){
 //********************************************************************
 
-  _BP_A = new BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","RecombinationA", BinnedParams::k1D_SYMMETRIC);
-  _BP_B = new BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","RecombinationB", BinnedParams::k1D_SYMMETRIC);
+  _BP_A = new BinnedParams(pd::DataDir("pdSystematics"),"RecombinationA", BinnedParams::k1D_SYMMETRIC);
+  _BP_B = new BinnedParams(pd::DataDir("pdSystematics"),"RecombinationB", BinnedParams::k1D_SYMMETRIC);
 
   // Read the systematic source parameters from the data files
   SetNParameters(_BP_A->GetNBins()+_BP_B->GetNBins());

@@ -1,9 +1,10 @@
 #include "LifetimeVariation.hxx"
+#include "pdDataFiles.hxx"
 #include "pdServiceManager.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
-LifetimeVariation::LifetimeVariation():EventVariationBase(),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","Lifetime", BinnedParams::k1D_SYMMETRIC_NOMEAN){
+LifetimeVariation::LifetimeVariation():EventVariationBase(),BinnedParams(pd::DataDir("pdSystematics"),"Lifetime", BinnedParams::k1D_SYMMETRIC_NOMEAN){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

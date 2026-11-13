@@ -1,10 +1,11 @@
 #include "NominalBeamMomWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
 
 //********************************************************************
-NominalBeamMomWeight::NominalBeamMomWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","NominalBeamMom", BinnedParams::k1D_SYMMETRIC){
+NominalBeamMomWeight::NominalBeamMomWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"NominalBeamMom", BinnedParams::k1D_SYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

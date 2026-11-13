@@ -1,4 +1,5 @@
 #include "ProtonBackgroundWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
@@ -6,7 +7,7 @@
 #include "SystematicUtils.hxx"
 
 //********************************************************************
-ProtonBackgroundWeight::ProtonBackgroundWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","ProtonBackgroundWeight", BinnedParams::k1D_SYMMETRIC){
+ProtonBackgroundWeight::ProtonBackgroundWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"ProtonBackgroundWeight", BinnedParams::k1D_SYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

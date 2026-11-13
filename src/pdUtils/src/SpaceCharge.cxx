@@ -2,6 +2,7 @@
 
 #include "SpaceCharge.hxx"
 #include "Parameters.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
@@ -109,8 +110,7 @@ void SpaceCharge::Initialize(){
   fEDChargeLossZHighMin               = 233.;//ND::params().GetParameterF("EDChargeLossZHighMin");
   fEDChargeLossZHighMax               = 465.;//ND::params().GetParameterF("EDChargeLossZHighMax");
   
-  fInputFilename = std::string(getenv("PDUTILSROOT"))+"/data/SCE_DataDriven_180kV_v4.root";
-  //fInputFilename = std::string(getenv("PDUTILSROOT"))+"/data/SCE_Alternate_v4_EField.root";
+  fInputFilename = pd::DataFile("pdUtils", ND::params().GetParameterS("pdUtils.SCE.MapFile"));
   fInputFile = new TFile(fInputFilename.c_str(), "OPEN");
   
   //check it exits

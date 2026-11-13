@@ -1,4 +1,5 @@
 #include "KaonEnergyCorrection.hxx"
+#include "pdDataFiles.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,7 +9,7 @@
 KaonEnergyCorrection::KaonEnergyCorrection(){
 //********************************************************************
 
-  _params = new BinnedParams(std::string(getenv("PDCORRECTIONSROOT"))+"/data","KaonEnergy", BinnedParams::k1D_SYMMETRIC,"",true);
+  _params = new BinnedParams(pd::DataDir("pdCorrections"),"KaonEnergy", BinnedParams::k1D_SYMMETRIC,"",true);
 
 }
 

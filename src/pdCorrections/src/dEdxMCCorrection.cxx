@@ -1,4 +1,5 @@
 #include "dEdxMCCorrection.hxx"
+#include "pdDataFiles.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,8 +9,8 @@
 dEdxMCCorrection::dEdxMCCorrection(){
 //********************************************************************
 
-  _params_1 = new BinnedParams(std::string(getenv("PDCORRECTIONSROOT"))+"/data","dEdxMC_1", BinnedParams::k2D_SYMMETRIC,"",true);
-  _params_2 = new BinnedParams(std::string(getenv("PDCORRECTIONSROOT"))+"/data","dEdxMC_2", BinnedParams::k2D_SYMMETRIC,"",true);
+  _params_1 = new BinnedParams(pd::DataDir("pdCorrections"),"dEdxMC_1", BinnedParams::k2D_SYMMETRIC,"",true);
+  _params_2 = new BinnedParams(pd::DataDir("pdCorrections"),"dEdxMC_2", BinnedParams::k2D_SYMMETRIC,"",true);
   _paramsparams_1 = new BinnedParamsParams();
   _paramsparams_2 = new BinnedParamsParams();
   

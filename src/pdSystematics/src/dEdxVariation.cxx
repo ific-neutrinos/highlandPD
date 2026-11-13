@@ -1,8 +1,9 @@
 #include "dEdxVariation.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
-dEdxVariation::dEdxVariation():EventVariationBase(),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","dEdx", BinnedParams::k1D_SYMMETRIC_NOMEAN){
+dEdxVariation::dEdxVariation():EventVariationBase(),BinnedParams(pd::DataDir("pdSystematics"),"dEdx", BinnedParams::k1D_SYMMETRIC_NOMEAN){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

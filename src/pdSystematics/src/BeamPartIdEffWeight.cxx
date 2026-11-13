@@ -1,11 +1,12 @@
 #include "BeamPartIdEffWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
 #include "SystematicUtils.hxx"
 
 //********************************************************************
-BeamPartIdEffWeight::BeamPartIdEffWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","BeamPartIdEffWeight", BinnedParams::k2D_EFF_ASSYMMETRIC){
+BeamPartIdEffWeight::BeamPartIdEffWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"BeamPartIdEffWeight", BinnedParams::k2D_EFF_ASSYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files

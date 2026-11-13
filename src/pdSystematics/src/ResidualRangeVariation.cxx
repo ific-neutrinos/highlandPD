@@ -1,8 +1,9 @@
 #include "ResidualRangeVariation.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
-ResidualRangeVariation::ResidualRangeVariation():EventVariationBase(100),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","ResidualRange", BinnedParams::k1D_SYMMETRIC_NOMEAN){
+ResidualRangeVariation::ResidualRangeVariation():EventVariationBase(100),BinnedParams(pd::DataDir("pdSystematics"),"ResidualRange", BinnedParams::k1D_SYMMETRIC_NOMEAN){
 //********************************************************************
 
   //This systematic uses a Uniform random throw

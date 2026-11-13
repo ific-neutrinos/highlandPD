@@ -5,6 +5,9 @@
  < pdUtils.SCE.EnableCalEfieldSCE  = 1   >
  < pdUtils.SCE.Efield              = 500 >
 
+Space charge map (in pdUtils/data). The alternative map is SCE_Alternate_v4_EField.root
+ < pdUtils.SCE.MapFile = SCE_DataDriven_180kV_v4.root >
+
 --- Calorimetry --------
 Nominal electric field (kV/cm) and ModBox recombination parameters used by
 Calorimetry. Note: RecombinationDataCorrection uses its own values
@@ -21,6 +24,15 @@ Calibration constants from ADC area to electrons, per plane
  < pdUtils.Calorimetry.CalAreaConstant.Plane0 = 1.04e-3   >
  < pdUtils.Calorimetry.CalAreaConstant.Plane1 = 1.04e-3   >
  < pdUtils.Calorimetry.CalAreaConstant.Plane2 = 1.0156e-3 >
+
+PID tables (in pdUtils/data): dE/dx vs residual range templates, and kinetic energy vs range
+ < pdUtils.PID.dEdxTemplatesFile = dEdxrestemplates.root >
+ < pdUtils.PID.KEvsRangeFile     = ke_vs_range.root      >
+
+dQ/dx calibration files (in pdUtils/data)
+ < pdUtils.Calorimetry.NormFile  = mc_prod4_dQdx_norm.txt  >
+ < pdUtils.Calorimetry.XCalFile  = mc_prod4_dQdx_XCal.txt  >
+ < pdUtils.Calorimetry.YZCalFile = mc_prod4_dQdx_YZCal.txt >
 
 Electron lifetime (us) for MC and for each data run
  < pdUtils.Calorimetry.ElectronLifetime.MC = 35000 >

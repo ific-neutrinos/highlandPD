@@ -1,4 +1,5 @@
 #include "SCEVariationBase.hxx"
+#include "pdDataFiles.hxx"
 #include "pdServiceManager.hxx"
 #include "Parameters.hxx"
 
@@ -7,7 +8,7 @@
 #include <cstdlib>
 
 //********************************************************************
-SCEVariationBase::SCEVariationBase():EventVariationBase(),BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","SCE", BinnedParams::k1D_SYMMETRIC_NOMEAN){
+SCEVariationBase::SCEVariationBase():EventVariationBase(),BinnedParams(pd::DataDir("pdSystematics"),"SCE", BinnedParams::k1D_SYMMETRIC_NOMEAN){
 //********************************************************************
 
   //Toys use the nominal map scaled on the fly, there are no per-toy copies
@@ -31,8 +32,8 @@ SCEVariationBase::SCEVariationBase():EventVariationBase(),BinnedParams(std::stri
   }
   else{
     // Voxel: our own reader, BinnedParams is limited to NMAXSYSTSOURCEBINS bins
-    InitializeVoxels(std::string(getenv("PDSYSTEMATICSROOT"))+"/data/"+
-                     ND::params().GetParameterS("pdSystematics.SCE.VoxelFile"));
+    InitializeVoxels(pd::DataFile("pdSystematics", 
+                     ND::params().GetParameterS("pdSystematics.SCE.VoxelFile")));
   }
 }
 

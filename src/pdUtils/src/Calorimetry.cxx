@@ -2,6 +2,7 @@
 
 #include "Calorimetry.hxx"
 #include "Parameters.hxx"
+#include "pdDataFiles.hxx"
 
 //********************************************************************
 Calorimetry::Calorimetry(const SpaceCharge& sce):_sce(sce){
@@ -55,7 +56,7 @@ CaloContext Calorimetry::NominalContext() const{
 void Calorimetry::CreateNormHistogram(){
 //********************************************************************
 
-  std::string filename = std::string(getenv("PDUTILSROOT"))+"/data/mc_prod4_dQdx_norm.txt";
+  std::string filename = pd::DataFile("pdUtils", ND::params().GetParameterS("pdUtils.Calorimetry.NormFile"));
   FILE* tf = fopen(filename.c_str(), "r");
   
   //check it exits
@@ -85,7 +86,7 @@ void Calorimetry::CreateNormHistogram(){
 void Calorimetry::CreateXCalHistogram(){
 //********************************************************************
 
-  std::string filename = std::string(getenv("PDUTILSROOT"))+"/data/mc_prod4_dQdx_XCal.txt";
+  std::string filename = pd::DataFile("pdUtils", ND::params().GetParameterS("pdUtils.Calorimetry.XCalFile"));
   FILE* tf = fopen(filename.c_str(), "r");
   
   //check it exits
@@ -138,7 +139,7 @@ void Calorimetry::CreateXCalHistogram(){
 void Calorimetry::CreateYZCalHistogram(){
 //********************************************************************
 
-  std::string filename = std::string(getenv("PDUTILSROOT"))+"/data/mc_prod4_dQdx_YZCal.txt";
+  std::string filename = pd::DataFile("pdUtils", ND::params().GetParameterS("pdUtils.Calorimetry.YZCalFile"));
   FILE* tf = fopen(filename.c_str(), "r");
   
   //check it exits
