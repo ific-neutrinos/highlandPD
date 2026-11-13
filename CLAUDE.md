@@ -66,16 +66,36 @@ root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 - Fase 1 validada (13-nov-2026): con 10.000 eventos de MC, la salida de `archive/pre-cleanup` y la de la rama son idénticas en todos los árboles (`ana`, `all_syst`, `truth`, `header`). En el log solo cambian los prints de depuración quitados.
 - Referencia actual: `~/Public/highland/backup/regression_ref/fase1/mc.root`. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
 
+## Servicios de calorimetría y SCE (en curso, 13-nov-2026)
+
+Decidido con el usuario (primero el bloque de diseño, antes que los bugs sueltos):
+
+- **`pdServiceManager`** en `pdUtils`, con acceso global `pd::services()` al estilo de `ND::params()`. Tiene que ser global porque las correcciones y los sistemáticos no tienen acceso a `ana()`. Usa métodos con tipo (`SCE()`, `Calorimetry()`), creación perezosa (nunca en la inicialización estática), objetos `const` y lista de servicios en el log.
+- **Auditoría:** todas las `Calorimetry` y `SpaceCharge` tienen la misma configuración base. Solo cambia estado por evento o por toy: lifetime (`LifetimeVariation`, `SCEVariation`), ModBox A/B (`RecombinationVariation`) y qué SCE usar. Basta con una instancia nominal de cada una, y ese estado viaja como contexto en cada llamada.
+- **SCE en los toys sin copias del mapa.** La interpolación (spline natural `"b2e2"` en un eje y bilineal en los otros) es lineal en los valores de los nodos. Variación global: `D_toy = f·D_nominal`. Por vóxel: funciones base del spline (`B_i(x)`, calculadas una vez por eje) por los factores del toy, que ya guarda `ToyExperiment`. Hay que mantener los dos modos (por vóxel era el objetivo; nunca se midieron incertidumbres por vóxel, por eso se usa la global). El sistemático de SCE cuesta hoy ~2 GB y ~10 s (100 mapas de ~20 MB).
+- **Validación:** el servicio debe dar salida idéntica bit a bit. El SCE global por factor no saldrá idéntico (hoy el mapa escalado se guarda en `TH3F` float); se acepta con tolerancia, enseñando antes al usuario el tamaño de las diferencias.
+- Pasos: (1) servicio con SCE y Calorimetry nominales + contexto, migrando las clases vivas; (2) SCE global por factor; (3) SCE por vóxel; (4) unificar `SCEVariation` y `SCEGeometricVariation`.
+- Hecho: quitadas las 6 clases muertas (`CalorimetryCalibration`, `RecombinationMCCorrection`, `dQdx{Cal,Norm,XCal,YZCal}Variation`) y sus `.dat`. Copia en el backup.
+
+Encontrado en la auditoría, pendiente:
+
+- `SCEVariation` (calibraciones) borra dos veces el mapa del último toy al salir y crea un mapa 101 que no libera.
+- `dEdxVariation` crea una `Calorimetry` (con su SCE) que no usa.
+- `LifetimeCorrection` (solo en las calibraciones) nunca llama a `SetLifetime`: aplica la lifetime de MC (35 ms) también a datos. Los sistemáticos solo corren en MC, donde la lifetime es fija, así que ahí no afecta; la duda es la corrección sobre datos. Preguntar si las calibraciones se corren sobre datos.
+- Campo E: `Calorimetry` usa 0,4867 kV/cm y `RecombinationDataCorrection` usa 0,553 (con sus propios ModBox). El usuario no recuerda si es a propósito. Al pasarlos a parámetros, mantener los dos valores con nombres distintos para no cambiar resultados.
+- `ResetLifetime()` pone 35000 a mano en lugar de leer el parámetro.
+- `dQdxXCalibration` lee `$HIGHLANDPDPATH/yz_corrections_mc_lifetime_mypc.root`, un fichero personal que no está en el repo.
+
 ## Fase 2 (después del test de regresión): bugs que cambian resultados
 
 Cada uno en su propio commit, comparando micro-trees antes y después.
 
 - `pdSystematics/src/SCEVariation.hxx:33` y `SCEGeometricVariation.hxx:30`: `SpaceCharge* _sce[100]` indexado por `toy_index`. Con `NumberOfToys > 100` se escribe fuera del array. Además crea 100 `SpaceCharge` al inicializar.
-- `pdSystematics/src/dQdxXCalVariation.cxx:43` y `dQdxYZCalVariation.cxx:44`: `dQdx * (Cal*(1+σ·v)) / Cal`. La calibración se cancela y queda un escalado global, idéntico a `dQdxNormVariation`. Confirmar con el usuario qué se pretendía (¿variación por bins en X o en YZ?).
-- `pdSystematics/src/dQdxCalVariation.cxx:40`: `return` dentro del bucle de hits si `GetBinValues` falla. Las partículas restantes quedan sin variar y la actual a medias. En la línea 53, `Chi2ndf` se toma del muón; en las demás variaciones se toma del protón.
+- *(Código muerto, ya eliminado.)* `pdSystematics/src/dQdxXCalVariation.cxx:43` y `dQdxYZCalVariation.cxx:44`: `dQdx * (Cal*(1+σ·v)) / Cal`. La calibración se cancela y queda un escalado global, idéntico a `dQdxNormVariation`. Confirmar con el usuario qué se pretendía (¿variación por bins en X o en YZ?).
+- *(Código muerto, ya eliminado. `dEdxVariation`, que sí se usa, tiene el mismo patrón: `return` en el bucle de hits y `Chi2ndf` del muón.)* `pdSystematics/src/dQdxCalVariation.cxx:40`: `return` dentro del bucle de hits si `GetBinValues` falla. Las partículas restantes quedan sin variar y la actual a medias. En la línea 53, `Chi2ndf` se toma del muón; en las demás variaciones se toma del protón.
 - `pdUtils/src/pdAnalysisUtils.cxx:48`: `TFile` global abierto en la inicialización estática con `getenv("PDUTILSROOT")` sin comprobar. Si la variable no existe, casca al cargar la librería.
 - `pdUtils/src/pdAnalysisUtils.cxx:1174,1230,1320,1368`: `TFile::Open("ke_vs_range.root")` en cada llamada a `GetdEdxLikelihood*`, unas 10 veces por candidato desde `secondaryKaonAnalysis/src/kaonTree.cxx`.
-- `secondaryKaonAnalysis/src/secondaryKaonAnalysis.cxx:145`: el índice `kdQdxCalibration` se registra con `dEdxVariation` ("dEdx variation"). Confirmar si es intencionado.
+- `secondaryKaonAnalysis/src/secondaryKaonAnalysis.cxx:145`: el índice `kdQdxCalibration` se registra con `dEdxVariation`. Resuelto: `dEdxVariation` sustituyó a `dQdxCalVariation` y heredó su índice. Solo queda renombrar el índice.
 - **Rendimiento:** hay unas 20 instancias de `Calorimetry` y `SpaceCharge` (una por corrección o sistemático, más una por toy en SCE). Cada `Calorimetry` crea su propio `SpaceCharge` y relee los mismos ficheros (entre ellos `mc_prod4_dQdx_YZCal.txt`, de 4,4 MB). Hay que pasar a una instancia compartida.
 - `Calorimetry.cxx`: constantes cableadas (E-field, ModBox A/B, v_drift, APA x) que deberían ir a `pdUtils.parameters.dat`.
 - 37 `getenv` sin comprobar.
