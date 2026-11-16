@@ -9,7 +9,6 @@
 #include "secondaryKaonSelection.hxx"
 #include "secondaryKaonSelectionNoBranches.hxx"
 #include "secondaryKaonXSSelection.hxx"
-#include "PrimaryProtonKaonSelection.hxx"
 #include "secondaryProtonSelection.hxx"
 #include "kaonAnalysisUtils.hxx"
 
@@ -113,7 +112,6 @@ void secondaryKaonAnalysis::DefineSelections(){
 //********************************************************************
 
   if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelection(false));  
-    //if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "kaon selection",    new PrimaryProtonKaonSelection(false));  
     //if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "proton selection",    new secondaryProtonSelection(false));  
   else                     sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelectionNoBranches(false));  
 }

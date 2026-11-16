@@ -60,11 +60,5 @@ public:
   StepBase* MakeClone(){return new EventHasTracksCut();}
 };
 
-class TracksInDefinedVolumeCut: public StepBase{
-public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new TracksInDefinedVolumeCut();}
-};
 
 #endif

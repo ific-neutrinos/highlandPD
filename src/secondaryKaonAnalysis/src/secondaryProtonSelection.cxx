@@ -28,7 +28,6 @@ void secondaryProtonSelection::DefineSteps(){
   // //next cuts have to be applied to each branch
   // AddSplit(secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES);
   // for(int i = 0; i < (int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES; i++)
-  //   AddStep(i, StepBase::kCut, "Proton chi2 cut"    , new ProtonChi2Cut(0,25)  , true);
 
   // // This number tells the selection to stop when a given accum level (accumulated cut level) is not passed. 
   // // For example, 2 as argument would mean that selection is stopped for the current toy experiment when the 
