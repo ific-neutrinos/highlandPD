@@ -493,6 +493,9 @@ Float_t pdAnaUtils::ComputeAveragedEdxOverResRange(AnaParticlePD* part, double m
     }
   }
 
+  //no hit passes the cuts (before, 0/0 = NaN)
+  if(nhits == 0)return -999.;
+
   return sumdedx/nhits;
 }
 
