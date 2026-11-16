@@ -27,7 +27,7 @@ cmake --build build && cmake -P build/cmake_install.cmake   # recompilar
 
 ## Qué hay
 
-- **Núcleo:** `pdEventModel` (`pdDataClasses`), `pdIO` (`PDSPAnalyzerTreeConverter`, `MichelRemovingTreeConverter`, `pdMiniTreeConverter`, `pdBaseConverter`), `pdUtils` (`Calorimetry`, `SpaceCharge`, `pdAnalysisUtils`, `standardPDTree`), `pdCorrections` (13 correcciones), `pdSystematics` (variaciones y pesos), `pdBaseAnalysis`.
+- **Núcleo:** `pdEventModel` (`pdDataClasses`), `pdIO` (`PDSPAnalyzerTreeConverter`, `MichelRemovingTreeConverter`, `pdBaseConverter`; `pdMiniTreeConverter` no lo usa nadie: los minitrees se leen con `HighlandMiniTreeConverter` de highland), `pdUtils` (`Calorimetry`, `SpaceCharge`, `pdAnalysisUtils`, `standardPDTree`), `pdCorrections` (11 correcciones), `pdSystematics` (variaciones y pesos), `pdBaseAnalysis`.
 - **Análisis:** `secondaryKaonAnalysis` (incluye `coherentfit/`, que no se compila), `dEdxCalibrationAnalysis`, `StoppingProtonAnalysis`, `BrokenTracksAnalysis`, `BeamWeightsAnalysis`, `pdExampleAnalysis`.
 - **No se compila:** `secondaryKaonAnalysis/src/coherentfit`. `CreateMiniTreePD.exe` y `CoherentFit.exe` están comentados en el CMake.
 - **Solo en local, ignorado por git:** `src/secondaryKaonAnalysis/macros/tesis/` (macros de la tesis del usuario: no borrarlas del disco).
@@ -45,7 +45,7 @@ Hecho en la rama `cleanup/highlandPD` (13-nov-2026), sin push:
 - Quitados del repo: `LArSoftReader/`, `QPIXAnalysis/` (decisión del usuario: sale de highlandPD), `unusedCodeToRevisit/` (también borrado del disco) y `macros/tesis/` (sigue en disco), `nohup.out`, `coherentfit/oldfits`, dos autosaves de emacs, `dEdxCalibrationAnalysis/macros/x.C` (idéntico a `yz.C` y definía `yz()`), los 4 módulos CMake de `/cvmfs` y el modelo CNN `.pb` de MCC11 junto con el parámetro `pdUtils.CNN.PBfile`, que no leía nadie. Los ficheros borrados siguen en el historial de git, así que el `.git` no adelgaza.
 - Borrados de disco (no estaban en git): `CMakeLists_backup.txt`, `scripts/setup_backup.sh`, `bin/CoherentFit.exe` (binario viejo).
 - Añadido `pdUtils/data/dedx_mpv_profiles.root`, que estaba sin seguir; ningún código lo referencia todavía.
-- Quitados los prints de depuración del bucle de eventos: `MIGUEEEE...` en `GetdEdxLikelihood`, el de cada hit en `dEdxLikelihood` y los contadores de `DaughterFinderCorrection::Apply`. El resto de `std::cout` se queda: métodos `Print()`, mensajes de error y mensajes de `Initialize`/`Finalize`. Pasar los errores a `std::cerr` y corregir los textos de `Calorimetry` (los de YZ dicen "X correction") queda para más adelante.
+- Quitados los prints de depuración del bucle de eventos: `MIGUEEEE...` en `GetdEdxLikelihood`, el de cada hit en `dEdxLikelihood` y los contadores de `DaughterFinderCorrection::Apply`. El resto de `std::cout` se queda: métodos `Print()`, mensajes de error y mensajes de `Initialize`/`Finalize`. (Los errores ya van por `std::cerr`.)
 - Rutas `/home/migue/` de `pdUtils/data/likelihood_microtree.C` y `secondaryKaonAnalysis/macros/selfsysttest.C` pasadas a argumentos.
 - CMake: función para los ejecutables, sin la cadena de `add_dependencies`, sin `-ansi`, `cmake_minimum_required(3.12)`. `ENABLE_EXPORTS` mantiene el `-rdynamic` que CMake 3.0 añadía siempre (CMP0065). Flags comprobados iguales a los de antes.
 
@@ -55,10 +55,10 @@ Pendiente:
 
 ## Test de regresión
 
-`test/regression/` (override `regression.parameters.dat`, `run_regression.sh`, `compare.C`). Usar minitrees **sin filtrar**: los de candidatos (`minitree_candidates_*`) no traen las hijas de los candidatos y `secondaryKaon.exe` casca en `EventBoxKaon.cxx:52` (`Daughters[0]` con `Daughters` vacío; el bug ya existía antes de la limpieza).
+`test/regression/` (override `regression.parameters.dat`, `run_regression.sh`, `compare.C`). Usar minitrees **sin filtrar**: los de candidatos (`minitree_candidates_*`) no traen las hijas de los candidatos. Ya no hacen caer `secondaryKaon.exe` (el `Daughters[0]` de `EventBoxKaon` se arregló en `389e350`; comprobado con el de MC, 1.503 eventos), pero la selección no sirve para comparar. `check.sh <ref> <salida> <mc> <data>` corre MC y datos en paralelo y compara.
 
 ```bash
-test/regression/run_regression.sh <dir_mc>   <mc.root> -          0       # todo el MC, ~12-14 min
+test/regression/run_regression.sh <dir_mc>   <mc.root> -          0       # todo el MC, ~8-9 min
 test/regression/run_regression.sh <dir_data> -         <data.root> 10000  # ~1,5 min
 root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
 ```
@@ -73,11 +73,11 @@ root -l -b -q 'test/regression/compare.C+("ref/mc.root","<dir_salida>/mc.root")'
   - `recomb/{mc,data}.root`: generadas con `archive/pre-cleanup`. El servicio de SCE y calorimetría da idéntico.
   - `sce_scaling/{mc,data}.root`: tras el paso 2 (10.000 eventos de MC). Frente a `recomb`, `ana` y datos son idénticos y `all_syst` en MC difiere en 1 ULP de float (`compare.C+(a,b,true,1e-6)` pasa). La de `fase1/` es la anterior, sin recombinación. Cada bug de la Fase 2 debe compararse contra la referencia anterior, y las diferencias deben explicarse por el arreglo.
 
-## Servicios de calorimetría y SCE (en curso, 13-nov-2026)
+## Servicios de calorimetría y SCE (hecho, 13-nov-2026)
 
 Decidido con el usuario (primero el bloque de diseño, antes que los bugs sueltos):
 
-- **`pdServiceManager`** en `pdUtils`, con acceso global `pd::services()` al estilo de `ND::params()`. Tiene que ser global porque las correcciones y los sistemáticos no tienen acceso a `ana()`. Usa métodos con tipo (`SCE()`, `Calorimetry()`), creación perezosa (nunca en la inicialización estática), objetos `const` y lista de servicios en el log.
+- **`pdServiceManager`** en `pdUtils`, con acceso global `pd::services()` al estilo de `ND::params()`. Tiene que ser global porque las correcciones y los sistemáticos no tienen acceso a `ana()`. Usa métodos con tipo (`SCE()`, `Calo()`, `PID()`), creación perezosa (nunca en la inicialización estática), objetos `const` y lista de servicios en el log.
 - **Auditoría:** todas las `Calorimetry` y `SpaceCharge` tienen la misma configuración base. Solo cambia estado por evento o por toy: lifetime (`LifetimeVariation`, `SCEVariation`), ModBox A/B (`RecombinationVariation`) y qué SCE usar. Basta con una instancia nominal de cada una, y ese estado viaja como contexto en cada llamada.
 - **SCE en los toys sin copias del mapa.** La interpolación (spline natural `"b2e2"` en un eje y bilineal en los otros) es lineal en los valores de los nodos. Variación global: `D_toy = f·D_nominal`. Por vóxel: funciones base del spline (`B_i(x)`, calculadas una vez por eje) por los factores del toy, que ya guarda `ToyExperiment`. Hay que mantener los dos modos (por vóxel era el objetivo; nunca se midieron incertidumbres por vóxel, por eso se usa la global). El sistemático de SCE cuesta hoy ~2 GB y ~10 s (100 mapas de ~20 MB).
 - **Validación:** el servicio debe dar salida idéntica bit a bit. El SCE global por factor no saldrá idéntico (hoy el mapa escalado se guarda en `TH3F` float); se acepta con tolerancia, enseñando antes al usuario el tamaño de las diferencias.
@@ -127,12 +127,43 @@ Resuelto:
 - `pdAnalysisUtils` limpiado sin cambio de resultados: fuera las funciones sin uso (`ComputeKineticEnergy`, `ComputeDistanceToVertex`, `isBeamLike`, `ComputeTrackLengthFromHitPosition`) y el código comentado; `Chi2PID_UpToRR` es ahora `Chi2PID(part, pdg, maxRR)`; las cuatro `GetdEdxLikelihood*` comparten un helper; `GetTrueParticle(event, ID)` usa `anaUtils::GetTrueParticleByID`; arreglados accesos fuera de rango en `ComputeResidualRange` y `EstimateHitsDirection` con menos de 2 hits.
 - Mensajes de error por `std::cerr` (los últimos estaban en `SCEVariationBase` y en las utilidades madre-hija de `pdAnalysisUtils`) y textos de `Calorimetry` corregidos. Los `std::cout` que quedan son `Print()` y mensajes de inicialización o finalización. `coherentfit/` (no se compila) no se ha tocado.
 
+## Auditoría del 16-nov-2026 (pendiente)
+
+Compila desde cero sin errores (16 warnings). Ejecutables probados con 2.000 eventos de MC. `test/sce` estaba roto desde `33b9a51` (leer parámetros fuera de un análisis) y se arregló en `bba9295`.
+Toys con σ = 0 (copia de `pdSystematics/data` con las σ a cero vía `$HIGHLANDPD_DATADIR`): en todo el MC la selección de los 161.130 toys es idéntica a la nominal y las variables difieren ≤ 1,5e-5. En MC los sistemáticos son coherentes con el nominal.
+
+**A. Bugs que cambian resultados** (uno por commit, con test):
+1. Datos: `RecombinationDataCorrection` (y `dEdxMCCorrection`, hoy desactivada) cambian el dE/dx sin recalcular `Chi2Proton/Chi2Muon/Chi2ndf`. `MuonChi2Cut` y `bestcandidate_dau_chi2_muon` usan el χ² previo: en 10.000 eventos de datos, los 11 que llegan al final tienen el χ²/ndf un 4,8 % más alto de media (hasta 16,6 %) que el recalculado. `KaonChi2Cut` sí recalcula. En MC no cambia nada.
+2. `GetBeamQualityCuts` fuerza `NominalBeamMom > 3` a 1: los cortes de 6 y 7 GeV (añadidos en `cccb747`) no se leen y `beam_quality` usa los de 1 GeV (σz MC 1,20 frente a 0,20). No afecta a la selección de kaones.
+3. `bestcandidateparticlereduced` nunca vale 3210 (kaón señal) con `FillKaonCandidatesInfo = 0`: `Signal` solo se calcula (`SetIsSignal`) en el bloque de candidatos. Los 31 kaones verdaderos del test salen como 321.
+4. `secondaryKaonXSAnalysis.cxx:66` lee `secondaryKaonAnalysis.ApplyRecombinationCorrection` en vez de `...xsAnalysis.ApplyRecombinationCorrection` (hoy ambos 1).
+5. `pdExampleAnalysis` declara las variables de hits de las hijas y no llama a `FillStandardVariables_BeamParticleDaughtersHitsReco`.
+6. Calibraciones (sin validar, no hay minitree): `SCECalorimetricVariation::UndoSystematic` no restaura `Pitch` ni `dQdx_SCE` (los que cambia) y su efecto no llega a `dQdx_elife` (lifetime comentada); `LifetimeVariation::UndoSystematic` no restaura dE/dx ni χ², y el dE/dx que recalcula sale de `hit.dQdx`, que no recoge la variación.
+
+**B. Para decidir con el usuario:**
+- Filtros de los minitrees de candidatos frente a la selección: χ² muón 0,64–5,84 frente a 0,5–6,0; cos −0,98 frente a −1; momento 0,210–0,237 (sin corregir) frente a 0,221–0,245 (corregido, probablemente compensa el SCE). Solo importa si el análisis final usa esos minitrees.
+- Cortes desactivados (comentados en `DefineSteps`): `BeamHadronCut`, `MuonCNNCut`, `ProtonChi2Cut`, `BeamFilterForXSCut`, `BQCForXS`, `DauMomMuonCut`, `AllCut`, `DrawingTestAction`, `TracksInDefinedVolumeCut`; `KaonCNNCut` sin ninguna referencia.
+- Funciones de `standardPDTree` para nietas y bisnietas (8, API sin uso).
+- Ficheros de datos sin uso (~3,6 MB): `pdUtils/data/{SCE_DataDriven_180kV_v3,SCEoffsets_ProtoDUNE_E500,Xcalo_r5387,YZcalo_r5387,run_5387_Xcalibration,kaon_PID}.root`, `TopPrM_Lifetime.txt`; `pdCorrections/data/dEdx.dat`; `pdSystematics/data/{length,Recombination}.dat`. `dedx_profiles.root` y `dedx_mpv_profiles.root` solo los usan macros.
+- `SpaceCharge.cxx:782,803`: el autor dejó `//*-1 check this` en el signo de la corrección de posición.
+
+**C. Sin cambio de resultados** (validar con el test idéntico a `lklwin/`):
+- Bugs latentes: `branchesIDs[0] > Candidates.size()-1` en 4 cortes de `secondaryKaonSelection` (desborda con el vector vacío; usar `>=`); `kaonTree.cxx:441` `dau_mom` con el `calE` del candidato y masa 105,07, y `csda`/`dau_csda` sin usar; `SpaceCharge::GetPosOffsets/GetEfieldOffsets` usan `SCEhistograms`, que nunca se rellena; `return` silencioso en `RecombinationVariation` si no lee sus parámetros; etiqueta "beam particle is proton-like" con `BeamPDGCut(211)` en `secondaryKaonXSSelection`.
+- Código muerto: `HitVariationBase`, `KaonEnergyCorrection` (+`KaonEnergy.dat`), `dEdxMCScaleCorrection` (+`dEdxMCScale.dat`), `DaughterFinderCorrection` (única usuaria de `GetRecoParticleWithAssociatedTrueID`), `pdMiniTreeConverter`, `PrimaryProtonKaonSelection`, la clase `pdBaseSelection` y `EventQualityCut`; `boxUtils::FillTrueCandidatesAndDaughters` y `FillTrueCandidateAndDaughters`; `FillStandardVariables_CountersTrue` (declarada sin definir) y `PDCounters`; en `SpaceCharge` la implementación forward (`GetPosOffsets`, `GetEfieldOffsets`, `ElectronDiverterPosOffsets` y sus constantes, splines `fwd`, `SCEhistograms`, bloque `/* */` de 91 líneas), `InitializeHistogram`, `GetNbins*`, `GetBinCenter*`. ~260 líneas comentadas con `//` y ~150 en `/* */`.
+- Parámetros que no se leen: `pdBaseAnalysis.{UseIsBeamLike,Test}`, `pdUtils.SCE.{Enable*,Efield}`, 10 de `pdExampleAnalysis`, `secondaryKaonAnalysis.XSSelection.BeamPDGFilter` (y el miembro `_BeamPDGFilter`).
+- Salida: `*_hit_dedx_cal` del árbol de kaones siempre -999 (nadie rellena `dEdx_calib`).
+- 16 warnings: 12 de signo (contadores) y 4 variables sin usar; ninguno esconde un bug.
+- Macros: ninguna usa lo quitado o renombrado. `plots.C` usa `$KAONANALYSISROOT` (ahora `SECONDARYKAONANALYSISROOT`); `CoherentFit_MC.C` necesita `CoherentFit` (no se compila). Rutas personales en 10 macros de `dEdxCalibrationAnalysis`, `CoherentFit_MC.C` y `load.C`.
+- Otros: `.todo` antiguo (la mitad hecho; pasar lo vigente aquí y borrarlo); `DOALL.sh` redefine `HIGHLANDPATH` como el directorio padre y acaba en `build/`; línea comentada con la jerarquía antigua en `scripts/setup.sh`; `lib/` e `include/` con restos de `CoherentFit` (se van con `cleanup.sh` + `INSTALL.sh`).
+
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
 - Separar el núcleo `pd*` (una librería) de los análisis (una librería y un ejecutable cada uno, opcionales vía CMake).
 - Factorizar el copy-paste:
-  - Las 4 variaciones `dQdx*` son casi idénticas.
-  - El bloque que recalcula Chi2PID está repetido en 9 ficheros.
+  - El bloque que recalcula los χ² (`Chi2Proton`, `Chi2Muon`, `Chi2ndf`) está en 4 variaciones y su restauración en 3 `UndoSystematic`: helper común (sirve también para el bug A1 de la auditoría).
+  - El bucle "partículas + `Original`" se repite en las 11 correcciones y el de la `SystBox` en las 6 variaciones.
+  - `ParticlePositionSCECorrection` repite la parte geométrica de `SCEGeometricVariation`; `SCECorrection` = `HitPositionSCECorrection` + `HitPitchSCECorrection`.
+  - Los filtros de `CreateMiniTreeCandidates` y `CreateMiniTreeEventCandidates` son iguales y con números cableados.
   - `secondaryKaonAnalysis` vs `secondaryKaonXSAnalysis`: 73 % iguales.
   - `CreateMiniTreeCandidates` vs `CreateMiniTreeEventCandidates`: 76 % iguales.
 - `pdBaseAnalysis` debería registrar las correcciones y sistemáticos estándar, activables por parámetros. `pdExampleAnalysis` no usa sistemáticos.
