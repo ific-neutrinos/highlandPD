@@ -57,6 +57,12 @@ public:
   UInt_t Channel;
   Int_t  View;
 
+  /// Key of the recob::Hit in LArSoft
+  Int_t UniqueID;
+
+  /// ID of the true particle that deposits most energy in this hit (MC only)
+  Int_t TrueID;
+
   Float_t CNN[3];
   
   /// wave form associated to this hit
@@ -122,6 +128,36 @@ public:
   TVector3 Direction_NoSCE;
 
   bool IsValid() {return (Position_NoSCE.X() != -999 && Position_NoSCE.Y() != -999 && Position_NoSCE.Z() != -999);}
+};
+
+/// 3D space point of a PFParticle (Michels, showers and PFParticles without track).
+/// Value type without inheritance: there may be millions of them.
+class AnaSpacePointPD{
+public:
+  AnaSpacePointPD();
+
+  /// Dump the object to screen.
+  void Print() const;
+
+  Float_t Position[3];
+
+  /// UniqueID of the hit used in each plane (-999 if none)
+  Int_t HitIDs[3];
+};
+
+/// True trajectory point, to follow the chain of the K+- (only for the configured PDGs)
+class AnaTrueTrajPointPD{
+public:
+  AnaTrueTrajPointPD();
+
+  /// Dump the object to screen.
+  void Print() const;
+
+  Float_t Position[3];
+  Float_t Momentum[3];
+
+  /// Geant4 process at this point (AnaTrueParticleB::ProcessEnum), -999 if none
+  Int_t Process;
 };
 
 /// AnaParticle
@@ -219,6 +255,19 @@ public:
   /// Generation of the particle (primary particle, daughter, granddaughter, etc.)
   Int_t Generation;
 
+  /// Pandora slice: distinguishes the beam slice from the cosmic slices
+  Int_t SliceID;
+
+  /// Pandora metadata
+  Bool_t  IsClearCosmic;
+  Float_t PandoraTrackScore;
+
+  /// T0 of the PFParticle (-999 if none)
+  Float_t T0;
+
+  /// 3D space points
+  std::vector<AnaSpacePointPD> SpacePoints;
+
   /// test
   Double_t Distance_to_closest_particle;
 
@@ -283,6 +332,9 @@ public:
   
   /// The true momentum at the TPC entrance
   Float_t MomentumInTPC;  
+
+  /// True trajectory (only for the configured PDGs)
+  std::vector<AnaTrueTrajPointPD> TrjPoints;
 };
 
 /// Extension of AnaEvent to include specific information of the ProtoDUNE beam line instrumentation
@@ -364,6 +416,9 @@ protected:
 public:
 
   std::vector<AnaWireCNN> CNNwires;
+
+  /// Hits without PFParticle near the ends of the beam slice
+  std::vector<AnaHitPD> UnassociatedHits;
 };
 
 class AnaSpillPD: public AnaSpill{
@@ -412,6 +467,9 @@ protected:
 public:
 
   std::vector<AnaWireCNN> CNNwires;
+
+  /// Hits without PFParticle near the ends of the beam slice (copied from the bunch)
+  std::vector<AnaHitPD> UnassociatedHits;
 };
 
 // Extension of AnaEventInfo

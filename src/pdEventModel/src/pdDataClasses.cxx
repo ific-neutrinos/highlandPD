@@ -60,6 +60,9 @@ AnaHitPD::AnaHitPD(){
 
   dEdx_calib    = kFloatUnassigned;
   
+  UniqueID      = kIntUnassigned;
+  TrueID        = kIntUnassigned;
+
   Signal.clear();
   CNN[0]=CNN[1]=CNN[2]=kFloatUnassigned;
 }
@@ -76,6 +79,8 @@ AnaHitPD::AnaHitPD(const AnaHitPD& hit){
   PlaneID       = hit.PlaneID;
   Channel       = hit.Channel;
   View          = hit.View;
+  UniqueID      = hit.UniqueID;
+  TrueID        = hit.TrueID;
   Signal        = hit.Signal;
   for (size_t i=0;i<3;i++)
     CNN[i]           = hit.CNN[i];
@@ -118,6 +123,8 @@ void AnaHitPD::Print() const{
   std::cout << "WireID.Wire:   " << WireID.Wire  << std::endl;
   std::cout << "Channel:       " << Channel  << std::endl;
   std::cout << "View:          " << View << std::endl;
+  std::cout << "UniqueID:      " << UniqueID << std::endl;
+  std::cout << "TrueID:        " << TrueID << std::endl;
   std::cout << "#adcs:         " << Signal.size()  << std::endl;
   std::cout << "Integral:      " << Integral      << std::endl; 
   std::cout << "PeakTime:      " << PeakTime      << std::endl;
@@ -153,6 +160,46 @@ void AnaTrajectoryPointPD::Print() const{
   std::cout << "-------- AnaTrajectoryPointPD --------- " << std::endl;
 
   std::cout << "Position:      " << "( " << Position.X() << ", " << Position.Y() << ", " << Position.Z() << ")" << std::endl;
+}
+
+//********************************************************************
+AnaSpacePointPD::AnaSpacePointPD(){
+//********************************************************************
+
+  for(int i = 0; i < 3; i++){
+    Position[i] = kFloatUnassigned;
+    HitIDs[i]   = kIntUnassigned;
+  }
+}
+
+//********************************************************************
+void AnaSpacePointPD::Print() const{
+//********************************************************************
+
+  std::cout << "-------- AnaSpacePointPD --------- " << std::endl;
+  std::cout << "Position:      " << "( " << Position[0] << ", " << Position[1] << ", " << Position[2] << ")" << std::endl;
+  std::cout << "HitIDs:        " << HitIDs[0] << " " << HitIDs[1] << " " << HitIDs[2] << std::endl;
+}
+
+//********************************************************************
+AnaTrueTrajPointPD::AnaTrueTrajPointPD(){
+//********************************************************************
+
+  for(int i = 0; i < 3; i++){
+    Position[i] = kFloatUnassigned;
+    Momentum[i] = kFloatUnassigned;
+  }
+  Process = kIntUnassigned;
+}
+
+//********************************************************************
+void AnaTrueTrajPointPD::Print() const{
+//********************************************************************
+
+  std::cout << "-------- AnaTrueTrajPointPD --------- " << std::endl;
+  std::cout << "Position:      " << "( " << Position[0] << ", " << Position[1] << ", " << Position[2] << ")" << std::endl;
+  std::cout << "Momentum:      " << "( " << Momentum[0] << ", " << Momentum[1] << ", " << Momentum[2] << ")" << std::endl;
+  std::cout << "Process:       " << Process << std::endl;
 }
 
 //********************************************************************
@@ -210,6 +257,12 @@ AnaParticlePD::AnaParticlePD():AnaParticle(){
     
   Length_alt = kFloatUnassigned;
   Generation = kIntUnassigned;
+
+  SliceID           = kIntUnassigned;
+  IsClearCosmic     = false;
+  PandoraTrackScore = kFloatUnassigned;
+  T0                = kFloatUnassigned;
+  SpacePoints.clear();
 
   Distance_to_closest_particle = kFloatUnassigned;
   
@@ -289,6 +342,12 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
   Length_alt = part.Length_alt;
   Generation = part.Generation;
 
+  SliceID           = part.SliceID;
+  IsClearCosmic     = part.IsClearCosmic;
+  PandoraTrackScore = part.PandoraTrackScore;
+  T0                = part.T0;
+  SpacePoints       = part.SpacePoints;
+
   Distance_to_closest_particle = part.Distance_to_closest_particle;
 
   for (int i=0; i<3; i++){
@@ -315,6 +374,10 @@ void AnaParticlePD::Print() const{
   std::cout << "isPandora:               " << isPandora << std::endl;
   std::cout << "BeamOrigin:              " << BeamOrigin << std::endl;
   std::cout << "PassBeamCut:             " << isBeamPart << std::endl;
+  std::cout << "SliceID:                 " << SliceID << std::endl;
+  std::cout << "IsClearCosmic:           " << IsClearCosmic << std::endl;
+  std::cout << "PandoraTrackScore:       " << PandoraTrackScore << std::endl;
+  std::cout << "T0:                      " << T0 << std::endl;
 
   std::cout << "FitPDG:                  " << FitPDG << std::endl;
   
@@ -363,6 +426,7 @@ void AnaParticlePD::Print() const{
   std::cout << "RangeMomentum:           " << RangeMomentum[0] << " " << RangeMomentum[1] << std::endl;
 
   std::cout << "Stored hits in plane 0,1,2:  " << Hits[0].size() << " " << Hits[1].size() << " " << Hits[2].size() << std::endl;    
+  std::cout << "Space points:            " << SpacePoints.size() << std::endl;
 }
 
 //********************************************************************
@@ -376,7 +440,7 @@ AnaTrueParticlePD::AnaTrueParticlePD():AnaTrueParticle(){
   Matched = false;
   LengthInTPC   = kFloatUnassigned;
   MomentumInTPC = kFloatUnassigned;
-  
+  TrjPoints.clear();
 }
 
 //********************************************************************
@@ -397,6 +461,7 @@ AnaTrueParticlePD::AnaTrueParticlePD(const AnaTrueParticlePD& truePart):AnaTrueP
   Matched = truePart.Matched;
   LengthInTPC = truePart.LengthInTPC;
   MomentumInTPC = truePart.MomentumInTPC;
+  TrjPoints = truePart.TrjPoints;
 }
 
 //********************************************************************
@@ -413,6 +478,8 @@ void AnaTrueParticlePD::Print() const{
   std::cout << "Matched:               " << Matched << std::endl; 
   std::cout << "LengthInTPC:           " << LengthInTPC << std::endl;
   std::cout << "MomentumInTPC:         " << MomentumInTPC << std::endl;
+  std::cout << "Signal:                " << Signal << std::endl;
+  std::cout << "True traj. points:     " << TrjPoints.size() << std::endl;
 }
 
 //********************************************************************
@@ -526,6 +593,7 @@ AnaBunchPD::AnaBunchPD():AnaBunch(){
 //********************************************************************
 
   CNNwires.clear();
+  UnassociatedHits.clear();
 }
 
 //********************************************************************
@@ -538,7 +606,8 @@ AnaBunchPD::~AnaBunchPD(){
 AnaBunchPD::AnaBunchPD(const AnaBunchPD& bunch):AnaBunch(bunch){
 //********************************************************************
 
-  CNNwires = bunch.CNNwires;
+  CNNwires         = bunch.CNNwires;
+  UnassociatedHits = bunch.UnassociatedHits;
 }
 
 
@@ -552,6 +621,7 @@ void AnaBunchPD::Print() const{
   AnaBunch::Print();
   
   std::cout << "#wires:      " << CNNwires.size() << std::endl;  
+  std::cout << "#unassociated hits: " << UnassociatedHits.size() << std::endl;
 }
 
 //********************************************************************
@@ -571,13 +641,15 @@ AnaEventPD::~AnaEventPD(){
 AnaEventPD::AnaEventPD(const AnaEventPD& event):AnaEvent(event){
 //********************************************************************
 
-  CNNwires = event.CNNwires;
+  CNNwires         = event.CNNwires;
+  UnassociatedHits = event.UnassociatedHits;
 }
 
 //*****************************************************************************
 AnaEventPD::AnaEventPD(const AnaSpillPD& spill, const AnaBunchPD& bunch):AnaEvent(spill,bunch) {
 //*****************************************************************************
 
+  UnassociatedHits = bunch.UnassociatedHits;
 }
 
 //********************************************************************
@@ -622,4 +694,6 @@ void AnaEventInfoPD::Print() const{
 
   AnaEventInfo::Print();
   std::cout << "#NominalBeamMom:      " << NominalBeamMom << std::endl;
+  std::cout << "EmptyEvent:           " << EmptyEvent << std::endl;
+  std::cout << "HasPandora:           " << HasPandora << std::endl;
 }
