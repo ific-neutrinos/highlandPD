@@ -78,6 +78,9 @@ void dEdxMCCorrection::Apply(AnaSpillC& spillC){
 	+ _random->Landau(mean_landau,sigma_landau)
 	+ _random->Gaus(0,sigma_gauss);
     }
+
+    //the chi2 PID depends on the hit dE/dx
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 }
 
