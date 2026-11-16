@@ -3,11 +3,7 @@ if [[ -z "${HIGHLANDPATH}" ]]; then
     return;
 fi
 
-
-# and this package to the highland package hierarchy (otherwise the parameters file will not be read)
-#export HIGHLAND_PACKAGE_HIERARCHY=secondaryKaonAnalysis:pionAnalysis:stoppingProtonAnalysis:pdStudies:pdSystematics:pdBaseAnalysis:LArSoftReader:pdUtils:pdEventModel:$HIGHLAND_PACKAGE_HIERARCHY
-
-# automatically find the highland source directory
+# automatically find the highlandPD source directory
 export HIGHLANDPDPATH="$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 echo "HIGHLANDPDPATH=${HIGHLANDPDPATH}"
 

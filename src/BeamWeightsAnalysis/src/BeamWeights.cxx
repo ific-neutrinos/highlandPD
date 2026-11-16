@@ -120,7 +120,6 @@ void BeamWeights::FillToyVarsInMicroTrees(bool addBase){
 //********************************************************************
 
   // Fill the common variables  (highland/src/highland2/baseAnalysis)
-  // if (addBase) baseAnalysis::FillToyVarsInMicroTreesBase(addBase);
 
 }
 
@@ -129,7 +128,6 @@ void BeamWeights::FillTruthTree(const AnaTrueVertex& vtx){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  // baseAnalysis::FillTruthTreeBase(vtx);
 }
 
 //********************************************************************

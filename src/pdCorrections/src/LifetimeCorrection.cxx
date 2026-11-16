@@ -1,4 +1,5 @@
 #include "LifetimeCorrection.hxx"
+#include "pdServiceManager.hxx"
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
@@ -8,9 +9,8 @@
 LifetimeCorrection::LifetimeCorrection(){
 //********************************************************************
 
-  _cal = new Calorimetry();
-  _cal->Initialize();
-  
+  //always the nominal (MC) lifetime, it does not call GetLifetime(event)
+  _cal = &pd::services().Calo();
 }
 
 //********************************************************************

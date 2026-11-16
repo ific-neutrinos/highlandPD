@@ -21,8 +21,8 @@ public:
   
 protected:
 
-  SpaceCharge* _sce;
-  Calorimetry* _cal;
+  const SpaceCharge* _sce; ///< owned by pd::services()
+  const Calorimetry* _cal; ///< owned by pd::services()
   
 };
 

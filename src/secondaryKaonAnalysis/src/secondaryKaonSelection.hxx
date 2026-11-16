@@ -33,13 +33,6 @@ protected:
 
 };
 
-//---- Steps and actions for the analysis
-class BeamHadronCut: public StepBase{
-public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BeamHadronCut();}
-};
 
 class GetKaonsAction: public StepBase{
 public:
@@ -70,13 +63,6 @@ public:
   StepBase* MakeClone(){return new MuonChi2Cut();}
 };
 
-class MuonCNNCut: public StepBase{
-public:
-  using StepBase::StepBase;
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new MuonCNNCut();}
-};
 
 class MuonRangeMomCut: public StepBase{
 public:
@@ -86,13 +72,6 @@ public:
   StepBase* MakeClone(){return new MuonRangeMomCut();}
 };
 
-class KaonCNNCut: public StepBase{
-public:
-  using StepBase::StepBase;
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new KaonCNNCut();}
-};
 
 class KaonMuonAngleCut: public StepBase{
 public:
@@ -110,13 +89,6 @@ public:
   StepBase* MakeClone(){return new KaonMuonDistanceCut();}
 };
 
-class ProtonChi2Cut: public StepBase{
- public:
-  using StepBase::StepBase;
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new ProtonChi2Cut();}
-};
 
 class KaonChi2Cut: public StepBase{
  public:

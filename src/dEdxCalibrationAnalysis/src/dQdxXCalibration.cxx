@@ -1,4 +1,5 @@
 #include "dQdxXCalibration.hxx"
+#include "pdServiceManager.hxx"
 
 #include <sys/time.h>
 #include <iomanip>
@@ -24,7 +25,7 @@
 #include "SCECorrection.hxx"
 #include "LifetimeCorrection.hxx"
 
-#include "SCEVariation.hxx"
+#include "SCECalorimetricVariation.hxx"
 #include "LifetimeVariation.hxx"
 
 //********************************************************************
@@ -86,7 +87,6 @@ bool dQdxXCalibration::Initialize(){
   }
 
   //get yz correction histogram
-  //TFile* yzfile = TFile::Open((std::string(getenv("DEDXCALIBRATIONROOT"))+"/data/yz_corrections_data_yz_60-90_sce_lifetime_v2.root").c_str());
   TFile* yzfile = TFile::Open((std::string(getenv("HIGHLANDPDPATH"))+"/yz_corrections_mc_lifetime_mypc.root").c_str());
   yz_correction     = (TH2F*)yzfile->Get("correction_yz");
   yz_correction->SetDirectory(0);
@@ -96,8 +96,7 @@ bool dQdxXCalibration::Initialize(){
   yzfile->Close();
 
   //always initialize space charge for ana configuration
-  _sce = new SpaceCharge();
-  _sce->Initialize();
+  _sce = &pd::services().SCE();
   
   return true;
 }
@@ -147,7 +146,7 @@ void dQdxXCalibration::DefineSystematics(){
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
   baseAnalysis::DefineSystematics();
 
-  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCEVariation());
+  if(_ApplySCESystematic)     evar().AddEventVariation(kSCE_syst     , "SCE variation"     , new SCECalorimetricVariation());
   if(_ApplyLifetimeSystematic)evar().AddEventVariation(kLifetime_syst, "lifetime variation", new LifetimeVariation());
 }
 
@@ -199,10 +198,11 @@ void dQdxXCalibration::FillMicroTrees(bool addBase){
       zbin = part->Hits[2][ihit].Position.Z()/STEP;
       ybin = part->Hits[2][ihit].Position.Y()/STEP;
       double yzcorr = yz_correction->GetBinContent(zbin+1,ybin+1);
-      double efield = dEdxUtils::ElectricField(GetSCE(),
+      double efield = dEdxUtils::ElectricField(_sce,
 					       part->Hits[2][ihit].Position.X(),
 					       part->Hits[2][ihit].Position.Y(),
-					       part->Hits[2][ihit].Position.Z());
+					       part->Hits[2][ihit].Position.Z(),
+					       GetSCEScaling());
       double recfact = dEdxUtils::Recombination(efield);
       //fill global histogram
       h_global_x->Fill(part->Hits[2][ihit].dQdx_elife*yzcorr*recfact);
@@ -239,10 +239,11 @@ void dQdxXCalibration::FillToyVarsInMicroTrees(bool addBase){
       zbin = part->Hits[2][ihit].Position.Z()/STEP;
       ybin = part->Hits[2][ihit].Position.Y()/STEP;
       double yzcorr = yz_correction->GetBinContent(zbin+1,ybin+1,itoy+1);
-      double efield = dEdxUtils::ElectricField(GetSCE(),
+      double efield = dEdxUtils::ElectricField(_sce,
 					       part->Hits[2][ihit].Position.X(),
 					       part->Hits[2][ihit].Position.Y(),
-					       part->Hits[2][ihit].Position.Z());
+					       part->Hits[2][ihit].Position.Z(),
+					       GetSCEScaling());
       double recfact = dEdxUtils::Recombination(efield);
       //fill global histogram
       h_global_x_toy->Fill(itoy+1,part->Hits[2][ihit].dQdx_elife*yzcorr*recfact);
@@ -254,16 +255,17 @@ void dQdxXCalibration::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-SpaceCharge* dQdxXCalibration::GetSCE(){
+SCEScaling dQdxXCalibration::GetSCEScaling(){
 //********************************************************************
 
-  if(conf().GetCurrentConfigurationIndex() == 0)return _sce;
+  if(conf().GetCurrentConfigurationIndex() == 0)return SCEScaling();
   else{
     if(_ApplySCESystematic){
       Int_t itoy = conf().GetToyIndex();
-      return static_cast<SCEVariation*>(evar().GetEventVariation("SCE variation"))->GetToySCE(itoy);
+      const ToyExperiment* toy = conf().GetCurrentConfiguration()->GetToyMaker().GetToyExperiment(itoy);
+      return static_cast<SCEVariationBase*>(evar().GetEventVariation("SCE variation"))->GetToyScaling(*toy);
     }
-    else return _sce;
+    else return SCEScaling();
   }
 }
 
@@ -285,8 +287,6 @@ void dQdxXCalibration::Finalize(){
   
   //speed up fitting procedure
   ROOT::EnableImplicitMT();
-  // ROOT::Math::MinimizerOptions::SetDefaultStrategy(0);
-  // ROOT::Math::MinimizerOptions::SetDefaultTolerance(10);
 
   FillHistograms();
   if(_enableAllSystConfig)

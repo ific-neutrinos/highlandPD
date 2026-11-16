@@ -1,4 +1,5 @@
 #include "BrokenTrackWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
@@ -6,7 +7,7 @@
 #include "SystematicUtils.hxx"
 
 //********************************************************************
-BrokenTrackWeight::BrokenTrackWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","brokenTrack", BinnedParams::k1D_EFF_SYMMETRIC){
+BrokenTrackWeight::BrokenTrackWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"brokenTrack", BinnedParams::k1D_EFF_SYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files
@@ -29,8 +30,6 @@ Weight_h BrokenTrackWeight::ComputeWeight(const ToyExperiment& toy, const AnaEve
   const ToyBoxKaon& box = *static_cast<const ToyBoxKaon*>(&boxB);   
   if(box.Candidates.empty())return eventWeight;
     
-  // Get the SystBox for this event, and the appropriate selection and branch
-  SystBoxB* SystBox = GetSystBox(event,box.SelectionEnabledIndex,boxB.SuccessfulBranch); // not really needed
    
   //get bestcandidate
   AnaParticlePD* part = box.Candidates[box.BestCandidateIndex];

@@ -13,15 +13,10 @@
 #include "HighlandMiniTreeConverter.hxx"
 #include "PDSPAnalyzerTreeConverter.hxx"
 
-#include "dQdxCalVariation.hxx"
-#include "dQdxXCalVariation.hxx"
-#include "dQdxYZCalVariation.hxx"
-#include "dQdxNormVariation.hxx"
 #include "RecombinationVariation.hxx"
-#include "ResidualRangeVariation.hxx"
 #include "BeamPartIdEffWeight.hxx"
 #include "BrokenTrackWeight.hxx"
-#include "SCEVariation.hxx"
+#include "SCECalorimetricVariation.hxx"
 #include "SCEGeometricVariation.hxx"
 #include "NominalBeamMomWeight.hxx"
 #include "BeamCompositionWeight.hxx"
@@ -29,9 +24,7 @@
 
 #include "HitPitchSCECorrection.hxx"
 #include "HitPositionSCECorrection.hxx"
-#include "CalorimetryCalibration.hxx"
 #include "ParticlePositionSCECorrection.hxx"
-#include "DaughterFinderCorrection.hxx"
 #include "dEdxMCCorrection.hxx"
 
 //********************************************************************
@@ -117,7 +110,6 @@ void secondaryProtonAnalysis::DefineMicroTrees(bool addBase){
   standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
   standardPDTree::AddStandardVariables_BeamParticleTrue(output());
   standardPDTree::AddStandardVariables_BeamParticleReco(output());
-  //standardPDTree::AddStandardVariables_BeamParticleHitsReco(output());
 
   // -------- Add candidates variables ----------------------
   kaonTree::AddKaonVariables_KaonCandidatesReco    (output(),secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES);
@@ -159,7 +151,6 @@ void secondaryProtonAnalysis::FillMicroTrees(bool addBase){
     for(int i = 0; i < std::min((int)box().Candidates.size(),(int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES); i++){
       AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[i]->ParentID));
       kaonTree::FillKaonVariables_KaonCandidatesReco    (output(), box().Candidates[i] ,parent);
-      //kaonTree::FillKaonVariables_KaonCandidatesHitsReco(output(), box().Candidates[i]);
       kaonTree::FillKaonVariables_KaonCandidatesTrue    (output(), box().Candidates[i]);
       output().IncrementCounter(kaonTree::ncandidates);
     } 
@@ -277,7 +268,6 @@ void secondaryProtonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  //baseAnalysis::FillTruthTreeBase(vtx);
 
   // Event variables
   output().FillVar(run,    GetSpill().EventInfo->Run);

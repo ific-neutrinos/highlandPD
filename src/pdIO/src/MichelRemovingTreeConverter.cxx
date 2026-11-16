@@ -80,7 +80,6 @@ void MichelRemovingTreeConverter::FillParticleInfo(AnaParticlePD* part, const in
     AnaHitPD hit;
     //fill calo info
     hit.dQdx_elife    = trkdqdx[itrk][2][ihit];
-    //hit.dEdx          = trkdedx[itrk][2][ihit];
     hit.ResidualRange = trkresrange[itrk][2][ihit];
     hit.Pitch         = trkpitch[itrk][2][ihit];
     hit.Position.SetXYZ(trkhitx[itrk][2][ihit],trkhity[itrk][2][ihit],trkhitz[itrk][2][ihit]);

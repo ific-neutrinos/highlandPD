@@ -1,5 +1,4 @@
 #include "EventBoxKaon.hxx"
-//#include "CutUtils.hxx"
 #include "AnalysisUtils.hxx"
 #include "pdDataClasses.hxx"
 
@@ -35,10 +34,10 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
     if(part->isPandora)continue;
     //look for candidates
     if(part->DaughtersIDs.size() == 1){
-      //check this particle hasn't been added before
+      //check this particle hasn't been added before (e.g. as the daughter of another candidate)
       bool added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == part){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == part){
 	  added = true;
 	  break;
 	}
@@ -49,11 +48,12 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
 	nCandidatesAndDaughters++;
       }
       //now go for the daughter
+      if(part->Daughters.empty())continue; //daughter not in the event
       AnaParticleB* dau = static_cast<AnaParticleB*>(part->Daughters[0]);
       if(!dau)continue;
       added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == dau){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == dau){
 	  added = true;
 	  break;
 	}
@@ -67,50 +67,6 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
   anaUtils::ResizeArray(EventBox->RecObjectsInGroup [EventBoxKaon::kCandidatesAndDaughters], 
                         EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters],
                         nCandidatesAndDaughters);
-}
-
-//********************************************************************
-void boxUtils::FillTrueCandidatesAndDaughters(AnaEventB& event){
-//********************************************************************
-  
-  (void)event;
-  /*//  This method fills the EventBoxKaon with  the true candidate and its daughters for later use
-  EventBoxB* EventBox = event.EventBoxes[EventBoxId::kEventBoxKaon];
-
-  std::vector<AnaTrueParticle*> trueParts;
-  int nCandidateAndDaughters = 0; 
-
-  // Get all true parts in the event
-  AnaTrueParticleB** parts = event.TrueParticles;
-  Int_t nParts             = event.nTrueParticles;
-
-  for(Int_t i = 0; i < nParts; i++){    
-    AnaTrueParticlePD* part = static_cast<AnaTrueParticlePD*>(parts[i]);
-    if (part->ProcessStart == AnaTrueParticle::primary){
-      trueParts[nCandidateAndDaughters] = part;
-      nCandidateAndDaughters++;
-      const std::vector<Int_t>& daughtersIDs = part->Daughters;
-      for (UInt_t j=0;j<daughtersIDs.size(); ++j){      
-        AnaTrueParticleB* dau = anaUtils::GetTrueParticleByID(event, daughtersIDs[j]);
-        if (!dau) continue;
-        trueParts[nCandidateAndDaughters] = static_cast<AnaTrueParticle*>(dau);
-        nCandidateAndDaughters++;
-      }
-      break;
-    }
-  }
-      
-  EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters]=0;
-  anaUtils::CreateArray(EventBox->TrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters], nCandidateAndDaughters);
-
-  for (Int_t i=0;i<nCandidateAndDaughters; ++i){
-    AnaTrueParticleB* part = trueParts[i];
-    EventBox->TrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters][EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters]++] = part;
-  }
-
-  anaUtils::ResizeArray(EventBox->TrueObjectsInGroup [EventBoxKaon::kCandidateAndDaughters], 
-                        EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters],
-                        nCandidateAndDaughters);*/
 }
 
 //********************************************************************
@@ -158,10 +114,10 @@ void boxUtils::FillProtonCandidates(AnaEventB& event, SubDetId::SubDetEnum det){
     if(part->isPandora)continue;
     //look for candidates
     if(part->DaughtersIDs.size() == 0){
-      //check this particle hasn't been added before
+      //check this particle hasn't been added before (e.g. as the daughter of another candidate)
       bool added = false;
-      for(int j = 0; j < (int)NMAXPARTICLES; j++){
-	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]] == part){
+      for(int j = 0; j < EventBox->nRecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters]; j++){
+	if(EventBox->RecObjectsInGroup[EventBoxKaon::kCandidatesAndDaughters][j] == part){
 	  added = true;
 	  break;
 	}

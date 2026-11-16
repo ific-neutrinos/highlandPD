@@ -48,6 +48,9 @@ void RecombinationDataCorrection::Apply(AnaSpillC& spillC){
       double dEdx = original->Hits[2][ihit].dEdx;
       part->Hits[2][ihit].dEdx = (C_ratio * exp(beta_new/beta * log(alpha + (beta*dEdx)/(rho*Efield) )) - alpha_new) * (rho*Efield/beta_new);
     }
+
+    //the chi2 PID depends on the hit dE/dx
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 }
 

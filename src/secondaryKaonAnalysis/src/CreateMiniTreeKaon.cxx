@@ -55,7 +55,6 @@ void CreateMiniTreeKaon::DeleteUninterestingParticles(){
 //********************************************************************
 
   AnaBunchB* bunch = static_cast<AnaBunchB*>(_spill->Bunches[0]);
-  //_totalParticles += bunch->Particles.size();
 
   std::vector<AnaParticleB*> goodParticles;
   std::vector<AnaParticleB*> badParticles; 

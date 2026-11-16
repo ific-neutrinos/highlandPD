@@ -57,7 +57,6 @@ public:
   UInt_t Channel;
   Int_t  View;
 
-  //std::vector<Float_t> CNN; //!
   Float_t CNN[3];
   
   /// wave form associated to this hit
@@ -327,28 +326,6 @@ public:
 
 
 /// ProtoDUNE counters
-
-class PDCounters{
-
-public:
-  
-  PDCounters(){
-    ntrue_beamdaughter_piplus=0;
-    ntrue_beamdaughter_piminus=0;
-    ntrue_beamdaughter_pi0=0;
-    ntrue_beamdaughter_proton=0;
-    ntrue_beamdaughter_neutron=0;
-    ntrue_beamdaughter_nucleus=0;    
-  }
-  virtual ~PDCounters(){}
-  
-  Int_t ntrue_beamdaughter_pi0;
-  Int_t ntrue_beamdaughter_piplus;
-  Int_t ntrue_beamdaughter_piminus;
-  Int_t ntrue_beamdaughter_proton;
-  Int_t ntrue_beamdaughter_neutron;
-  Int_t ntrue_beamdaughter_nucleus;
-};
 
 class AnaWireCNN{
 public:

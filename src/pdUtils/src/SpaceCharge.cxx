@@ -2,23 +2,12 @@
 
 #include "SpaceCharge.hxx"
 #include "Parameters.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
 SpaceCharge::SpaceCharge(){
 //********************************************************************
-
-  fEnableElectronDiverterDistortions1 = false;
-  fEnableElectronDiverterDistortions2 = false;
-  fEDZCenterMin                       = -999.;
-  fEDZCenterMax                       = -999.;
-  fEDAXPosOffs                        = -999.;
-  fEDBZPosOffs                        = -999.;
-  fEDs                                = -999.;
-  fEDChargeLossZLowMin                = -999.;
-  fEDChargeLossZLowMax                = -999.;
-  fEDChargeLossZHighMin               = -999.;
-  fEDChargeLossZHighMax               = -999.;
 
   hDx_cal_pos = NULL;
   hDy_cal_pos = NULL;
@@ -34,24 +23,6 @@ SpaceCharge::SpaceCharge(){
   hEy_cal_neg = NULL;
   hEz_cal_neg = NULL;
 
-  nominal_hDx_cal_pos = NULL;
-  nominal_hDy_cal_pos = NULL;
-  nominal_hDz_cal_pos = NULL;
-  nominal_hEx_cal_pos = NULL;
-  nominal_hEy_cal_pos = NULL;
-  nominal_hEz_cal_pos = NULL;
-
-  nominal_hDx_cal_neg = NULL;
-  nominal_hDy_cal_neg = NULL;
-  nominal_hDz_cal_neg = NULL;
-  nominal_hEx_cal_neg = NULL;
-  nominal_hEy_cal_neg = NULL;
-  nominal_hEz_cal_neg = NULL;
-
-  spline_dx_fwd_neg.clear();
-  spline_dy_fwd_neg.clear();
-  spline_dz_fwd_neg.clear();
-  
   spline_dx_bkwd_neg.clear();
   spline_dy_bkwd_neg.clear();
   spline_dz_bkwd_neg.clear();
@@ -60,9 +31,6 @@ SpaceCharge::SpaceCharge(){
   spline_dEy_neg.clear();
   spline_dEz_neg.clear();
   
-  spline_dx_fwd_pos.clear();
-  spline_dy_fwd_pos.clear();
-  spline_dz_fwd_pos.clear();
   
   spline_dx_bkwd_pos.clear();
   spline_dy_bkwd_pos.clear();
@@ -72,9 +40,6 @@ SpaceCharge::SpaceCharge(){
   spline_dEy_pos.clear();
   spline_dEz_pos.clear();
   
-  SCEhistograms.clear();
-
-  _IsVaried = false;
 }
 
 //********************************************************************
@@ -95,50 +60,21 @@ SpaceCharge::~SpaceCharge(){
   delete hEy_cal_neg;
   delete hEz_cal_neg;
 
-  delete nominal_hDx_cal_pos;
-  delete nominal_hDy_cal_pos;
-  delete nominal_hDz_cal_pos;
-  delete nominal_hEx_cal_pos;
-  delete nominal_hEy_cal_pos;
-  delete nominal_hEz_cal_pos;
-
-  delete nominal_hDx_cal_neg;
-  delete nominal_hDy_cal_neg;
-  delete nominal_hDz_cal_neg;
-  delete nominal_hEx_cal_neg;
-  delete nominal_hEy_cal_neg;
-  delete nominal_hEz_cal_neg;
-
   ClearSplines();
-
-  for(int i = 0; i < (int)SCEhistograms.size(); i++)
-    delete SCEhistograms[i]; //redundant, they have been deleted above, but just in case
-  SCEhistograms.clear();
+  for(int i = 0; i < 12; i++)
+    for(TSpline3* b : _basis[i]) delete b;
 }
 
 //********************************************************************
 void SpaceCharge::Initialize(){
 //********************************************************************
 
-  fEnableElectronDiverterDistortions1 = true;//ND::params().GetParameterF("EnableElectronDiverterDistortions1");
-  fEnableElectronDiverterDistortions2 = true;//ND::params().GetParameterF("EnableElectronDiverterDistortions2");
-  fEDZCenterMin                       = 231.;//ND::params().GetParameterI("EDZCenter");
-  fEDZCenterMax                       = 463.;//ND::params().GetParameterI("EDZCenter");
-  fEDAXPosOffs                        = -3.;//ND::params().GetParameterF("EDAXPosOffs");
-  fEDBZPosOffs                        = -1;//ND::params().GetParameterF("EDBZPosOffs");
-  fEDs                                = 2.5;//ND::params().GetParameterF("EDs");
-  fEDChargeLossZLowMin                = 229.;//ND::params().GetParameterF("EDChargeLossZLowMin");
-  fEDChargeLossZLowMax                = 461.;//ND::params().GetParameterF("EDChargeLossZLowMax");
-  fEDChargeLossZHighMin               = 233.;//ND::params().GetParameterF("EDChargeLossZHighMin");
-  fEDChargeLossZHighMax               = 465.;//ND::params().GetParameterF("EDChargeLossZHighMax");
-  
-  fInputFilename = std::string(getenv("PDUTILSROOT"))+"/data/SCE_DataDriven_180kV_v4.root";
-  //fInputFilename = std::string(getenv("PDUTILSROOT"))+"/data/SCE_Alternate_v4_EField.root";
+  fInputFilename = pd::DataFile("pdUtils", ND::params().GetParameterS("pdUtils.SCE.MapFile"));
   fInputFile = new TFile(fInputFilename.c_str(), "OPEN");
   
   //check it exits
   if(!fInputFile){
-    std::cout << "Can't open file " << fInputFilename << std::endl;
+    std::cerr << "SpaceCharge::Initialize(). Can't open file " << fInputFilename << std::endl;
     exit(1);
   }
   
@@ -148,40 +84,14 @@ void SpaceCharge::Initialize(){
     
   CalSCEhistograms = {hDx_cal_pos, hDy_cal_pos, hDz_cal_pos, hEx_cal_pos, hEy_cal_pos, hEz_cal_pos, hDx_cal_neg, hDy_cal_neg, hDz_cal_neg, hEx_cal_neg, hEy_cal_neg, hEz_cal_neg};
 
+  InitializeBasis();
+
   fInputFile->Close();
 }
 
 //********************************************************************
 void SpaceCharge::InitializeHistograms(){
 //********************************************************************
-  
-  // InitializeHistogram(&hDx_cal_pos, "RecoBkwd_Displacement_X_Pos", "hDx_pos");
-  // InitializeHistogram(&hDy_cal_pos, "RecoBkwd_Displacement_Y_Pos", "hDy_pos");
-  // InitializeHistogram(&hDz_cal_pos, "RecoBkwd_Displacement_Z_Pos", "hDz_pos");
-  // InitializeHistogram(&hEx_cal_pos, "Reco_ElecField_X_Pos"       , "hEx_pos");
-  // InitializeHistogram(&hEy_cal_pos, "Reco_ElecField_Y_Pos"       , "hEy_pos");
-  // InitializeHistogram(&hEz_cal_pos, "Reco_ElecField_Z_Pos"       , "hEz_pos");
-								           
-  // InitializeHistogram(&hDx_cal_neg, "RecoBkwd_Displacement_X_Neg", "hDx_neg");
-  // InitializeHistogram(&hDy_cal_neg, "RecoBkwd_Displacement_Y_Neg", "hDy_neg");
-  // InitializeHistogram(&hDz_cal_neg, "RecoBkwd_Displacement_Z_Neg", "hDz_neg");
-  // InitializeHistogram(&hEx_cal_neg, "Reco_ElecField_X_Neg"       , "hEx_neg");
-  // InitializeHistogram(&hEy_cal_neg, "Reco_ElecField_Y_Neg"       , "hEy_neg");
-  // InitializeHistogram(&hEz_cal_neg, "Reco_ElecField_Z_Neg"       , "hEz_neg");
-
-  // nominal_hDx_cal_pos = (TH3F*)hDx_cal_pos->Clone("nom_hDx_pos");
-  // nominal_hDy_cal_pos = (TH3F*)hDy_cal_pos->Clone("nom_hDy_pos");
-  // nominal_hDz_cal_pos = (TH3F*)hDz_cal_pos->Clone("nom_hDz_pos");
-  // nominal_hEx_cal_pos = (TH3F*)hEx_cal_pos->Clone("nom_hEx_pos");
-  // nominal_hEy_cal_pos = (TH3F*)hEy_cal_pos->Clone("nom_hEy_pos");
-  // nominal_hEz_cal_pos = (TH3F*)hEz_cal_pos->Clone("nom_hEz_pos");
-
-  // nominal_hDx_cal_neg = (TH3F*)hDx_cal_neg->Clone("nom_hDx_neg");
-  // nominal_hDy_cal_neg = (TH3F*)hDy_cal_neg->Clone("nom_hDy_neg");
-  // nominal_hDz_cal_neg = (TH3F*)hDz_cal_neg->Clone("nom_hDz_neg");
-  // nominal_hEx_cal_neg = (TH3F*)hEx_cal_neg->Clone("nom_hEx_neg");
-  // nominal_hEy_cal_neg = (TH3F*)hEy_cal_neg->Clone("nom_hEy_neg");
-  // nominal_hEz_cal_neg = (TH3F*)hEz_cal_neg->Clone("nom_hEz_neg");
 
   //Load in files
   TH3F* hDx_cal_pos_orig = (TH3F*)fInputFile->Get("RecoBkwd_Displacement_X_Pos");
@@ -212,19 +122,7 @@ void SpaceCharge::InitializeHistograms(){
   hEy_cal_neg = (TH3F*)hEy_cal_neg_orig->Clone("hEy_neg");
   hEz_cal_neg = (TH3F*)hEz_cal_neg_orig->Clone("hEz_neg");
 
-  nominal_hDx_cal_pos = (TH3F*)hDx_cal_pos_orig->Clone("nom_hDx_pos");
-  nominal_hDy_cal_pos = (TH3F*)hDy_cal_pos_orig->Clone("nom_hDy_pos");
-  nominal_hDz_cal_pos = (TH3F*)hDz_cal_pos_orig->Clone("nom_hDz_pos");
-  nominal_hEx_cal_pos = (TH3F*)hEx_cal_pos_orig->Clone("nom_hEx_pos");
-  nominal_hEy_cal_pos = (TH3F*)hEy_cal_pos_orig->Clone("nom_hEy_pos");
-  nominal_hEz_cal_pos = (TH3F*)hEz_cal_pos_orig->Clone("nom_hEz_pos");
 
-  nominal_hDx_cal_neg = (TH3F*)hDx_cal_neg_orig->Clone("nom_hDx_neg");
-  nominal_hDy_cal_neg = (TH3F*)hDy_cal_neg_orig->Clone("nom_hDy_neg");
-  nominal_hDz_cal_neg = (TH3F*)hDz_cal_neg_orig->Clone("nom_hDz_neg");
-  nominal_hEx_cal_neg = (TH3F*)hEx_cal_neg_orig->Clone("nom_hEx_neg");
-  nominal_hEy_cal_neg = (TH3F*)hEy_cal_neg_orig->Clone("nom_hEy_neg");
-  nominal_hEz_cal_neg = (TH3F*)hEz_cal_neg_orig->Clone("nom_hEz_neg");
 
   hDx_cal_pos->SetDirectory(0);
   hDy_cal_pos->SetDirectory(0);
@@ -240,59 +138,7 @@ void SpaceCharge::InitializeHistograms(){
   hEy_cal_neg->SetDirectory(0);
   hEz_cal_neg->SetDirectory(0);
   
-  nominal_hDx_cal_pos->SetDirectory(0);
-  nominal_hDy_cal_pos->SetDirectory(0);
-  nominal_hDz_cal_pos->SetDirectory(0);
-  nominal_hEx_cal_pos->SetDirectory(0);
-  nominal_hEy_cal_pos->SetDirectory(0);
-  nominal_hEz_cal_pos->SetDirectory(0);
 
-  nominal_hDx_cal_neg->SetDirectory(0);
-  nominal_hDy_cal_neg->SetDirectory(0);
-  nominal_hDz_cal_neg->SetDirectory(0);
-  nominal_hEx_cal_neg->SetDirectory(0);
-  nominal_hEy_cal_neg->SetDirectory(0);
-  nominal_hEz_cal_neg->SetDirectory(0);  
-}
-
-//********************************************************************
-void SpaceCharge::InitializeHistogram(TH3F** h, const char* histo, const char* newname){
-//********************************************************************
-  
-  std::string histoname(histo);
-  std::string filename = fInputFilename.substr(0,fInputFilename.find(".root"))+"_"+histoname+".dat";
-
-  FILE* pFile = fopen(filename.c_str(),"r");
-  if(!pFile){
-    std::cout << "cannot open file " << filename << std::endl;
-    std::exit(1);
-  }
-
-  int nbinsx, nbinsy, nbinsz;
-  double xmin, xmax, ymin, ymax, zmin, zmax;
-
-  if(fscanf(pFile,"%d %lf %lf",&nbinsx,&xmin,&xmax)!=3)
-    std::cout << "Can't read X binnng " << std::endl;
-
-  if(fscanf(pFile,"%d %lf %lf",&nbinsy,&ymin,&ymax)!=3)
-    std::cout << "Can't read Y binnng " << std::endl;
-
-  if(fscanf(pFile,"%d %lf %lf",&nbinsz,&zmin,&zmax)!=3)
-    std::cout << "Can't read Z binnng " << std::endl;
-
-  //create and fill 3d histogram
-  *h = new TH3F(newname, "",
-	       nbinsx , xmin, xmax,
-	       nbinsy , ymin, ymax,
-	       nbinsz , zmin, zmax);
-
-  int x,y,z;
-  double val;
-  
-  while(fscanf(pFile, "%d %d %d %lf", &x, &y, &z, &val) == 4)
-    (*h)->SetBinContent(x,y,z,val);
-
-  fclose(pFile);
 }
 
 //********************************************************************
@@ -355,97 +201,6 @@ void SpaceCharge::InitializeSplines(){
     }
   }
 
-  /*//Load in files
-    // THIS IS FOR FORWARD IMPLEMENTATION, NOT DONE SO FAR AND NOT NEEDED
-  TH3F* hDx_sim_pos_orig = (TH3F*)infile->Get("RecoFwd_Displacement_X_Pos");
-  TH3F* hDy_sim_pos_orig = (TH3F*)infile->Get("RecoFwd_Displacement_Y_Pos");
-  TH3F* hDz_sim_pos_orig = (TH3F*)infile->Get("RecoFwd_Displacement_Z_Pos");
-  TH3F* hEx_sim_pos_orig = (TH3F*)infile->Get("Reco_ElecField_X_Pos");
-  TH3F* hEy_sim_pos_orig = (TH3F*)infile->Get("Reco_ElecField_Y_Pos");
-  TH3F* hEz_sim_pos_orig = (TH3F*)infile->Get("Reco_ElecField_Z_Pos");
-    
-  TH3F* hDx_sim_neg_orig = (TH3F*)infile->Get("RecoFwd_Displacement_X_Neg");
-  TH3F* hDy_sim_neg_orig = (TH3F*)infile->Get("RecoFwd_Displacement_Y_Neg");
-  TH3F* hDz_sim_neg_orig = (TH3F*)infile->Get("RecoFwd_Displacement_Z_Neg");
-  TH3F* hEx_sim_neg_orig = (TH3F*)infile->Get("Reco_ElecField_X_Neg");
-  TH3F* hEy_sim_neg_orig = (TH3F*)infile->Get("Reco_ElecField_Y_Neg");
-  TH3F* hEz_sim_neg_orig = (TH3F*)infile->Get("Reco_ElecField_Z_Neg");
-  
-  TH3F* hDx_sim_pos = (TH3F*)hDx_sim_pos_orig->Clone("hDx_pos");
-  TH3F* hDy_sim_pos = (TH3F*)hDy_sim_pos_orig->Clone("hDy_pos");
-  TH3F* hDz_sim_pos = (TH3F*)hDz_sim_pos_orig->Clone("hDz_pos");
-  TH3F* hEx_sim_pos = (TH3F*)hEx_sim_pos_orig->Clone("hEx_pos");
-  TH3F* hEy_sim_pos = (TH3F*)hEy_sim_pos_orig->Clone("hEy_pos");
-  TH3F* hEz_sim_pos = (TH3F*)hEz_sim_pos_orig->Clone("hEz_pos");
-  
-  TH3F* hDx_sim_neg = (TH3F*)hDx_sim_neg_orig->Clone("hDx_neg");
-  TH3F* hDy_sim_neg = (TH3F*)hDy_sim_neg_orig->Clone("hDy_neg");
-  TH3F* hDz_sim_neg = (TH3F*)hDz_sim_neg_orig->Clone("hDz_neg");
-  TH3F* hEx_sim_neg = (TH3F*)hEx_sim_neg_orig->Clone("hEx_neg");
-  TH3F* hEy_sim_neg = (TH3F*)hEy_sim_neg_orig->Clone("hEy_neg");
-  TH3F* hEz_sim_neg = (TH3F*)hEz_sim_neg_orig->Clone("hEz_neg");
-  
-  int nBinsX = hDx_sim_pos_orig->GetNbinsX();
-  int nBinsY = hDx_sim_pos_orig->GetNbinsY();
-  int nBinsZ = hDx_sim_pos_orig->GetNbinsZ();
-  for(int y = 1; y <= nBinsY; y++){
-    spline_dx_fwd_neg.push_back(std::vector<TSpline3*>());
-    spline_dx_fwd_pos.push_back(std::vector<TSpline3*>());
-    for(int z = 1; z <= nBinsZ; z++){
-      spline_dx_fwd_neg.back().push_back(MakeSpline(hDx_sim_neg,1,y,z,1,1));
-      spline_dx_fwd_pos.back().push_back(MakeSpline(hDx_sim_pos,1,y,z,1,2));
-    }
-  }
-  for(int x = 1; x <= nBinsX; x++){
-    spline_dy_fwd_neg.push_back(std::vector<TSpline3*>());
-    spline_dy_fwd_pos.push_back(std::vector<TSpline3*>());
-    
-    for(int z = 1; z <= nBinsZ; z++){
-      spline_dy_fwd_neg.back().push_back(MakeSpline(hDy_sim_neg,2,x,z,1,1));
-      spline_dy_fwd_pos.back().push_back(MakeSpline(hDy_sim_pos,2,x,z,1,2));
-    }
-  }
-  for(int x = 1; x <= nBinsX; x++){
-    spline_dz_fwd_neg.push_back(std::vector<TSpline3*>());
-    spline_dz_fwd_pos.push_back(std::vector<TSpline3*>());
-    for(int y = 1; y <= nBinsY; y++){
-      spline_dz_fwd_neg.back().push_back(MakeSpline(hDz_sim_neg,3,x,y,1,1));
-      spline_dz_fwd_pos.back().push_back(MakeSpline(hDz_sim_pos,3,x,y,1,2));
-    }
-  }
-    
-  nBinsX = hEx_sim_pos_orig->GetNbinsX();
-  nBinsY = hEx_sim_pos_orig->GetNbinsY();
-  nBinsZ = hEx_sim_pos_orig->GetNbinsZ();
-  for(int y = 1; y <= nBinsY; y++){
-    spline_dEx_neg.push_back(std::vector<TSpline3*>());
-    spline_dEx_pos.push_back(std::vector<TSpline3*>());
-    for(int z = 1; z <= nBinsZ; z++){
-      spline_dEx_neg.back().push_back(MakeSpline(hEx_sim_neg,1,y,z,3,1));
-      spline_dEx_pos.back().push_back(MakeSpline(hEx_sim_pos,1,y,z,3,2));
-    }
-  }
-  for(int x = 1; x <= nBinsX; x++){
-    spline_dEy_neg.push_back(std::vector<TSpline3*>());
-    spline_dEy_pos.push_back(std::vector<TSpline3*>());
-    
-    for(int z = 1; z <= nBinsZ; z++){
-      spline_dEy_neg.back().push_back(MakeSpline(hEy_sim_neg,2,x,z,3,1));
-      spline_dEy_pos.back().push_back(MakeSpline(hEy_sim_pos,2,x,z,3,2));
-    }
-  }
-  for(int x = 1; x <= nBinsX; x++){
-    spline_dEz_neg.push_back(std::vector<TSpline3*>());
-    spline_dEz_pos.push_back(std::vector<TSpline3*>());
-    for(int y = 1; y <= nBinsY; y++){
-      spline_dEz_neg.back().push_back(MakeSpline(hEz_sim_neg,3,x,y,3,1));
-      spline_dEz_pos.back().push_back(MakeSpline(hEz_sim_pos,3,x,y,3,2));
-    }
-  }
-  
-  SCEhistograms = {hDx_sim_pos, hDy_sim_pos, hDz_sim_pos, hEx_sim_pos, hEy_sim_pos, hEz_sim_pos, hDx_sim_neg, hDy_sim_neg, hDz_sim_neg, hEx_sim_neg, hEy_sim_neg, hEz_sim_neg};
-   
-  infile->Close();  */
 }
 
 //********************************************************************
@@ -474,7 +229,7 @@ TSpline3* SpaceCharge::MakeSpline(TH3F* spline_hist, int dim1, int dim2_bin, int
     }
   }
   else {
-    std::cout << "Unkown dimension " << dim1 << std::endl;
+    std::cerr << "SpaceCharge::MakeSpline(). Unknown dimension " << dim1 << std::endl;
     std::exit(1);
   }
 
@@ -511,7 +266,6 @@ TSpline3* SpaceCharge::MakeSpline(TH3F* spline_hist, int dim1, int dim2_bin, int
 double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yVal, double zVal, int dim, int maptype, int driftvol) const {
 //********************************************************************
 
-  //std::cout << "Interpolating " << interp_hist->GetName() << std::endl;
   int bin_x = interp_hist->GetXaxis()->FindBin(xVal);
   int bin_y = interp_hist->GetYaxis()->FindBin(yVal);
   int bin_z = interp_hist->GetZaxis()->FindBin(zVal);
@@ -609,14 +363,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     double f_22 = 0.0;
     if(driftvol == 1)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dx_fwd_neg[low_y-1][low_z-1]->Eval(xVal);
-        f_12 = spline_dx_fwd_neg[low_y-1][high_z-1]->Eval(xVal);
-        f_21 = spline_dx_fwd_neg[high_y-1][low_z-1]->Eval(xVal);
-        f_22 = spline_dx_fwd_neg[high_y-1][high_z-1]->Eval(xVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dx_bkwd_neg[low_y-1][low_z-1]->Eval(xVal);
         f_12 = spline_dx_bkwd_neg[low_y-1][high_z-1]->Eval(xVal);
@@ -633,14 +380,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     }
     else if(driftvol == 2)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dx_fwd_pos[low_y-1][low_z-1]->Eval(xVal);
-        f_12 = spline_dx_fwd_pos[low_y-1][high_z-1]->Eval(xVal);
-        f_21 = spline_dx_fwd_pos[high_y-1][low_z-1]->Eval(xVal);
-        f_22 = spline_dx_fwd_pos[high_y-1][high_z-1]->Eval(xVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dx_bkwd_pos[low_y-1][low_z-1]->Eval(xVal);
         f_12 = spline_dx_bkwd_pos[low_y-1][high_z-1]->Eval(xVal);
@@ -672,14 +412,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     double f_22 = 0.0;
     if(driftvol == 1)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dy_fwd_neg[low_x-1][low_z-1]->Eval(yVal);
-        f_12 = spline_dy_fwd_neg[low_x-1][high_z-1]->Eval(yVal);
-        f_21 = spline_dy_fwd_neg[high_x-1][low_z-1]->Eval(yVal);
-        f_22 = spline_dy_fwd_neg[high_x-1][high_z-1]->Eval(yVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dy_bkwd_neg[low_x-1][low_z-1]->Eval(yVal);
         f_12 = spline_dy_bkwd_neg[low_x-1][high_z-1]->Eval(yVal);
@@ -696,14 +429,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     }
     else if(driftvol == 2)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dy_fwd_pos[low_x-1][low_z-1]->Eval(yVal);
-        f_12 = spline_dy_fwd_pos[low_x-1][high_z-1]->Eval(yVal);
-        f_21 = spline_dy_fwd_pos[high_x-1][low_z-1]->Eval(yVal);
-        f_22 = spline_dy_fwd_pos[high_x-1][high_z-1]->Eval(yVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dy_bkwd_pos[low_x-1][low_z-1]->Eval(yVal);
         f_12 = spline_dy_bkwd_pos[low_x-1][high_z-1]->Eval(yVal);
@@ -735,14 +461,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     double f_22 = 0.0;
     if(driftvol == 1)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dz_fwd_neg[low_x-1][low_y-1]->Eval(zVal);
-        f_12 = spline_dz_fwd_neg[low_x-1][high_y-1]->Eval(zVal);
-        f_21 = spline_dz_fwd_neg[high_x-1][low_y-1]->Eval(zVal);
-        f_22 = spline_dz_fwd_neg[high_x-1][high_y-1]->Eval(zVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dz_bkwd_neg[low_x-1][low_y-1]->Eval(zVal);
         f_12 = spline_dz_bkwd_neg[low_x-1][high_y-1]->Eval(zVal);
@@ -759,14 +478,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
     }
     else if(driftvol == 2)
     {
-      if(maptype == 1)
-      {
-        f_11 = spline_dz_fwd_pos[low_x-1][low_y-1]->Eval(zVal);
-        f_12 = spline_dz_fwd_pos[low_x-1][high_y-1]->Eval(zVal);
-        f_21 = spline_dz_fwd_pos[high_x-1][low_y-1]->Eval(zVal);
-        f_22 = spline_dz_fwd_pos[high_x-1][high_y-1]->Eval(zVal);
-      }
-      else if(maptype == 2)
+      if(maptype == 2)
       {
         f_11 = spline_dz_bkwd_pos[low_x-1][low_y-1]->Eval(zVal);
         f_12 = spline_dz_bkwd_pos[low_x-1][high_y-1]->Eval(zVal);
@@ -789,7 +501,7 @@ double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yV
 }
 
 //********************************************************************
-void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
@@ -798,54 +510,54 @@ void SpaceCharge::ApplyParticlePositionCorrection(AnaParticlePD* part) const {
   
   //position start
   TVector3 pos(part->PositionStart[0],part->PositionStart[1],part->PositionStart[2]);
-  TVector3 offset = GetCalPosOffsets(pos,1);
+  TVector3 offset = GetCalPosOffsets(pos,1,scale);
   part->PositionStart[0] -= offset.X();
   part->PositionStart[1] += offset.Y();
   part->PositionStart[2] += offset.Z();
 
   //position end
   pos.SetXYZ(part->PositionEnd[0],part->PositionEnd[1],part->PositionEnd[2]);
-  offset = GetCalPosOffsets(pos,1);
+  offset = GetCalPosOffsets(pos,1,scale);
   part->PositionEnd[0] -= offset.X();
   part->PositionEnd[1] += offset.Y();
   part->PositionEnd[2] += offset.Z();
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyPositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyPositionCorrection(part->Hits[2][ihit]);
+    ApplyPositionCorrection(part->Hits[2][ihit], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPositionCorrection(AnaHitPD& hit) const {
+void SpaceCharge::ApplyPositionCorrection(AnaHitPD& hit, const SCEScaling& scale) const {
 //********************************************************************
 
-  TVector3 offset = GetCalPosOffsets(hit.Position_NoSCE, hit.TPCid); //*-1 check this
+  TVector3 offset = GetCalPosOffsets(hit.Position_NoSCE, hit.TPCid, scale); //*-1 check this
   hit.Position.SetX(hit.Position_NoSCE.X() - offset.X());
   hit.Position.SetY(hit.Position_NoSCE.Y() + offset.Y());
   hit.Position.SetZ(hit.Position_NoSCE.Z() + offset.Z());
 }
 
 //********************************************************************
-void SpaceCharge::ApplyTrjPointPositionCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyTrjPointPositionCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int itp = 0; itp < (int)part->TrjPoints.size(); itp++)
-    ApplyTrjPointPositionCorrection(part->TrjPoints[itp]);
+    ApplyTrjPointPositionCorrection(part->TrjPoints[itp], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp) const {
+void SpaceCharge::ApplyTrjPointPositionCorrection(AnaTrajectoryPointPD& tp, const SCEScaling& scale) const {
 //********************************************************************
 
   int TPCid = pdAnaUtils::GetPosTPCid(tp.Position_NoSCE);
   
-  TVector3 offset = GetCalPosOffsets(tp.Position_NoSCE, TPCid); //*-1 check this
+  TVector3 offset = GetCalPosOffsets(tp.Position_NoSCE, TPCid, scale); //*-1 check this
   tp.Position.SetX(tp.Position_NoSCE.X() - offset.X());
   tp.Position.SetY(tp.Position_NoSCE.Y() + offset.Y());
   tp.Position.SetZ(tp.Position_NoSCE.Z() + offset.Z());
@@ -887,16 +599,16 @@ void SpaceCharge::ApplyTrjPointDirectionCorrection(AnaParticlePD* part) const {
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPitchCorrection(AnaParticlePD* part) const {
+void SpaceCharge::ApplyPitchCorrection(AnaParticlePD* part, const SCEScaling& scale) const {
 //********************************************************************
 
   if(!part)return;
   for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++)
-    ApplyPitchCorrection(part->Hits[2][ihit]);
+    ApplyPitchCorrection(part->Hits[2][ihit], scale);
 }
 
 //********************************************************************
-void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
+void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit, const SCEScaling& scale) const {
 //********************************************************************
 
   TVector3 hitpos = hit.Position_NoSCE;
@@ -909,8 +621,8 @@ void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
   
   //correct pitch by SCE effect
   TVector3 dirProjection(hitpos.X()+pitch*hitdir.X(),hitpos.Y()+pitch*hitdir.Y(),hitpos.Z()+pitch*hitdir.Z());
-  TVector3 dirOffset = GetCalPosOffsets(dirProjection, hit.TPCid);
-  TVector3 posOffset = GetCalPosOffsets(hitpos, hit.TPCid);
+  TVector3 dirOffset = GetCalPosOffsets(dirProjection, hit.TPCid, scale);
+  TVector3 posOffset = GetCalPosOffsets(hitpos, hit.TPCid, scale);
   TVector3 dirCorrection(pitch*hitdir.X() - dirOffset.X() + posOffset.X(),
 			 pitch*hitdir.Y() + dirOffset.Y() - posOffset.Y(),
 			 pitch*hitdir.Z() + dirOffset.Z() - posOffset.Z());
@@ -919,203 +631,75 @@ void SpaceCharge::ApplyPitchCorrection(AnaHitPD& hit) const {
 }
 
 //********************************************************************
-UInt_t SpaceCharge::GetNbinsX() const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetNbinsX();
-}
-
-//********************************************************************
-UInt_t SpaceCharge::GetNbinsY() const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetNbinsY();
-}
-
-//********************************************************************
-UInt_t SpaceCharge::GetNbinsZ() const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetNbinsZ();
-}
-
-//********************************************************************
-double SpaceCharge::GetBinCenterX(UInt_t bin) const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetXaxis()->GetBinCenter(bin);
-}
-
-//********************************************************************
-double SpaceCharge::GetBinCenterY(UInt_t bin) const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetYaxis()->GetBinCenter(bin);
-}
-
-//********************************************************************
-double SpaceCharge::GetBinCenterZ(UInt_t bin) const {
-//********************************************************************
-    
-  if(!hDx_cal_neg)return -1;
-  else return hDx_cal_neg->GetZaxis()->GetBinCenter(bin);
-}
-
-//********************************************************************
-double SpaceCharge::GetEFieldXAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldXAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEx_cal_neg)return -1;
-    else return hEx_cal_neg->GetBinContent(hEx_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEx_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEx_cal_neg->GetBinContent(bin);
+      return scale.Global*hEx_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEx_cal_pos)return -1;
-    else return hEx_cal_pos->GetBinContent(hEx_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEx_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEx_cal_pos->GetBinContent(bin);
+      return scale.Global*hEx_cal_pos->GetBinContent(bin);
+    }
   }
 }
 
 //********************************************************************
-double SpaceCharge::GetEFieldYAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldYAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEy_cal_neg)return -1;
-    else return hEy_cal_neg->GetBinContent(hEy_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEy_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEy_cal_neg->GetBinContent(bin);
+      return scale.Global*hEy_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEy_cal_pos)return -1;
-    else return hEy_cal_pos->GetBinContent(hEy_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEy_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEy_cal_pos->GetBinContent(bin);
+      return scale.Global*hEy_cal_pos->GetBinContent(bin);
+    }
   }
 }
 
 //********************************************************************
-double SpaceCharge::GetEFieldZAtPoint(double x, double y, double z) const {
+double SpaceCharge::GetEFieldZAtPoint(double x, double y, double z, const SCEScaling& scale) const {
 //********************************************************************
     
   if(x < 0){
     if(!hEz_cal_neg)return -1;
-    else return hEz_cal_neg->GetBinContent(hEz_cal_neg->FindBin(x,y,z));
+    else{
+      Int_t bin = hEz_cal_neg->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(0,bin)*hEz_cal_neg->GetBinContent(bin);
+      return scale.Global*hEz_cal_neg->GetBinContent(bin);
+    }
   }
   else{
     if(!hEz_cal_pos)return -1;
-    else return hEz_cal_pos->GetBinContent(hEz_cal_pos->FindBin(x,y,z));
+    else{
+      Int_t bin = hEz_cal_pos->FindBin(x,y,z);
+      if(scale.IsVoxel()) return scale.NodeFactor(1,bin)*hEz_cal_pos->GetBinContent(bin);
+      return scale.Global*hEz_cal_pos->GetBinContent(bin);
+    }
   }
-}
-
-//********************************************************************
-void SpaceCharge::ApplyGlobalVariation(const double var){
-//********************************************************************
-    
-  hDx_cal_pos->Scale(var);
-  hDy_cal_pos->Scale(var);
-  hDz_cal_pos->Scale(var);
-
-  hDx_cal_neg->Scale(var);
-  hDy_cal_neg->Scale(var);
-  hDz_cal_neg->Scale(var);
-
-  hEx_cal_pos->Scale(var);
-  hEy_cal_pos->Scale(var);
-  hEz_cal_pos->Scale(var);
-                          
-  hEx_cal_neg->Scale(var);
-  hEy_cal_neg->Scale(var);
-  hEz_cal_neg->Scale(var);
-  
-  //prepare new splines
-  ResetSplines();
-
-  //set true
-  _IsVaried = true;
-}
-
-//********************************************************************
-void SpaceCharge::ApplyVoxelVariation(UInt_t xbin, UInt_t ybin, UInt_t zbin, double var, bool reset_splines){
-//********************************************************************
-    
-  hDx_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDx_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hDy_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDy_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hDz_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hDz_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-
-  hDx_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDx_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hDy_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDy_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hDz_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hDz_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-
-  hEx_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEx_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hEy_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEy_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-  hEz_cal_pos->SetBinContent(xbin,ybin,zbin,nominal_hEz_cal_pos->GetBinContent(xbin,ybin,zbin)*var);
-
-  hEx_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEx_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hEy_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEy_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-  hEz_cal_neg->SetBinContent(xbin,ybin,zbin,nominal_hEz_cal_neg->GetBinContent(xbin,ybin,zbin)*var);
-      
-  //prepare new splines
-  if(reset_splines)ResetSplines();
-
-  //set true
-  _IsVaried = true;
-}
-
-//********************************************************************
-void SpaceCharge::ResetToNominal(){
-//********************************************************************
-    
-  delete hDx_cal_pos;
-  delete hDy_cal_pos;
-  delete hDz_cal_pos;
-  delete hEx_cal_pos;
-  delete hEy_cal_pos;
-  delete hEz_cal_pos;
-
-  delete hDx_cal_neg;
-  delete hDy_cal_neg;
-  delete hDz_cal_neg;
-  delete hEx_cal_neg;
-  delete hEy_cal_neg;
-  delete hEz_cal_neg;
-
-  hDx_cal_pos = (TH3F*)nominal_hDx_cal_pos->Clone("hDx_pos");
-  hDy_cal_pos = (TH3F*)nominal_hDy_cal_pos->Clone("hDy_pos");
-  hDz_cal_pos = (TH3F*)nominal_hDz_cal_pos->Clone("hDz_pos");
-  hEx_cal_pos = (TH3F*)nominal_hEx_cal_pos->Clone("hEx_pos");
-  hEy_cal_pos = (TH3F*)nominal_hEy_cal_pos->Clone("hEy_pos");
-  hEz_cal_pos = (TH3F*)nominal_hEz_cal_pos->Clone("hEz_pos");
-
-  hDx_cal_neg = (TH3F*)nominal_hDx_cal_neg->Clone("hDx_neg");
-  hDy_cal_neg = (TH3F*)nominal_hDy_cal_neg->Clone("hDy_neg");
-  hDz_cal_neg = (TH3F*)nominal_hDz_cal_neg->Clone("hDz_neg");
-  hEx_cal_neg = (TH3F*)nominal_hEx_cal_neg->Clone("hEx_neg");
-  hEy_cal_neg = (TH3F*)nominal_hEy_cal_neg->Clone("hEy_neg");
-  hEz_cal_neg = (TH3F*)nominal_hEz_cal_neg->Clone("hEz_neg");
-
-  //reset splines
-  ResetSplines();
-
-  //set varied to false since it is nominal once again
-  _IsVaried = false;
-}
-
-//********************************************************************
-void SpaceCharge::ResetSplines(){
-//********************************************************************
-    
-  ClearSplines();
-  InitializeSplines();
 }
 
 //********************************************************************
 void SpaceCharge::ClearSplines(){
 //********************************************************************
 
-  ClearVectorOfSplines(spline_dx_fwd_neg);
-  ClearVectorOfSplines(spline_dy_fwd_neg);
-  ClearVectorOfSplines(spline_dz_fwd_neg);
 
   ClearVectorOfSplines(spline_dx_bkwd_neg);
   ClearVectorOfSplines(spline_dy_bkwd_neg);
@@ -1125,9 +709,6 @@ void SpaceCharge::ClearSplines(){
   ClearVectorOfSplines(spline_dEy_neg);
   ClearVectorOfSplines(spline_dEz_neg);
 
-  ClearVectorOfSplines(spline_dx_fwd_pos);
-  ClearVectorOfSplines(spline_dy_fwd_pos);
-  ClearVectorOfSplines(spline_dz_fwd_pos);
 
   ClearVectorOfSplines(spline_dx_bkwd_pos);
   ClearVectorOfSplines(spline_dy_bkwd_pos);
@@ -1151,36 +732,7 @@ void SpaceCharge::ClearVectorOfSplines(std::vector<std::vector<TSpline3*>> &spli
 }
 
 //********************************************************************
-TVector3 SpaceCharge::GetPosOffsets(TVector3 const& point) const {
-//********************************************************************
-  
-  TVector3 Offsets(0,0,0);
-  TVector3 p = point;
- 
-  if(IsTooFarFromBoundaries(p))return Offsets;
-
-  if(!IsInsideBoundaries(p)&&!IsTooFarFromBoundaries(p)) p = PretendAtBoundary(p);
-  
-  if(p.X() > 0.){
-    Offsets = GetOffsets(p, SCEhistograms.at(0), SCEhistograms.at(1), SCEhistograms.at(2), 1, 2);
-    Offsets.SetX(-1.0*Offsets.X());
-  } 
-  else{
-    Offsets = GetOffsets(p, SCEhistograms.at(6), SCEhistograms.at(7), SCEhistograms.at(8), 1, 1);
-    Offsets.SetX(-1.0*Offsets.X());
-  }
-       
-  TVector3 pafteroffset(p.X()+Offsets.X(), p.Y()+Offsets.Y(), p.Z()+Offsets.Z());
-  TVector3 edoffset = ElectronDiverterPosOffsets(pafteroffset);
-  Offsets.SetX(Offsets.X()+edoffset.X());
-  Offsets.SetY(Offsets.Y()+edoffset.Y());
-  Offsets.SetZ(Offsets.Z()+edoffset.Z());
-
-  return Offsets;
-}
-
-//********************************************************************
-TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid) const {
+TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale) const {
 //********************************************************************
 
   TVector3 Offsets(0,0,0);
@@ -1193,16 +745,19 @@ TVector3 SpaceCharge::GetCalPosOffsets(TVector3 const& point, int const& TPCid) 
   
   if((TPCid == 2 || TPCid == 6 || TPCid == 10) && p.X()>-20.){
     if(p.X()<0.) p = {0.00001, p.Y(), p.Z()};
-    Offsets = GetOffsets(p, CalSCEhistograms.at(0), CalSCEhistograms.at(1), CalSCEhistograms.at(2), 2, 2);
+    if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 0, scale);
+    else                Offsets = GetOffsets(p, CalSCEhistograms.at(0), CalSCEhistograms.at(1), CalSCEhistograms.at(2), 2, 2);
     Offsets[0] = -1.0*Offsets[0];
   } 
   else if((TPCid == 1 || TPCid == 5 || TPCid == 9) && p.X()<20.) {
     if(p.X()>0.) p= {-0.00001, p.Y(), p.Z()};
-    Offsets = GetOffsets(p, CalSCEhistograms.at(6), CalSCEhistograms.at(7), CalSCEhistograms.at(8), 2, 1);
+    if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 6, scale);
+    else                Offsets = GetOffsets(p, CalSCEhistograms.at(6), CalSCEhistograms.at(7), CalSCEhistograms.at(8), 2, 1);
     Offsets[0] = -1.0*Offsets[0];
   } 
 
-  return Offsets;
+  if(scale.IsVoxel()) return Offsets;
+  return scale.Global*Offsets;
 }
 
 //********************************************************************
@@ -1215,27 +770,7 @@ TVector3 SpaceCharge::GetOffsets(TVector3 const& point, TH3F* hX, TH3F* hY, TH3F
 }
 
 //********************************************************************
-TVector3 SpaceCharge::GetEfieldOffsets(TVector3 const& point) const {
-//********************************************************************
-  
-  TVector3 Offsets(0,0,0);
-  TVector3 p = point;
-
-  if(IsTooFarFromBoundaries(p))return Offsets;
-
-  if(!IsInsideBoundaries(p) && !IsTooFarFromBoundaries(p)) p = PretendAtBoundary(p);
-  
-  if(p.X() > 0.)Offsets = GetOffsets(p, SCEhistograms.at(3), SCEhistograms.at(4), SCEhistograms.at(5), 3, 2);
-  else          Offsets = GetOffsets(p, SCEhistograms.at(9), SCEhistograms.at(10),SCEhistograms.at(11),3, 1);
-  Offsets.SetX(-1.0*Offsets.X());
-  Offsets.SetY(-1.0*Offsets.Y());
-  Offsets.SetZ(-1.0*Offsets.Z());
-    
-  return Offsets;
-}
-
-//********************************************************************
-TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCid) const { 
+TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCid, const SCEScaling& scale) const { 
 //********************************************************************
  
  TVector3 Offsets(0,0,0);
@@ -1247,17 +782,20 @@ TVector3 SpaceCharge::GetCalEfieldOffsets(TVector3 const& point, int const& TPCi
   
  if((TPCid == 2 || TPCid == 6 || TPCid == 10) && p.X()>-20.){
    if(p.X()<0.) p = {0.00001, p.Y(), p.Z()};
-   Offsets= GetOffsets(p, CalSCEhistograms.at(3), CalSCEhistograms.at(4), CalSCEhistograms.at(5), 3, 2);
+   if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 3, scale);
+   else                Offsets = GetOffsets(p, CalSCEhistograms.at(3), CalSCEhistograms.at(4), CalSCEhistograms.at(5), 3, 2);
  }
  else if((TPCid == 1 || TPCid == 5 || TPCid == 9) && p.X()<20.){
    if(p.X()>0.) p = {-0.00001, p.Y(), p.Z()};
-   Offsets = GetOffsets(p, CalSCEhistograms.at(9), CalSCEhistograms.at(10), CalSCEhistograms.at(11), 3, 1);
+   if(scale.IsVoxel()) Offsets = GetOffsetsVoxel(p, 9, scale);
+   else                Offsets = GetOffsets(p, CalSCEhistograms.at(9), CalSCEhistograms.at(10), CalSCEhistograms.at(11), 3, 1);
  } 
  Offsets.SetX(-1.0*Offsets.X());
  Offsets.SetY(-1.0*Offsets.Y());
  Offsets.SetZ(-1.0*Offsets.Z());
  
- return Offsets;
+ if(scale.IsVoxel()) return Offsets;
+ return scale.Global*Offsets;
 }
 
 
@@ -1302,44 +840,115 @@ TVector3 SpaceCharge::PretendAtBoundary(TVector3 const& point) const {
 }
 
 //********************************************************************
-TVector3 SpaceCharge::ElectronDiverterPosOffsets(TVector3 const& point) const {
+void SpaceCharge::InitializeBasis(){
 //********************************************************************
 
-  double z = point.Z();
-  TVector3 Offsets(0,0,0);
-
-  if (!fEnableElectronDiverterDistortions1){
-    if(point.X()<0){
-      if(z > fEDChargeLossZLowMin && z < fEDChargeLossZHighMin)
-	Offsets.SetXYZ(2E9,2E9,2E9);
-      else{
-	double zdiff = z - fEDZCenterMin;
-	double zexp = TMath::Exp( -TMath::Sq(zdiff/fEDs) );
-	Offsets.SetZ(Offsets.Z() + fEDBZPosOffs * zdiff * zexp);
-	
-	// the timing offsets need to be computed after the z shift
-	double zdiffc = zdiff + Offsets.Z();
-	double zexpc = TMath::Exp( -TMath::Sq(zdiffc/fEDs) );
-	Offsets.SetX(Offsets.X() + fEDAXPosOffs * zexpc);
-      }
+  // Cardinal basis of the natural cubic spline ("b2e2", 0, 0, as in MakeSpline)
+  // along the spline axis of each calibration map: Dx/Ex along x, Dy/Ey along y,
+  // Dz/Ez along z. The spline through values y_i is sum_i y_i*B_i, so a map whose
+  // nodes are scaled can be interpolated without building new splines.
+  for(int ih = 0; ih < 12; ih++){
+    TH3F* h = CalSCEhistograms.at(ih);
+    int dim = ih%3 + 1;
+    TAxis* axis = (dim == 1) ? h->GetXaxis() : (dim == 2) ? h->GetYaxis() : h->GetZaxis();
+    int n = axis->GetNbins();
+    std::vector<double> a(n), b(n);
+    for(int i = 0; i < n; i++) a[i] = axis->GetBinCenter(i+1);
+    for(int i = 0; i < n; i++){
+      for(int j = 0; j < n; j++) b[j] = (i == j) ? 1. : 0.;
+      _basis[ih].push_back(new TSpline3(Form("basis_%d_%d", ih, i), &a[0], &b[0], n, "b2e2", 0, 0));
     }
+
+    // the same, as plain arrays
+    _basisKnots[ih].resize(n);
+    _basisCoef[ih].resize(4*n*n);
+    for(int i = 0; i < n; i++)
+      for(int k = 0; k < n; k++){
+        double xk, y, bb, c, d;
+        _basis[ih][i]->GetCoeff(k, xk, y, bb, c, d);
+        if(i == 0) _basisKnots[ih][k] = xk;
+        double* coef = &_basisCoef[ih][4*(i*n+k)];
+        coef[0] = y; coef[1] = bb; coef[2] = c; coef[3] = d;
+      }
+
+    int nbins = (h->GetNbinsX()+2)*(h->GetNbinsY()+2)*(h->GetNbinsZ()+2);
+    _mapContent[ih].resize(nbins);
+    for(int bin = 0; bin < nbins; bin++) _mapContent[ih][bin] = h->GetBinContent(bin);
+  }
+}
+
+//********************************************************************
+TVector3 SpaceCharge::GetOffsetsVoxel(TVector3 const& point, int ihist0, const SCEScaling& scale) const {
+//********************************************************************
+
+  return {InterpolateVoxel(ihist0  , point.X(), point.Y(), point.Z(), 1, scale),
+          InterpolateVoxel(ihist0+1, point.X(), point.Y(), point.Z(), 2, scale),
+          InterpolateVoxel(ihist0+2, point.X(), point.Y(), point.Z(), 3, scale)};
+}
+
+namespace{
+  // Neighbour bins used for the bilinear interpolation, as in
+  // SpaceCharge::InterpolateSplines (including the int bin center).
+  void SelectNeighbours(const TAxis* axis, double val, int& low, int& high){
+    int bin = axis->FindBin(val);
+    int bincenter = axis->GetBinCenter(bin);
+    int max = axis->GetNbins();
+    if(bin <= 1)            {low = 1;     high = 2;}
+    else if(bin >= max)     {low = max-1; high = max;}
+    else if(val > bincenter){low = bin;   high = bin+1;}
+    else                    {low = bin-1; high = bin;}
+  }
+}
+
+//********************************************************************
+double SpaceCharge::InterpolateVoxel(int ihist, double xVal, double yVal, double zVal, int dim, const SCEScaling& scale) const {
+//********************************************************************
+
+  TH3F* h = CalSCEhistograms.at(ihist);
+  int dv = (ihist < 6) ? 1 : 0; // CalSCEhistograms: 0-5 x>0, 6-11 x<0
+
+  // the two axes interpolated linearly, and the coordinate along the spline axis
+  const TAxis *axisA, *axisB;
+  double valA, valB, valS;
+  if(dim == 1)     {axisA = h->GetYaxis(); axisB = h->GetZaxis(); valA = yVal; valB = zVal; valS = xVal;}
+  else if(dim == 2){axisA = h->GetXaxis(); axisB = h->GetZaxis(); valA = xVal; valB = zVal; valS = yVal;}
+  else             {axisA = h->GetXaxis(); axisB = h->GetYaxis(); valA = xVal; valB = yVal; valS = zVal;}
+
+  int lowA, highA, lowB, highB;
+  SelectNeighbours(axisA, valA, lowA, highA);
+  SelectNeighbours(axisB, valB, lowB, highB);
+
+  // basis weights along the spline axis, as TSpline3::Eval: same interval
+  // for all the basis splines, since they share the knots
+  int n = _basisKnots[ihist].size();
+  int k = _basis[ihist][0]->FindX(valS);
+  if(k >= n-1 && n > 1) k = n-2;
+  double dx = valS - _basisKnots[ihist][k];
+  std::vector<double> w(n);
+  for(int i = 0; i < n; i++){
+    const double* c = &_basisCoef[ihist][4*(i*n+k)];
+    w[i] = c[0]+dx*(c[1]+dx*(c[2]+dx*c[3]));
   }
 
-  if (!fEnableElectronDiverterDistortions2){
-    if(point.X()<0){
-      if(z > fEDChargeLossZLowMax && z < fEDChargeLossZHighMax)
-	Offsets.SetXYZ(2E9,2E9,2E9);
-      else{
-	double zdiff = z - fEDZCenterMax;
-	double zexp = TMath::Exp( -TMath::Sq(zdiff/fEDs) );
-	Offsets.SetZ(Offsets.Z() + fEDBZPosOffs * zdiff * zexp);
-	
-	// the timing offsets need to be computed after the z shift
-	double zdiffc = zdiff + Offsets.Z();
-	double zexpc = TMath::Exp( -TMath::Sq(zdiffc/fEDs) );
-	Offsets.SetX(Offsets.X() + fEDAXPosOffs * zexpc);
-      }
-    }
-  }
-  return Offsets;
+  // spline value at each of the four neighbour lines, with scaled nodes
+  const std::vector<double>& content = _mapContent[ihist];
+  int stride = (dim == 1) ? 1 : (dim == 2) ? h->GetNbinsX()+2 : (h->GetNbinsX()+2)*(h->GetNbinsY()+2);
+  auto line = [&](int iA, int iB){
+    int bin = (dim == 1) ? h->GetBin(1, iA, iB) : (dim == 2) ? h->GetBin(iA, 1, iB) : h->GetBin(iA, iB, 1);
+    double sum = 0;
+    for(int i = 0; i < n; i++, bin += stride)
+      sum += w[i]*scale.NodeFactor(dv, bin)*content[bin];
+    return sum;
+  };
+  double f_11 = line(lowA,  lowB);
+  double f_12 = line(lowA,  highB);
+  double f_21 = line(highA, lowB);
+  double f_22 = line(highA, highB);
+
+  double a_1 = axisA->GetBinCenter(lowA);
+  double a_2 = axisA->GetBinCenter(highA);
+  double b_1 = axisB->GetBinCenter(lowB);
+  double b_2 = axisB->GetBinCenter(highB);
+
+  return (f_11*(a_2-valA)*(b_2-valB) + f_21*(valA-a_1)*(b_2-valB) + f_12*(a_2-valA)*(valB-b_1) + f_22*(valA-a_1)*(valB-b_1))/((a_2-a_1)*(b_2-b_1));
 }

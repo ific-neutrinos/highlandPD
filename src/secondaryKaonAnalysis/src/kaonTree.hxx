@@ -21,7 +21,6 @@ namespace kaonTree{
   void AddKaonVariables_KaonBestCandidateTrue(OutputManager& output);
 
   // Methods to fill the kaonAnalysis sets of variables in the output tree
-  //void FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart);
   void FillKaonVariables_TrueKaonCandidates(OutputManager& output, const AnaTrueParticlePD* truePart, const AnaTrueParticlePD* trueDau);
 
   void FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaParticlePD* part, AnaParticlePD* parent = NULL);
@@ -113,7 +112,6 @@ namespace kaonTree{
     candidates_hit_y,
     candidates_hit_z,
     candidates_hit_dedx,
-    candidates_hit_dedx_cal,
     //candidates_hit_dqdx_raw,    
     candidates_hit_resrange,
 
@@ -161,7 +159,6 @@ namespace kaonTree{
     candidates_dau_hit_y,
     candidates_dau_hit_z,
     candidates_dau_hit_dedx,
-    candidates_dau_hit_dedx_cal,
     //candidates_dau_hit_dqdx_raw,    
     candidates_dau_hit_resrange,
 
@@ -287,7 +284,6 @@ namespace kaonTree{
     bestcandidate_hit_y,
     bestcandidate_hit_z,
     bestcandidate_hit_dedx,
-    bestcandidate_hit_dedx_cal,
     //bestcandidate_hit_dqdx_raw,    
     bestcandidate_hit_resrange,
 
@@ -327,7 +323,6 @@ namespace kaonTree{
     bestcandidate_dau_hit_y,
     bestcandidate_dau_hit_z,
     bestcandidate_dau_hit_dedx,
-    bestcandidate_dau_hit_dedx_cal,
     //bestcandidate_dau_hit_dqdx_raw,    
     bestcandidate_dau_hit_resrange,
 

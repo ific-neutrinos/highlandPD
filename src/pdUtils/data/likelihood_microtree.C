@@ -138,17 +138,21 @@ double LikelihoodFit(TGraph* tg){
 }
 
 
-void likelihood_microtree(){
+// microtree: micro-tree de entrada. dedx_profiles y ke_vs_range: por defecto,
+// los de este directorio (pdUtils/data); ejecutar la macro desde aquí.
+void likelihood_microtree(const std::string& microtree,
+                          const std::string& dedx_profiles = "dedx_profiles.root",
+                          const std::string& ke_vs_range   = "ke_vs_range.root"){
 
   gStyle->SetOptFit(1);
   
   //get minitree
-  TFile* file = TFile::Open("/home/migue/Documents/PhD/tesis/files/microtrees/xs/xs_03-05-2023.root");
+  TFile* file = TFile::Open(microtree.c_str());
   TTree* tree = (TTree*)file->Get("ana");
 
   //get kaon pid
-  TFile* kfile = TFile::Open("/home/migue/Documents/PhD/tesis/macros/analysis/xs/dedx_profiles.root");
-  TFile* rfile = TFile::Open("/home/migue/Documents/PhD/tesis/macros/analysis/xs/ke_vs_range.root");
+  TFile* kfile = TFile::Open(dedx_profiles.c_str());
+  TFile* rfile = TFile::Open(ke_vs_range.c_str());
 
   TCanvas* c1 = new TCanvas("c1","c1",700,500);
   TCanvas* c2 = new TCanvas("c2","c2",700,500);

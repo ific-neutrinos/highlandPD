@@ -18,8 +18,6 @@ void pdExampleSelection::DefineSteps(){
   // the step sequence is broken if cut is not passed (default is "false")
   AddStep(StepBase::kAction, "find Pandora track",           new FindBeamTrackAction());
   AddStep(StepBase::kCut,    "beam track in TPC",            new BeamTrackExistsCut());
-  //AddStep(StepBase::kCut,    "beam particle is proton-like", new BeamPDGCut(2212);
-  //AddStep(StepBase::kCut,    "pandora reco worked",          new BeamQualityCut());
   AddStep(StepBase::kCut,    "proton CSDA range",            new pdExampleCSDARangeCut());
   
   SetBranchAlias(0,"trunk");

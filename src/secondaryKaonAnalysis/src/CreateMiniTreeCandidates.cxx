@@ -40,12 +40,6 @@ bool CreateMiniTreeCandidates::Process(){
     _lastSpillSaved=true;
   } 
   
-  /*// Fill the minitree
-  if(SaveMiniTree()){
-    FillMiniTree();
-    // Mark this spill as saved
-    _lastSpillSaved=true;
-    } */ 
   
   return true;
 }
@@ -136,16 +130,10 @@ bool CreateMiniTreeCandidates::IsCandidate(AnaParticlePD* part){
   double mom = pdAnaUtils::ComputeRangeMomentum(dau->Length,13);
   if(mom <= 0.210 || mom >= 0.237)return false;
 
-  //daughter CNN cut
-  //if(abs(dau->CNNscore[0]-0.69)>=0.27)return false;
-
   //cos cut
   double cos = 0;
   for(int i = 0; i < 3; i++)cos = cos + part->DirectionEnd[i] * dau->DirectionStart[i];
   if(cos <= -0.98 || cos >= 0.64)return false;
-
-  //candidate CNN cut
-  //if(part->CNNscore[0]<=0.61)return false;
 
   //distance cut
   double dis = 0;

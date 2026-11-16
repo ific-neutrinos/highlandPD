@@ -1,0 +1,11 @@
+--- Space charge (SCE) systematics ------
+Shared by SCEGeometricVariation and SCECalorimetricVariation (SCEVariationBase).
+
+Variation mode of the SCE map in each toy:
+  0 = global: the whole map scaled by one parameter (sigma in data/SCE.dat)
+  1 = voxel:  each map node scaled by the parameter of its box (VoxelFile)
+ < pdSystematics.SCE.VariationMode = 0 >
+
+Boxes for the voxel mode, in pdSystematics/data. One line per box:
+xmin xmax ymin ymax zmin zmax sigma
+ < pdSystematics.SCE.VoxelFile = SCE2.dat >

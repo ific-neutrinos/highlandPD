@@ -34,24 +34,10 @@ protected:
 
 private:
 
-  Int_t _BeamPDGFilter;
 
 };
 
-//---- Steps and actions for the analysis
-class BeamFilterForXSCut: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BeamFilterForXSCut();}
-};
 
-class BQCForXS: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BQCForXS();}
-};
 
 class GetKaonsForXSAction: public StepBase{
  public:
@@ -62,8 +48,6 @@ class GetKaonsForXSAction: public StepBase{
 
 // class KaonChi2Cut: public StepBase{
 //  public:
-//   using StepBase::Apply;
-//   bool Apply(AnaEventC& event, ToyBoxB& box) const;
 //   StepBase* MakeClone(){return new KaonChi2Cut();}
 // };
 
@@ -74,25 +58,7 @@ class GetForcedDaughterAction: public StepBase{
   StepBase* MakeClone(){return new GetForcedDaughterAction();}
 };
 
-class DauMomMuonCut: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new DauMomMuonCut();}
-};
 
-class AllCut: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new AllCut();}
-};
 
-class DrawingTestAction: public StepBase{
- public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new DrawingTestAction();}
-};
 
 #endif

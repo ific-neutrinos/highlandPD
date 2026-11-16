@@ -165,12 +165,8 @@ void pdBaseAnalysis::FillTruthTree(){
   }
 }
 
-// //********************************************************************
-// bool pdBaseAnalysis::CheckFillTruthTreePD(const AnaTrueParticlePD* part){
-// //********************************************************************
 
 //   return true;
-// }
 
 //********************************************************************
 void pdBaseAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
@@ -221,8 +217,6 @@ bool pdBaseAnalysis::FinalizeConfiguration(){
       AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(*it);
 
       // not sure how this works in pd, for the moment we store all
-      // // Check the bunch
-      // if (GetBunch().Bunch != vtx->Bunch) continue;
 
       trueParticles.push_back(truepart); 
     }

@@ -1,11 +1,34 @@
 --- SCE parameters --------
- < pdUtils.SCE.EnableSimSpatialSCE = 1   >
- < pdUtils.SCE.EnableSimEfieldSCE  = 0   >	
- < pdUtils.SCE.EnableCalSpatialSCE = 0   >	
- < pdUtils.SCE.EnableCalEfieldSCE  = 1   >
- < pdUtils.SCE.Efield              = 500 >
+Space charge map (in pdUtils/data). The alternative map is SCE_Alternate_v4_EField.root
+ < pdUtils.SCE.MapFile = SCE_DataDriven_180kV_v4.root >
 
 --- Calorimetry --------
+Nominal electric field (kV/cm) and ModBox recombination parameters used by
+Calorimetry. Note: RecombinationDataCorrection uses its own values
+(E = 0.553 kV/cm); it is not known whether the difference is intended.
+ < pdUtils.Calorimetry.Efield  = 0.4867 >
+ < pdUtils.Calorimetry.ModBoxA = 0.930  >
+ < pdUtils.Calorimetry.ModBoxB = 0.212  >
+
+Drift velocity (cm/us) and APA x position (cm), for the lifetime correction
+ < pdUtils.Calorimetry.Vdrift = 0.156461 >
+ < pdUtils.Calorimetry.APAx   = 368.351  >
+
+Calibration constants from ADC area to electrons, per plane
+ < pdUtils.Calorimetry.CalAreaConstant.Plane0 = 1.04e-3   >
+ < pdUtils.Calorimetry.CalAreaConstant.Plane1 = 1.04e-3   >
+ < pdUtils.Calorimetry.CalAreaConstant.Plane2 = 1.0156e-3 >
+
+PID tables (in pdUtils/data): dE/dx vs residual range templates, and kinetic energy vs range
+ < pdUtils.PID.dEdxTemplatesFile = dEdxrestemplates.root >
+ < pdUtils.PID.KEvsRangeFile     = ke_vs_range.root      >
+
+dQ/dx calibration files (in pdUtils/data)
+ < pdUtils.Calorimetry.NormFile  = mc_prod4_dQdx_norm.txt  >
+ < pdUtils.Calorimetry.XCalFile  = mc_prod4_dQdx_XCal.txt  >
+ < pdUtils.Calorimetry.YZCalFile = mc_prod4_dQdx_YZCal.txt >
+
+Electron lifetime (us) for MC and for each data run
  < pdUtils.Calorimetry.ElectronLifetime.MC = 35000 >
  < pdUtils.Calorimetry.ElectronLifetime.Run5758 = 13210 >
  < pdUtils.Calorimetry.ElectronLifetime.Run5759 = 13430 >
@@ -104,5 +127,3 @@
  < pdUtils.AnalysisUtils.BeamQualityCuts.Data.7.sigmaz = 1.57  >
  < pdUtils.AnalysisUtils.BeamQualityCuts.Data.7.cos    = 0.95  >	
 
---- CNN --------------
- < pdUtils.CNN.PBfile              = cnn_emtrkmichl_pitch_5_wire_48_drift_48_down_6_mean_notes_protoduneBeamAndCosmicsMCC11.pb >

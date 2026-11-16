@@ -1,11 +1,12 @@
 #include "BeamPartIdEffWeight.hxx"
+#include "pdDataFiles.hxx"
 #include "pdAnalysisUtils.hxx"
 #include <cassert>
 #include "EventBoxPD.hxx"
 #include "SystematicUtils.hxx"
 
 //********************************************************************
-BeamPartIdEffWeight::BeamPartIdEffWeight():EventWeightBase(), BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","BeamPartIdEffWeight", BinnedParams::k2D_EFF_ASSYMMETRIC){
+BeamPartIdEffWeight::BeamPartIdEffWeight():EventWeightBase(), BinnedParams(pd::DataDir("pdSystematics"),"BeamPartIdEffWeight", BinnedParams::k2D_EFF_ASSYMMETRIC){
 //********************************************************************
 
   // Read the systematic source parameters from the data files
@@ -56,12 +57,6 @@ bool BeamPartIdEffWeight::IsRelevantTrueObject(const AnaEventC& event, const Ana
 //********************************************************************
 
   (void)event;
-
-  /*const AnaTrueParticleB& truePart = *static_cast<const AnaTrueParticleB*>(&trueObj);
-
-  // consider only charged true particles with momenta below 0.4 (as an example)
-  if(truePart.Charge==0) return false;
-  if(truePart.Momentum<0.4) return false;*/
-    
+  (void)trueObj;
   return true;
 }

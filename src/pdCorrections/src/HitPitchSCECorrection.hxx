@@ -21,7 +21,7 @@ public:
   
 protected:
 
-  Calorimetry* _cal;
+  const Calorimetry* _cal; ///< owned by pd::services()
 };
 
 #endif

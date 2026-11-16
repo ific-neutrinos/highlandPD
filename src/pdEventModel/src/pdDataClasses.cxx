@@ -5,7 +5,6 @@
 
 
 // define a constant value for uninitialised parameters
-//const Float_t  kFloatUnassigned = -999.;
 const Double_t kDoubleUnassigned = -999.;
 const Int_t    kIntUnassigned = -999;
 const Float_t  kFloatUnassigned = -999.;
@@ -62,7 +61,6 @@ AnaHitPD::AnaHitPD(){
   dEdx_calib    = kFloatUnassigned;
   
   Signal.clear();
-  //CNN.resize(3);
   CNN[0]=CNN[1]=CNN[2]=kFloatUnassigned;
 }
 
@@ -80,7 +78,6 @@ AnaHitPD::AnaHitPD(const AnaHitPD& hit){
   Channel       = hit.Channel;
   View          = hit.View;
   Signal        = hit.Signal;
-  //CNN.resize(3);
   for (size_t i=0;i<3;i++)
     CNN[i]           = hit.CNN[i];
 
@@ -576,7 +573,6 @@ AnaEventPD::AnaEventPD(const AnaEventPD& event):AnaEvent(event){
 AnaEventPD::AnaEventPD(const AnaSpillPD& spill, const AnaBunchPD& bunch):AnaEvent(spill,bunch) {
 //*****************************************************************************
 
-  //CNNwires = bunch.CNNwires;
 }
 
 //********************************************************************

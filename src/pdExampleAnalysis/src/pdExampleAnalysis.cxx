@@ -86,7 +86,6 @@ pdExampleAnalysis::pdExampleAnalysis(AnalysisAlgorithm* ana) : pdBaseAnalysis(an
 //********************************************************************
 
   // Add the package version
-  //  ND::versioning().AddPackage("pdExampleAnalysis", anaUtils::GetSoftwareVersionFromPath((std::string)getenv("STOPPINGPROTONANALYSISROOT")));
 }
 
 //********************************************************************
@@ -308,6 +307,7 @@ void pdExampleAnalysis::FillMicroTrees(bool addBase){
       AnaParticlePD* dau = static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]);
       standardPDTree::FillStandardVariables_BeamParticleDaughtersReco(output(), dau);
       standardPDTree::FillStandardVariables_BeamParticleDaughtersTrue(output(), dau);
+      standardPDTree::FillStandardVariables_BeamParticleDaughtersHitsReco(output(), dau, NMAXHITSPERPLANE);
       output().IncrementCounter(seltrk_ndau);
     }    
   }
@@ -354,7 +354,6 @@ void pdExampleAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   pdBaseAnalysis::FillTruthTree(part);
 
   // Fill standard variables for the PD analysis
-  //  standardPDTree::FillStandardVariables_CountersTrue(output(), _globalCounters);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(    output(), GetSpill().Beam);
 
 }

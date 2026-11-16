@@ -13,9 +13,9 @@ BrokenTracksSelection::BrokenTracksSelection(bool forceBreak): SelectionBase(for
 void BrokenTracksSelection::DefineSteps(){
 //********************************************************************
 
-  AddStep(StepBase::kAction,   "find Pandora track",         new FindBeamTrackAction(),      false);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "candidate exists",           new BeamTrackExistsCut(),       false);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "beam pdg",                   new BeamMuonCut(),              false);// in pdBaseAnalysis/src/pandoraPreselection  
+  AddStep(StepBase::kAction,   "find Pandora track",         new FindBeamTrackAction(),      false);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "candidate exists",           new BeamTrackExistsCut(),       false);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "beam pdg",                   new BeamMuonCut(),              false);// in pdBaseAnalysis/src/pdBaseSelection  
   AddStep(StepBase::kCut,      "beam quality",               new BeamTrackQualityCut(),      false);
   AddStep(StepBase::kCut,      "denominator",                new TrackReachesAPABorderCut(), false);
   AddStep(StepBase::kCut,      "almost numerator",           new TrackEndsInAPABorderCut(),  false);
@@ -68,21 +68,18 @@ bool TrackIsBrokenCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   bool IsBroken = false;
   double coscut = 0.9;
-  double discut = 13.;
 
   AnaParticlePD* part = box.MainTrack;
   
   int ndau = part->Daughters.size();
   for(int idau = 0; idau < ndau; idau++){
     AnaParticlePD* dau = (AnaParticlePD*)part->Daughters[idau];
-    double cos = 0, dis = 0;
+    double cos = 0;
     for(int i = 0; i < 3; i++){
       cos += part->DirectionEnd[i]*dau->DirectionStart[i];
-      dis += pow(dau->PositionStart[i]-part->PositionEnd[i],2);
     }
     cos = abs(cos);
-    dis = sqrt(dis);
-    if(cos > coscut){// && dis < discut){
+    if(cos > coscut){
       IsBroken = true;
       break;
     }

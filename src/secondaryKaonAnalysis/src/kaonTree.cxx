@@ -130,14 +130,12 @@ void kaonTree::AddKaonVariables_KaonCandidatesHitsReco(OutputManager& output, UI
   AddVarMF(output, candidates_hit_y,        "candidates y per hit",          ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_hit_z,        "candidates z per hit",          ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_hit_dedx,     "candidates dEdx per hit",       ncandidates, -nmax, nmaxhitsperplane);
-  AddVarMF(output, candidates_hit_dedx_cal, "candidates dEdx cal per hit",   ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_hit_resrange, "candidates hit residual range", ncandidates, -nmax, nmaxhitsperplane);
 
   AddVarMF(output, candidates_dau_hit_x,        "candidates daughter x per hit",          ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_dau_hit_y,        "candidates daughter y per hit",          ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_dau_hit_z,        "candidates daughter z per hit",          ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_dau_hit_dedx,     "candidates daughter dEdx per hit",       ncandidates, -nmax, nmaxhitsperplane);
-  AddVarMF(output, candidates_dau_hit_dedx_cal, "candidates daughter dEdx cal per hit",   ncandidates, -nmax, nmaxhitsperplane);
   AddVarMF(output, candidates_dau_hit_resrange, "candidates daughter hit residual range", ncandidates, -nmax, nmaxhitsperplane);
 }
 
@@ -292,14 +290,12 @@ void kaonTree::AddKaonVariables_KaonBestCandidateHitsReco(OutputManager& output,
   AddVarFixVF(output, bestcandidate_hit_y,        "bestcandidate y per hit",          nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_hit_z,        "bestcandidate z per hit",          nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_hit_dedx,     "bestcandidate dEdx per hit",       nmaxhitsperplane);
-  AddVarFixVF(output, bestcandidate_hit_dedx_cal, "bestcandidate dEdx cal per hit",   nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_hit_resrange, "bestcandidate hit residual range", nmaxhitsperplane);
 
   AddVarFixVF(output, bestcandidate_dau_hit_x,        "bestcandidate daughter x per hit",          nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_dau_hit_y,        "bestcandidate daughter y per hit",          nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_dau_hit_z,        "bestcandidate daughter z per hit",          nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_dau_hit_dedx,     "bestcandidate daughter dEdx per hit",       nmaxhitsperplane);
-  AddVarFixVF(output, bestcandidate_dau_hit_dedx_cal, "bestcandidate daughter dEdx cal per hit",   nmaxhitsperplane);
   AddVarFixVF(output, bestcandidate_dau_hit_resrange, "bestcandidate daughter hit residual range", nmaxhitsperplane);
 }
 
@@ -349,14 +345,11 @@ void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const
   output.FillVar               (truekaon_trueparentid,       truePart->ParentID        );
   output.FillVar               (truekaon_trueproc,           truePart->ProcessStart    ); 
   output.FillVar               (truekaon_trueendproc,        truePart->ProcessEnd      );
-  //output.FillVar               (truekaon_truedecay,          kvtx.DecayMode            );
-  //output.FillVar               (truekaon_truechainmuon,      kvtx.ChainMuon            );
   output.FillVar               (truekaon_truendau,    (Int_t)truePart->Daughters.size()); 
   output.FillVectorVarFromArray(truekaon_truepos,            truePart->Position,      4);
   output.FillVectorVarFromArray(truekaon_trueendpos,         truePart->PositionEnd,   4);
   output.FillVectorVarFromArray(truekaon_truedir,            truePart->Direction,     3);
   output.FillVectorVarFromArray(truekaon_trueenddir,         truePart->DirectionEnd,  3);
-  //output.FillVar               (truekaon_branch,      (Int_t)kvtx.Branch               ); 
   
   if(trueDau){
     if(trueDau->PDG == -13){
@@ -393,8 +386,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_mom_prot,         pdAnaUtils::ComputeRangeMomentum(part->Length,2212));
   output.FillVectorVar         (candidates_mom_muon,         pdAnaUtils::ComputeRangeMomentum(part->Length,13)  );
   Float_t calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(part);
-  Float_t mom  = sqrt(pow(calE,2)+2*calE*938.27);
-  Float_t csda = pdAnaUtils::ComputeCSDARange(mom, 2212);
   output.FillVectorVar         (candidates_calE,             calE           );
   output.FillVectorVar         (candidates_type,             part->Type             );
   output.FillMatrixVarFromArray(candidates_CNNscore,         part->CNNscore,       3); 
@@ -438,8 +429,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_dau_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(dau,5));
   output.FillVectorVar         (candidates_dau_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,dau->Hits[2]));
   Float_t dau_calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(dau);
-  Float_t dau_mom  = sqrt(pow(calE,2)+2*calE*105.07);
-  Float_t dau_csda = pdAnaUtils::ComputeCSDARange(dau_mom, 13);
   output.FillVectorVar         (candidates_dau_calE,            dau_calE           );
   output.FillVectorVar         (candidates_dau_vtx_michelscore,  dau->vtx_CNN_michelscore);
   output.FillVectorVar         (candidates_dau_vtx_nhits,        dau->vtx_CNN_NHits);
@@ -493,7 +482,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesHitsReco(OutputManager& output, A
       output.FillMatrixVar(candidates_hit_y,            (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_hit_z,            (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_hit_dedx,         (Float_t)-999., -1, j);
-      output.FillMatrixVar(candidates_hit_dedx_cal,     (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_hit_resrange,     (Float_t)-999., -1, j);
     }
   }
@@ -503,7 +491,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesHitsReco(OutputManager& output, A
       output.FillMatrixVar(candidates_hit_y,         (Float_t)part->Hits[2][j].Position.Y(),   -1, j);
       output.FillMatrixVar(candidates_hit_z,         (Float_t)part->Hits[2][j].Position.Z(),   -1, j);
       output.FillMatrixVar(candidates_hit_dedx,      (Float_t)part->Hits[2][j].dEdx,           -1, j);
-      output.FillMatrixVar(candidates_hit_dedx_cal,  (Float_t)part->Hits[2][j].dEdx_calib,     -1, j);
       output.FillMatrixVar(candidates_hit_resrange,  (Float_t)part->Hits[2][j].ResidualRange,  -1, j);
     }
   }
@@ -517,7 +504,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesHitsReco(OutputManager& output, A
       output.FillMatrixVar(candidates_dau_hit_y,        (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_dau_hit_z,        (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_dau_hit_dedx,     (Float_t)-999., -1, j);
-      output.FillMatrixVar(candidates_dau_hit_dedx_cal, (Float_t)-999., -1, j);
       output.FillMatrixVar(candidates_dau_hit_resrange, (Float_t)-999., -1, j);
     }
   }
@@ -527,7 +513,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesHitsReco(OutputManager& output, A
       output.FillMatrixVar(candidates_dau_hit_y,         (Float_t)dau->Hits[2][j].Position.Y(),   -1, j);
       output.FillMatrixVar(candidates_dau_hit_z,         (Float_t)dau->Hits[2][j].Position.Z(),   -1, j);
       output.FillMatrixVar(candidates_dau_hit_dedx,      (Float_t)dau->Hits[2][j].dEdx,           -1, j);
-      output.FillMatrixVar(candidates_dau_hit_dedx_cal,  (Float_t)dau->Hits[2][j].dEdx_calib,     -1, j);
       output.FillMatrixVar(candidates_dau_hit_resrange,  (Float_t)dau->Hits[2][j].ResidualRange,  -1, j);
     }
   }
@@ -650,35 +635,35 @@ void kaonTree::FillKaonVariables_KaonBestCandidateRecoPID(OutputManager& output,
 //********************************************************************
 
   if (!part) return;
-  std::pair<double,int> result = pdAnaUtils::Chi2PID_UpToRR(*part,2212,5);
+  std::pair<double,int> result = pdAnaUtils::Chi2PID(*part,2212,5);
   output.FillVar(bestcandidate_chi2_prot_perndf_5,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,13,5);
+  result = pdAnaUtils::Chi2PID(*part,13,5);
   output.FillVar(bestcandidate_chi2_muon_perndf_5,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,321,5);
+  result = pdAnaUtils::Chi2PID(*part,321,5);
   output.FillVar(bestcandidate_chi2_kaon_perndf_5,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,2212,10);
+  result = pdAnaUtils::Chi2PID(*part,2212,10);
   output.FillVar(bestcandidate_chi2_prot_perndf_10,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,13,10);
+  result = pdAnaUtils::Chi2PID(*part,13,10);
   output.FillVar(bestcandidate_chi2_muon_perndf_10,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,321,10);
+  result = pdAnaUtils::Chi2PID(*part,321,10);
   output.FillVar(bestcandidate_chi2_kaon_perndf_10,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,2212,15);
+  result = pdAnaUtils::Chi2PID(*part,2212,15);
   output.FillVar(bestcandidate_chi2_prot_perndf_15,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,13,15);
+  result = pdAnaUtils::Chi2PID(*part,13,15);
   output.FillVar(bestcandidate_chi2_muon_perndf_15,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,321,15);
+  result = pdAnaUtils::Chi2PID(*part,321,15);
   output.FillVar(bestcandidate_chi2_kaon_perndf_15,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,2212,20);
+  result = pdAnaUtils::Chi2PID(*part,2212,20);
   output.FillVar(bestcandidate_chi2_prot_perndf_20,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,13,20);
+  result = pdAnaUtils::Chi2PID(*part,13,20);
   output.FillVar(bestcandidate_chi2_muon_perndf_20,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,321,20);
+  result = pdAnaUtils::Chi2PID(*part,321,20);
   output.FillVar(bestcandidate_chi2_kaon_perndf_20,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,2212,25);
+  result = pdAnaUtils::Chi2PID(*part,2212,25);
   output.FillVar(bestcandidate_chi2_prot_perndf_25,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,13,25);
+  result = pdAnaUtils::Chi2PID(*part,13,25);
   output.FillVar(bestcandidate_chi2_muon_perndf_25,(Float_t)result.first/result.second);
-  result = pdAnaUtils::Chi2PID_UpToRR(*part,321,25);
+  result = pdAnaUtils::Chi2PID(*part,321,25);
   output.FillVar(bestcandidate_chi2_kaon_perndf_25,(Float_t)result.first/result.second);
 
   output.FillVar(bestcandidate_lkl_prot,pdAnaUtils::GetdEdxLikelihood(part,2212));
@@ -731,7 +716,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(OutputManager& output
       output.FillVectorVar(bestcandidate_hit_y,            (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_hit_z,            (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_hit_dedx,         (Float_t)-999.,  j);
-      output.FillVectorVar(bestcandidate_hit_dedx_cal,     (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_hit_resrange,     (Float_t)-999.,  j);
     }
   }
@@ -741,7 +725,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(OutputManager& output
       output.FillVectorVar(bestcandidate_hit_y,         (Float_t)part->Hits[2][j].Position.Y(),    j);
       output.FillVectorVar(bestcandidate_hit_z,         (Float_t)part->Hits[2][j].Position.Z(),    j);
       output.FillVectorVar(bestcandidate_hit_dedx,      (Float_t)part->Hits[2][j].dEdx,            j);
-      output.FillVectorVar(bestcandidate_hit_dedx_cal,  (Float_t)part->Hits[2][j].dEdx_calib,      j);
       output.FillVectorVar(bestcandidate_hit_resrange,  (Float_t)part->Hits[2][j].ResidualRange,   j);
     }
   }
@@ -755,7 +738,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(OutputManager& output
       output.FillVectorVar(bestcandidate_dau_hit_y,        (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_dau_hit_z,        (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_dau_hit_dedx,     (Float_t)-999.,  j);
-      output.FillVectorVar(bestcandidate_dau_hit_dedx_cal, (Float_t)-999.,  j);
       output.FillVectorVar(bestcandidate_dau_hit_resrange, (Float_t)-999.,  j);
     }
   }
@@ -765,7 +747,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(OutputManager& output
       output.FillVectorVar(bestcandidate_dau_hit_y,         (Float_t)dau->Hits[2][j].Position.Y(),    j);
       output.FillVectorVar(bestcandidate_dau_hit_z,         (Float_t)dau->Hits[2][j].Position.Z(),    j);
       output.FillVectorVar(bestcandidate_dau_hit_dedx,      (Float_t)dau->Hits[2][j].dEdx,            j);
-      output.FillVectorVar(bestcandidate_dau_hit_dedx_cal,  (Float_t)dau->Hits[2][j].dEdx_calib,      j);
       output.FillVectorVar(bestcandidate_dau_hit_resrange,  (Float_t)dau->Hits[2][j].ResidualRange,   j);
     }
   }

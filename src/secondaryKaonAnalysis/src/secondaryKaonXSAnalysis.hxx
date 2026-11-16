@@ -34,7 +34,6 @@ class secondaryKaonXSAnalysis: public baseAnalysis {
   bool CheckFillTruthTree(const AnaTrueVertex& vtx){return true;}
   bool CheckFillTruthTree(const AnaTrueParticlePD* part);
 
-  //using baseAnalysis::FillTruthTree;
   bool FinalizeConfiguration();
   void FillTruthTree();
   void FillTruthTree(const AnaTrueVertex& vtx){return;}
@@ -103,7 +102,7 @@ public:
   };
 
   enum enumSyst_secondaryKaonXSAnalysis{
-    kdQdxCalibration=0,
+    kdEdxVariation=0,
     kRecombination,
     kSCEGeometric,
     kBrokenTracks,

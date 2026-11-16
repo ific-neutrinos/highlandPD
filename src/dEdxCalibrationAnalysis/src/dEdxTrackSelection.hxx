@@ -1,7 +1,6 @@
 #ifndef dEdxTrackSelection_h
 #define dEdxTrackSelection_h
 
-//#include "dEdxCalibration.hxx"
 #include "SelectionBase.hxx"
 #include "Parameters.hxx"
 #include "ToyBoxdEdx.hxx"
@@ -60,11 +59,5 @@ public:
   StepBase* MakeClone(){return new EventHasTracksCut();}
 };
 
-class TracksInDefinedVolumeCut: public StepBase{
-public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new TracksInDefinedVolumeCut();}
-};
 
 #endif

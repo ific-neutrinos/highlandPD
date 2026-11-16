@@ -121,12 +121,12 @@ void maps(){
 //*********************************************************************************
 
   //nominal sce map
-  std::string filename1 = "/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00/localProducts_larsoft_v09_56_00_e20_prof/highland/highlandPD/src/pdUtils/data/SCE_DataDriven_180kV_v4.root";
+  std::string filename1 = std::string(gSystem->Getenv("PDUTILSROOT"))+"/data/SCE_DataDriven_180kV_v4.root";
   //open root file
   TFile* rfile1 = TFile::Open(filename1.c_str());
 
   //alternative sce map
-  std::string filename2 = "/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00/localProducts_larsoft_v09_56_00_e20_prof/highland/highlandPD/src/pdUtils/data/SCE_Alternate_v4_EField.root";
+  std::string filename2 = std::string(gSystem->Getenv("PDUTILSROOT"))+"/data/SCE_Alternate_v4_EField.root";
   //open root file
   TFile* rfile2 = TFile::Open(filename2.c_str());
 

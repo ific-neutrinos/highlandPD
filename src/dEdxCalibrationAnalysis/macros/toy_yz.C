@@ -60,11 +60,10 @@ Double_t Langaus(Double_t *x, Double_t *par) {
 }
 
 //********************************************
-void toy_yz(){
+void toy_yz(const std::string& filename){
 //********************************************
   
   //file name
-  std::string filename = "/dune/data/users/miagarc/toy.root";
   //open root file
   TFile* rfile = TFile::Open(filename.c_str());
   TTree* tree  = (TTree*)rfile->Get("all_syst");

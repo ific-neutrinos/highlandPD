@@ -147,7 +147,6 @@ void PDSPAnalyzerTreeConverter::FillBeamInfo(std::vector<AnaTrueParticleB*>& tru
   beam->nFibers[0] = beam_inst_nFibersP1;
   beam->nFibers[1] = beam_inst_nFibersP2;
   beam->nFibers[2] = beam_inst_nFibersP3;    
-  //beam->TOF = (*beam_inst_TOF)[0];
   
   // Create the BeamParticle object
   beam->BeamParticle = MakeParticle();
@@ -202,14 +201,6 @@ void PDSPAnalyzerTreeConverter::FillBunchInfo(std::vector<AnaTrueParticleB*>& tr
     part->DaughtersIDs.push_back(dautrk->UniqueID);
   }
 
-  // // The daughter showers
-  // for(size_t i = 0; i < reco_daughter_allShower_ID->size(); i++){
-  //   AnaParticlePD* dausho = MakeParticle();
-  //   FillDaughterPFPInfo(i, dausho);
-  //   FillDaughterParticleShowerInfo(trueParticles, i, dausho);
-  //   bunch->Particles.push_back(dausho);
-  //   part->Daughters.push_back(dausho);
-  // }
 }
 
 
@@ -258,14 +249,12 @@ void PDSPAnalyzerTreeConverter::FillBeamParticleInfo(std::vector<AnaTrueParticle
 
   //hit information
   //TVector3 point;
-  //point.SetXYZ(0,0,0);//no spatial information on the input tree
 
   for(size_t plane = 2; plane < 3; plane++){   // only the collection plane 
     for(size_t j = 0; j < reco_beam_dEdX_SCE->size(); j++){
       // Add hits
       AnaHitPD hit;//(plane,0,0,0, point);
 
-      //hit.dEdx          = (*reco_beam_dEdX_SCE)[j];
       hit.dQdx          = (*reco_beam_dQdX_SCE)[j];
       hit.dEdx          = (*reco_beam_calibrated_dEdX_SCE)[j];      
       hit.ResidualRange = (*reco_beam_resRange_SCE)[j];
@@ -390,15 +379,7 @@ void PDSPAnalyzerTreeConverter::FillDaughterParticleTrackInfo(std::vector<AnaTru
   part->PositionStart[1]  = (*reco_daughter_allTrack_startY)[itrk];
   part->PositionStart[2]  = (*reco_daughter_allTrack_startZ)[itrk];
 
-  /* Not available in input tree
-  part->DirectionEnd[0] = (*reco_daughter_allTrack_trackDirX)[itrk];
-  part->DirectionEnd[1] = (*reco_daughter_allTrack_trackDirY)[itrk];
-  part->DirectionEnd[2] = (*reco_daughter_allTrack_trackDirZ)[itrk];
-
-  part->DirectionStart[0] = (*reco_daughter_allTrack_trackDirX)[itrk]; 
-  part->DirectionStart[1] = (*reco_daughter_allTrack_trackDirY)[itrk];
-  part->DirectionStart[2] = (*reco_daughter_allTrack_trackDirZ)[itrk];
-  */
+  // The track directions are not in the input tree: computed below from the positions
 
   TVector3 dir(part->PositionEnd[0]-part->PositionStart[0],part->PositionEnd[1]-part->PositionStart[1],part->PositionEnd[2]-part->PositionStart[2]);
   dir.SetMag(1);
@@ -521,13 +502,7 @@ void PDSPAnalyzerTreeConverter::FillDaughterTrueParticleInfo(Int_t ipart, AnaTru
     truePart->Direction[2] = (*reco_daughter_PFP_true_byHits_startPz)[ipart]/(*reco_daughter_PFP_true_byHits_startP)[ipart];;
   }
 
-  /* not available
-    if ((*reco_daughter_PFP_true_byHits_endP)[ipart]){
-    truePart->DirectionEnd[0] = (*reco_daughter_PFP_true_byHits_endPx)[ipart]/(*reco_daughter_PFP_true_byHits_endP)[ipart];;
-    truePart->DirectionEnd[1] = (*reco_daughter_PFP_true_byHits_endPy)[ipart]/(*reco_daughter_PFP_true_byHits_endP)[ipart];;
-    truePart->DirectionEnd[2] = (*reco_daughter_PFP_true_byHits_endPz)[ipart]/(*reco_daughter_PFP_true_byHits_endP)[ipart];;
-    }
-  */
+  // The true end direction is not in the input tree
 
   truePart->Position[0] = (*reco_daughter_PFP_true_byHits_startX)[ipart];
   truePart->Position[1] = (*reco_daughter_PFP_true_byHits_startY)[ipart];

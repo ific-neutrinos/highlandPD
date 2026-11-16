@@ -81,13 +81,13 @@ Double_t dEdxUtils::Recombination(Double_t E){
 }
 
 //********************************************************************
-Double_t dEdxUtils::ElectricField(const SpaceCharge* sce, Double_t x, Double_t y, Double_t z){
+Double_t dEdxUtils::ElectricField(const SpaceCharge* sce, Double_t x, Double_t y, Double_t z, const SCEScaling& scale){
 //********************************************************************
   
   Double_t E0 = 0.4867;
-  Double_t ex = E0+E0*sce->GetEFieldXAtPoint(x,y,z);
-  Double_t ey = 0.0+E0*sce->GetEFieldYAtPoint(x,y,z);
-  Double_t ez = 0.0+E0*sce->GetEFieldZAtPoint(x,y,z);
+  Double_t ex = E0+E0*sce->GetEFieldXAtPoint(x,y,z,scale);
+  Double_t ey = 0.0+E0*sce->GetEFieldYAtPoint(x,y,z,scale);
+  Double_t ez = 0.0+E0*sce->GetEFieldZAtPoint(x,y,z,scale);
   return sqrt(ex*ex+ey*ey+ez*ez);
 }
 

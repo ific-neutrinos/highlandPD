@@ -29,7 +29,6 @@ class secondaryProtonAnalysis: public baseAnalysis {
   bool CheckFillTruthTree(const AnaTrueVertex& vtx){return true;}
   bool CheckFillTruthTree(const AnaTrueParticlePD* part);
 
-  //using baseAnalysis::FillTruthTree;
   bool FinalizeConfiguration();
   void FillTruthTree();
   void FillTruthTree(const AnaTrueVertex& vtx){return;}

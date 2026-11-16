@@ -9,7 +9,6 @@
 #include "secondaryKaonSelection.hxx"
 #include "secondaryKaonSelectionNoBranches.hxx"
 #include "secondaryKaonXSSelection.hxx"
-#include "PrimaryProtonKaonSelection.hxx"
 #include "secondaryProtonSelection.hxx"
 #include "kaonAnalysisUtils.hxx"
 
@@ -113,8 +112,6 @@ void secondaryKaonAnalysis::DefineSelections(){
 //********************************************************************
 
   if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelection(false));  
-    //if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "kaon selection",    new PrimaryProtonKaonSelection(false));  
-    //if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "proton selection",    new secondaryProtonSelection(false));  
   else                     sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelectionNoBranches(false));  
 }
 
@@ -141,8 +138,7 @@ void secondaryKaonAnalysis::DefineSystematics(){
   if(_ApplySCESystematic)
     evar().AddEventVariation(kSCEGeometric     ,"SCE variation",           new SCEGeometricVariation());
   if(_ApplydQdxSystematic)
-    //evar().AddEventVariation(kdQdxCalibration  ,"dQdx cal variation",      new dQdxCalVariation());
-    evar().AddEventVariation(kdQdxCalibration  ,"dEdx variation",          new dEdxVariation());
+    evar().AddEventVariation(kdEdxVariation  ,"dEdx variation",          new dEdxVariation());
   if(_ApplyRecombinationSystematic)
     evar().AddEventVariation(kRecombination    ,"Recombination variation", new RecombinationVariation());
   if(_ApplyBrokenTracksSystematic)
@@ -169,7 +165,7 @@ void secondaryKaonAnalysis::DefineConfigurations(){
     if(_ApplySCESystematic)
       conf().EnableEventVariation(kSCEGeometric,all_syst);
     if(_ApplydQdxSystematic)
-      conf().EnableEventVariation(kdQdxCalibration,all_syst);
+      conf().EnableEventVariation(kdEdxVariation,all_syst);
     if(_ApplyRecombinationSystematic)
       conf().EnableEventVariation(kRecombination,all_syst);
     if(_ApplyBrokenTracksSystematic)
@@ -453,10 +449,8 @@ void secondaryKaonAnalysis::FillTruthTree(){
 bool secondaryKaonAnalysis::CheckFillTruthTree(AnaTrueParticlePD* part){
 //********************************************************************
 
-  // if(!part)return false;
   // else if(abs(part->PDG)==321){
   //   return true;
-  // }
   // else return false;
 
   if(!part)return false;
@@ -464,7 +458,7 @@ bool secondaryKaonAnalysis::CheckFillTruthTree(AnaTrueParticlePD* part){
     return false;
   bool result = CheckGoodTruthKaon(part);
   if(result){
-    double true_KE = sqrt(pow(part->Momentum*1000,2)+pow(493.677,2))-493.677;
+    double true_KE = sqrt(pow(part->Momentum*1000,2)+pow(pdAnaUtils::kKaonMass,2))-pdAnaUtils::kKaonMass;
     if(true_KE<30)result = false;
   }
   return result;
@@ -485,7 +479,7 @@ bool secondaryKaonAnalysis::CheckGoodTruthKaon(AnaTrueParticlePD* part, bool che
     bool found_mu = false;
     bool found_nu = false;
     bool found_pi = false;
-    for(int idau = 0; idau < part->Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part->Daughters.size(); idau++){
       AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
       if(!dau)continue;
       if(dau->PDG==-13)found_mu = true;
@@ -501,7 +495,7 @@ bool secondaryKaonAnalysis::CheckGoodTruthKaon(AnaTrueParticlePD* part, bool che
   }
   //interacting kaons to kaon with good decay are ok
   else if(part->ProcessEnd==3 && checkchain){
-    for(int idau = 0; idau < part->Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part->Daughters.size(); idau++){
       AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
       if(!dau)continue;
       if(dau->PDG==321)
@@ -517,7 +511,6 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  //baseAnalysis::FillTruthTreeBase(vtx);
 
   // Event variables
   output().FillVar(run,    GetSpill().EventInfo->Run);
@@ -528,21 +521,20 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
 
   // Fill true kaons candidate info
-  //const kaonAnaTrueVertex& kvtx = static_cast<const kaonAnaTrueVertex&>(vtx);
   AnaTrueParticlePD* dau = NULL;
   if(part.ProcessEnd==2){
-    for(int idau = 0; idau < part.Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part.Daughters.size(); idau++){
       AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
       if(!dauu)continue;
       if(dauu->PDG==-13)dau = dauu;
     }
   }
   else if(part.ProcessEnd==3){
-    for(int idau = 0; idau < part.Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part.Daughters.size(); idau++){
       AnaTrueParticlePD* dauk = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
       if(!dauk)continue;
       if(dauk->PDG==321)
-	for(int idau = 0; idau < dauk->Daughters.size(); idau++){
+	for(int idau = 0; idau < (int)dauk->Daughters.size(); idau++){
 	  AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,dauk->Daughters[idau]);
 	  if(!dauu)continue;
 	  if(dauu->PDG==-13)dau = dauu;
@@ -602,6 +594,8 @@ void secondaryKaonAnalysis::FillCategories(){
     // ---------- best kaon candidate variables --------------
     if(box().Candidates.size()>0){
       anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]), "bestcandidate");
+      //the signal flag of the true kaon is needed by the category (also when the candidates block is off)
+      SetIsSignal(box().Candidates[branchmax]);
       kaonAnaUtils::FillBestCandidateParticleReducedCategory(static_cast<AnaParticlePD*>(box().Candidates[branchmax]));
       if(!box().Candidates[branchmax]->Daughters.empty())
 	anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]->Daughters[0]), "bestcandidatedau");
@@ -674,7 +668,6 @@ bool secondaryKaonAnalysis::FinalizeConfiguration(){
       }
       
       if(!found){ // if not truth-reco association, -1
-	//part->AccumLevel[0][0] = std::min(min_accum_level, CandidatesAccumLevel);
 	part->AccumLevel[0][0] = CandidatesAccumLevel; // if not truth-reco association, -1
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
       } 

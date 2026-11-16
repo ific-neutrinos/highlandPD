@@ -1,10 +1,9 @@
 {
-  std::string hostname = gSystem->HostName();
 
-  //  std::string dir = "/hep/DUNE/DataDir/MicroTrees/";
-  //std::string dir = "/hep/DUNE/ProtoDUNE/ANALYSIS/HIGHLAND_CMAKE/pionAnalysis/";
-  //if (hostname.find("neutrinos")!=std::string::npos) dir = "/data4/DUNE/migue/Analysis";
-  std::string dir = "/data4/DUNE/migue/analysis/";
+  // Directory with the micro-trees, from the environment variable MICROTREEDIR
+  const char* envdir = gSystem->Getenv("MICROTREEDIR");
+  if(!envdir){ std::cerr << "load.C: set MICROTREEDIR to the micro-tree directory" << std::endl; return; }
+  std::string dir = std::string(envdir)+"/";
 
   std::string fdata = dir+"pionana_data_new.root";
   std::string fmc   = dir+"6GeV_prod4_2.root";

@@ -1,19 +1,19 @@
 #include "RecombinationVariation.hxx"
+#include "pdDataFiles.hxx"
+#include "pdServiceManager.hxx"
 #include "pdAnalysisUtils.hxx"
 
 //********************************************************************
 RecombinationVariation::RecombinationVariation():EventVariationBase(),BinnedParams(){
 //********************************************************************
 
-  _BP_A = new BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","RecombinationA", BinnedParams::k1D_SYMMETRIC);
-  _BP_B = new BinnedParams(std::string(getenv("PDSYSTEMATICSROOT"))+"/data","RecombinationB", BinnedParams::k1D_SYMMETRIC);
+  _BP_A = new BinnedParams(pd::DataDir("pdSystematics"),"RecombinationA", BinnedParams::k1D_SYMMETRIC);
+  _BP_B = new BinnedParams(pd::DataDir("pdSystematics"),"RecombinationB", BinnedParams::k1D_SYMMETRIC);
 
   // Read the systematic source parameters from the data files
   SetNParameters(_BP_A->GetNBins()+_BP_B->GetNBins());
 
-  // Initialize Calorimetry object
-  _cal = new Calorimetry();
-  _cal->Initialize();
+  _cal = &pd::services().Calo();
 }
 
 //********************************************************************
@@ -29,8 +29,11 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   Int_t A_index, B_index;
   
   // Get the systematics parameters (This can be outside the loop if it does not depend on Particle properties)
-  if(!_BP_A->GetBinValues(0.5, A_mean,  A_var,  A_index))return;
-  if(!_BP_B->GetBinValues(0.5, B_mean,  B_var,  B_index))return;
+  if(!_BP_A->GetBinValues(0.5, A_mean,  A_var,  A_index) ||
+     !_BP_B->GetBinValues(0.5, B_mean,  B_var,  B_index)){
+    std::cerr << "RecombinationVariation::Apply: cannot read the ModBox parameters from RecombinationA/B.dat. Aborting." << std::endl;
+    exit(1);
+  }
 
   // They are correlated. To throw correlated random numbers, we have to generate a vector of 2 random numbers and 
   // multiply it by the Cholesky decomposition of the correlation matrix.
@@ -53,9 +56,10 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   Float_t ModBoxA = _cal->GetModBoxA()*(A_mean +  A_var*cvar[0]);
   Float_t ModBoxB = _cal->GetModBoxB()*(B_mean +  B_var*cvar[1]); 
 
-  //modify alpha and beta values on calorimetry class
-  _cal->SetModBoxA(ModBoxA);
-  _cal->SetModBoxB(ModBoxB);
+  //varied alpha and beta values for this toy
+  CaloContext ctx = _cal->NominalContext();
+  ctx.ModBoxA = ModBoxA;
+  ctx.ModBoxB = ModBoxB;
 
   // Loop over all relevant tracks for this variation
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
@@ -67,17 +71,12 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     if(!original)continue;
 
     //Apply recombination calculation
-    _cal->ApplyRecombination(part);
+    _cal->ApplyRecombination(part, ctx);
     
     //recompute derived quantities
-    std::pair<double, int> chi2pidprot = pdAnaUtils::Chi2PID(*part, 2212);
-    part->Chi2Proton  = chi2pidprot.first;
-    std::pair<double, int> chi2pidmuon = pdAnaUtils::Chi2PID(*part, 13);
-    part->Chi2Muon    = chi2pidmuon.first;
-    part->Chi2ndf     = chi2pidmuon.second;
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 
-  _cal->ResetModBoxParameters(); //not really needed but just in case
 }
 
 //********************************************************************
@@ -99,12 +98,9 @@ bool RecombinationVariation::UndoSystematic(AnaEventC& event){
     }
 
     // reset the top level quantities
-    part->Chi2Proton = original->Chi2Proton;
-    part->Chi2ndf    = original->Chi2ndf;
-    part->Chi2Muon   = original->Chi2Muon;
+    pdAnaUtils::CopyChi2PID(*part, *original);
   }
   
-  _cal->ResetModBoxParameters(); //double check
 
   // Don't reset the spill to corrected
   return false;

@@ -35,7 +35,6 @@ class secondaryKaonAnalysis: public baseAnalysis {
   bool CheckFillTruthTree(AnaTrueParticlePD* part);
   bool CheckGoodTruthKaon(AnaTrueParticlePD* part, bool checkchain = true);
 
-  //using baseAnalysis::FillTruthTree;
   bool FinalizeConfiguration();
   void FillTruthTree();
   void FillTruthTree(const AnaTrueVertex& vtx){return;}
@@ -111,7 +110,7 @@ public:
   };
 
   enum enumSyst_secondaryKaonAnalysis{
-    kdQdxCalibration=0,
+    kdEdxVariation=0,
     kRecombination,
     kSCEGeometric,
     kBrokenTracks,
