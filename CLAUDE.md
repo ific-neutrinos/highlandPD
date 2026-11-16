@@ -144,7 +144,7 @@ Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 - Calibraciones: el efecto de `SCECalorimetricVariation` no llega a `dQdx_elife` (lo que rellenan las calibraciones X/YZ) porque la llamada a la lifetime está comentada; y el dE/dx que recalcula `LifetimeVariation` parte de `hit.dQdx`, que no recoge la variación. Validar cuando haya un minitree de calibración.
 - `secondaryKaonXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210. Pregunta abierta: ¿usar la misma definición que `secondaryKaonAnalysis`?
 
-Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario lo pida. Revisado `phase2.md` (16-nov): la rama no quita nada del event model que ese plan necesite (solo `PDCounters`, sin uso, y comentarios). Conviene hacer el merge de esta rama antes de crear la de `phase2.md` desde `develop`.
+Rama `cleanup/highlandPD` subida y PR a `develop` abierta (16-nov-2026), pendiente de revisión y merge. Revisado `phase2.md` (16-nov): la rama no quita nada del event model que ese plan necesite (solo `PDCounters`, sin uso, y comentarios). Conviene hacer el merge de esta rama antes de crear la de `phase2.md` desde `develop`.
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
