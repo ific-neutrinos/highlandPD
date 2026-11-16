@@ -154,6 +154,7 @@ AnaTrueParticle* pdAnaUtils::GetBeamTrueParticle(const AnaSpillB& spill){
   AnaTrueParticle* beampart = NULL;
   
   AnaBeamPD* beam = static_cast<AnaBeamPD*>(spill.Beam);
+  if(!beam)return beampart; // no beam information (bad DAQ)
   AnaParticleMomB* beamPart = beam->BeamParticle;
 
   int true_id = 0;

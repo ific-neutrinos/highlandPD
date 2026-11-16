@@ -18,6 +18,9 @@ bool CreateMiniTreeKaon::RecoCandidateExists(){
   bool itExists = false;
   
   //get the bunch
+  //spills without bunch (bad DAQ)
+  if(_spill->Bunches.empty())return false;
+
   AnaBunchPD* Bunch = static_cast<AnaBunchPD*>(_spill->Bunches[0]);
 
   //loop over particles
@@ -53,6 +56,9 @@ bool CreateMiniTreeKaon::TruthCandidateExists(){
 //********************************************************************
 void CreateMiniTreeKaon::DeleteUninterestingParticles(){
 //********************************************************************
+
+  //spills without bunch (bad DAQ): nothing to delete
+  if(_spill->Bunches.empty())return;
 
   AnaBunchB* bunch = static_cast<AnaBunchB*>(_spill->Bunches[0]);
 
@@ -95,6 +101,9 @@ void CreateMiniTreeKaon::DeleteUninterestingTrueParticles(){
   // Keep the true particles associated to reconstructed particles and all its descendants
   // TODO: in principle no need to delete the true particles that are not kept since they will be deleted at the end of the event
   //       Since this is the final spill and not the raw spill we cannot delete particles !!!!
+
+  //spills without bunch (bad DAQ) are not saved
+  if(_spill->Bunches.empty())return;
 
   std::set<AnaTrueParticleB*> goodTrueParticles;
   std::vector<AnaTrueParticleB*> badTrueParticles;

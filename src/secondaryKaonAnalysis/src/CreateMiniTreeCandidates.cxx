@@ -29,6 +29,9 @@ bool CreateMiniTreeCandidates::Process(){
 
   _lastSpillSaved = false;
 
+  // Spills without bunch (bad DAQ) are not saved, but they count in the next saved spill
+  if(_spill->Bunches.empty())return true;
+
   // Save only candidates
   DeleteAllButCandidates();
   

@@ -19,6 +19,8 @@ void SCECorrection::Apply(AnaSpillC& spillC){
 
   //cast bunch
   AnaSpill& spill = *static_cast<AnaSpill*>(&spillC);
+  // spills without bunch (bad DAQ) have nothing to correct
+  if(spill.Bunches.empty())return;
   AnaBunch* bunch = static_cast<AnaBunch*>(spill.Bunches[0]);
 
   // Loop over particles

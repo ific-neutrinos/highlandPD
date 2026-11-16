@@ -28,6 +28,9 @@ bool CreateMiniTreeEventCandidates::Process(){
   _SpillsSincePreviousSavedSpill += _spill->Beam->SpillsSincePreviousSavedSpill; 
   
   _lastSpillSaved = false;
+
+  // Spills without bunch (bad DAQ) are not saved, but they count in the next saved spill
+  if(_spill->Bunches.empty())return true;
   
   // does any candidate pass the selection?
   bool pass = false;

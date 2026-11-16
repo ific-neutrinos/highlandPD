@@ -25,6 +25,7 @@ void BeamMomSmearingCorrection::Apply(AnaSpillC& spillC){
 
   // Get beam
   AnaBeamPD* beam = static_cast<AnaBeamPD*>(spill.Beam);
+  if(!beam)return; // no beam information (bad DAQ)
 
   // Get beam particle
   AnaParticle* beamPart = static_cast<AnaParticle*>(beam->BeamParticle);

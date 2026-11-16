@@ -5,8 +5,8 @@
 //   - rellena los miembros nuevos (SliceID, T0, SpacePoints, UniqueID/TrueID de
 //     los hits, TrjPoints de la truth, UnassociatedHits) con valores conocidos;
 //   - cada 10 entradas añade un evento marcado, como los guarda ahora
-//     CreateHighlandMiniTree: Beam y bunch vacíos, sin beam slice (HasPandora =
-//     false) y, uno de cada dos, con DQ malo (GoodDaq = false).
+//     CreateHighlandMiniTree: con Beam, y sin beam slice (bunch vacío, HasPandora =
+//     false) o con DQ malo (GoodDaq = false, sin bunch).
 // Luego relee el fichero y comprueba que los valores sobreviven al Clone().
 //
 // Uso, con el entorno de highland y highlandPD cargado:
@@ -105,22 +105,27 @@ int make_test_minitree(const char* in, const char* out, int n = 200){
     delete spill;
 
     if(i % 10 != 0){delete spillIn; continue;}
-    // evento marcado, construido como en CreateHighlandMiniTree: Beam y bunch vacíos, y
-    // sin beam slice (HasPandora = false) o con DQ malo (GoodDaq = false)
+    // evento marcado, construido como en CreateHighlandMiniTree: siempre con Beam (que cuenta
+    // como un spill); sin beam slice (bunch vacío, HasPandora = false) o con DQ malo (sin bunch)
     spill = new AnaSpillPD();
     spill->EventInfo   = spillIn->EventInfo->Clone();
     spill->DataQuality = spillIn->DataQuality->Clone();
     AnaBeamPD* beam = new AnaBeamPD();
     beam->BeamParticle = new AnaParticlePD();
+    beam->SpillsSincePreviousSavedSpill = 1;
+    beam->POTSincePreviousSavedSpill    = 0;
     spill->Beam = beam;
-    AnaBunchPD* bunch = new AnaBunchPD();
-    bunch->Bunch = 1;
-    bunch->Weight = 1;
-    spill->Bunches.push_back(bunch);
     AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
     info->Event = -info->Event;
     info->HasPandora = false;
-    if((i/10) % 2 == 1)static_cast<AnaDataQuality*>(spill->DataQuality)->GoodDaq = false;
+    if((i/10) % 2 == 0){
+      AnaBunchPD* bunch = new AnaBunchPD();
+      bunch->Bunch = 1;
+      bunch->Weight = 1;
+      spill->Bunches.push_back(bunch);
+    }
+    else
+      static_cast<AnaDataQuality*>(spill->DataQuality)->GoodDaq = false;
     tout->Fill();
     delete spill;
     delete spillIn;
