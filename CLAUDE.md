@@ -138,9 +138,11 @@ Hecho:
 - Sin cambio de resultados (test idéntico a `lklwin/`): bugs latentes (desbordamiento de `size()-1` en los cortes de kaones, `dau_mom`, `return` silencioso de `RecombinationVariation`, etiqueta del paso XS); código muerto (clases sin uso, cortes desactivados, `SpaceCharge` forward, funciones de nietas de `standardPDTree`, `PDCounters`); ~170 líneas de código comentado; parámetros que no se leían; ficheros de datos sin uso (copia en el backup); warnings; macros y scripts sin rutas personales (`$PDUTILSROOT`, argumentos, `$MICROTREEDIR` en `load.C`).
 - Decidido con el usuario: los filtros de los minitrees de candidatos no importan (el análisis usa los minitrees enteros); el signo de la corrección de posición del SCE se deja.
 
-Pendiente:
+Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 - Calibraciones: el efecto de `SCECalorimetricVariation` no llega a `dQdx_elife` (lo que rellenan las calibraciones X/YZ) porque la llamada a la lifetime está comentada; y el dE/dx que recalcula `LifetimeVariation` parte de `hit.dQdx`, que no recoge la variación. Validar cuando haya un minitree de calibración.
-- `secondaryKaonXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210.
+- `secondaryKaonXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210. Pregunta abierta: ¿usar la misma definición que `secondaryKaonAnalysis`?
+
+Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario lo pida (antes, revisar `phase2.md`).
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
