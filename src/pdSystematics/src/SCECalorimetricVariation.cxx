@@ -67,8 +67,8 @@ bool SCECalorimetricVariation::UndoSystematic(AnaEventC& event){
 
     //loop over hits
     for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
-      part->Hits[2][ihit].dQdx = original->Hits[2][ihit].dQdx;
-      part->Hits[2][ihit].dQdx_elife = original->Hits[2][ihit].dQdx_elife;
+      part->Hits[2][ihit].Pitch    = original->Hits[2][ihit].Pitch;
+      part->Hits[2][ihit].dQdx_SCE = original->Hits[2][ihit].dQdx_SCE;
       part->Hits[2][ihit].Position.SetX(original->Hits[2][ihit].Position.X());
       part->Hits[2][ihit].Position.SetY(original->Hits[2][ihit].Position.Y());
       part->Hits[2][ihit].Position.SetZ(original->Hits[2][ihit].Position.Z());

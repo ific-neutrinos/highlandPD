@@ -61,11 +61,7 @@ void LifetimeVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     }
 
     //recompute derived quantities
-    std::pair<double, int> chi2pidprot = pdAnaUtils::Chi2PID(*part, 2212);
-    part->Chi2Proton  = chi2pidprot.first;
-    std::pair<double, int> chi2pidmuon = pdAnaUtils::Chi2PID(*part, 13);
-    part->Chi2Muon    = chi2pidmuon.first;
-    part->Chi2ndf     = chi2pidmuon.second;
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 }
 
@@ -86,10 +82,11 @@ bool LifetimeVariation::UndoSystematic(AnaEventC& event){
       part->Hits[2][ihit].dQdx_NoSCE = original->Hits[2][ihit].dQdx_NoSCE;
       part->Hits[2][ihit].dQdx_SCE   = original->Hits[2][ihit].dQdx_SCE;
       part->Hits[2][ihit].dQdx_elife = original->Hits[2][ihit].dQdx_elife;
+      part->Hits[2][ihit].dEdx       = original->Hits[2][ihit].dEdx;
     }
+    pdAnaUtils::CopyChi2PID(*part, *original);
   }
 
-  
   // Don't reset the spill to corrected
   return false;
 }
