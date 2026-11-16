@@ -68,8 +68,6 @@ void kaonTree::AddKaonVariables_KaonCandidatesReco(OutputManager& output, UInt_t
   AddVarMaxSizeVI (output, candidates_nhits,           "candidates #hits",                     ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_average_dedx,    "candidates average dEdx/hit",          ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_truncated_dedx,  "candidates truncated dEdx/hit",        ncandidates, nmax);
-  AddVarMaxSizeVF (output, candidates_vtx_michelscore, "candidates michelscore in the vertex", ncandidates, nmax);
-  AddVarMaxSizeVI (output, candidates_vtx_nhits,       "candidates points in the vertex",      ncandidates, nmax);
 
   AddVarMaxSizeVI (output, candidates_dau_ndau,           "candidates daughter' daughters",            ncandidates, nmax);
   AddVarMaxSize4MF(output, candidates_dau_pos,            "candidates daughter position",              ncandidates, nmax); 
@@ -90,8 +88,6 @@ void kaonTree::AddKaonVariables_KaonCandidatesReco(OutputManager& output, UInt_t
   AddVarMaxSizeVF (output, candidates_dau_average_dedx,    "candidates dau average dEdx",              ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_dau_truncated_dedx,  "candidates dau truncated dEdx",            ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_dau_calE,            "candidates dau calorimetric energy",       ncandidates, nmax);
-  AddVarMaxSizeVF (output, candidates_dau_vtx_michelscore, "candidates dau michelscore in the vertex", ncandidates, nmax);
-  AddVarMaxSizeVI (output, candidates_dau_vtx_nhits,       "candidates dau points in the vertex",      ncandidates, nmax);
   
   AddVarMaxSizeVI (output, candidates_gdau_ndau,            "candidates gdaughter' gdaughters",              ncandidates, nmax);
   AddVarMaxSize4MF(output, candidates_gdau_pos,             "candidates gdaughter position",                 ncandidates, nmax); 
@@ -108,8 +104,6 @@ void kaonTree::AddKaonVariables_KaonCandidatesReco(OutputManager& output, UInt_t
   AddVarMaxSizeVF (output, candidates_gdau_chi2_ndf,        "candidates gdaughter chi2 ndf",                 ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_gdau_average_dedx,    "candidates gdau average dEdx",                  ncandidates, nmax);
   AddVarMaxSizeVF (output, candidates_gdau_calE,            "candidates gdau calorimetry energy deposition", ncandidates, nmax);
-  AddVarMaxSizeVF (output, candidates_gdau_vtx_michelscore, "candidates gdau michelscore in the vertex",     ncandidates, nmax);
-  AddVarMaxSizeVI (output, candidates_gdau_vtx_nhits,       "candidates gdau points in the vertex",          ncandidates, nmax);
 }
 
 //********************************************************************
@@ -197,8 +191,6 @@ void kaonTree::AddKaonVariables_KaonBestCandidateReco(OutputManager& output){
   AddVarF  (output, bestcandidate_cos_dau,         "bestcandidate-daughter cos"     );
   AddVarI  (output, bestcandidate_nhits,           "bestcandidate #hits"            );
   AddVarF  (output, bestcandidate_average_dedx,    "bestcandidate average dEdx/hit"         );
-  AddVarF  (output, bestcandidate_vtx_michelscore, "bestcandidate michelscore in the vertex");
-  AddVarI  (output, bestcandidate_vtx_nhits,       "bestcandidate points in the vertex"     );
   AddVarF  (output, bestcandidate_calE,            "bestcandidate calorimetry energy deposition"     );
   AddVarF  (output, bestcandidate_truncated_dedx,            "bestcandidate calorimetry energy deposition"     );
 
@@ -217,8 +209,6 @@ void kaonTree::AddKaonVariables_KaonBestCandidateReco(OutputManager& output){
   AddVarF  (output, bestcandidate_dau_chi2_ndf,        "bestcandidate daughter chi2 ndf"         );
   AddVarI  (output, bestcandidate_dau_nhits,           "bestcandidate daughter #hits"            );
   AddVarF  (output, bestcandidate_dau_calE,            "bestcandidate dau calorimetry energy deposition");
-  AddVarF  (output, bestcandidate_dau_vtx_michelscore, "bestcandidate dau michelscore in the vertex"    );
-  AddVarI  (output, bestcandidate_dau_vtx_nhits,       "bestcandidate dau points in the vertex"         );
 
   AddVarI  (output, bestcandidate_parent_ndau,       "bestcandidate parent' daughters"       );
   AddVar4VF(output, bestcandidate_parent_pos,        "bestcandidate parent position"         ); 
@@ -397,8 +387,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
 
   output.FillVectorVar         (candidates_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(part,20));
   output.FillVectorVar         (candidates_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,part->Hits[2]));
-  output.FillVectorVar         (candidates_vtx_michelscore,  part->vtx_CNN_michelscore);
-  output.FillVectorVar         (candidates_vtx_nhits,        part->vtx_CNN_NHits);
   output.FillVectorVar         (candidates_distance_tcp,        (Float_t)part->Distance_to_closest_particle);
 
   if(parent)output.FillVectorVar(candidates_distance_mother, pdAnaUtils::ComputeDistanceMotherDaughter(parent,part));
@@ -430,8 +418,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_dau_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,dau->Hits[2]));
   Float_t dau_calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(dau);
   output.FillVectorVar         (candidates_dau_calE,            dau_calE           );
-  output.FillVectorVar         (candidates_dau_vtx_michelscore,  dau->vtx_CNN_michelscore);
-  output.FillVectorVar         (candidates_dau_vtx_nhits,        dau->vtx_CNN_NHits);
 
   if(dau->Daughters.empty())return;
   AnaParticlePD* gdau = static_cast<AnaParticlePD*>(dau->Daughters[0]);
@@ -452,8 +438,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
 
   output.FillVectorVar         (candidates_gdau_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(gdau,5));
   output.FillVectorVar         (candidates_gdau_calE,             (Float_t)pdAnaUtils::ComputeDepositedEnergy(gdau));
-  output.FillVectorVar         (candidates_gdau_vtx_michelscore,  gdau->vtx_CNN_michelscore);
-  output.FillVectorVar         (candidates_gdau_vtx_nhits,        gdau->vtx_CNN_NHits);
 }
 
 //********************************************************************
@@ -590,8 +574,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateReco(OutputManager& output, An
   output.FillVar               (bestcandidate_chi2_ndf,         part->Chi2ndf          );
   output.FillVar               (bestcandidate_nhits,            part->NHits            );
   output.FillVar               (bestcandidate_average_dedx,     pdAnaUtils::ComputeAveragedEdxOverResRange(part)   );
-  output.FillVar               (bestcandidate_vtx_michelscore,  part->vtx_CNN_michelscore);
-  output.FillVar               (bestcandidate_vtx_nhits,        part->vtx_CNN_NHits);
   output.FillVar               (bestcandidate_calE,             (Float_t)pdAnaUtils::ComputeDepositedEnergy(part));
   output.FillVar               (bestcandidate_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,part->Hits[2]));
 
@@ -626,8 +608,6 @@ void kaonTree::FillKaonVariables_KaonBestCandidateReco(OutputManager& output, An
   output.FillVar               (bestcandidate_dau_nhits,            dau->NHits            );
 
   output.FillVar               (bestcandidate_dau_calE,             (Float_t)pdAnaUtils::ComputeDepositedEnergy(dau));
-  output.FillVar               (bestcandidate_dau_vtx_michelscore,  dau->vtx_CNN_michelscore);
-  output.FillVar               (bestcandidate_dau_vtx_nhits,        dau->vtx_CNN_NHits);
 }
 
 //********************************************************************

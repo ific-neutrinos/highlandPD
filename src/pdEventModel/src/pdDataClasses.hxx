@@ -25,15 +25,7 @@ public:
   AnaHitPD();
   virtual ~AnaHitPD(){}
 
-  //Anselmo stuff for CNN calculation, not really used, to be removed at some point
-  AnaHitPD(Int_t wire, Float_t integ, Float_t peakT, Float_t peakAmp, TVector3 pos){
-    WireID.Plane =wire;
-    Integral = integ;
-    PeakTime = peakT;
-    PeakAmplitude = peakAmp;
-    Position = pos;
-  }
-    
+
   /// Dump the object to screen.
   virtual void Print() const;
 
@@ -42,8 +34,8 @@ public:
   
 public:
 
-  // ---- Most of this information is needed to recompute the CNN. This is work in progress (is ABANDONED work)
-  AnaWireID WireID;    
+  // ---- Raw hit information
+  AnaWireID WireID;
 
   Float_t Integral;
   Float_t PeakTime;
@@ -85,15 +77,11 @@ public:
   TVector3 Direction_NoSCE;
 
 
-  /// SCE correction
+  /// SCE correction (intermediate step of the calibrations)
   Float_t dQdx_SCE;
-  Float_t dEdx_SCE;
-  Float_t ResidualRange_SCE;
 
-  /// SCE correction + e⁻ lifetime correction
+  /// SCE correction + e⁻ lifetime correction (intermediate step of the calibrations)
   Float_t dQdx_elife;
-  Float_t dEdx_elife;
-  Float_t ResidualRange_elife;
 
   /// SCE correction + e⁻ lifetime correction + XYZT correction + dEdx calibration
   Float_t dQdx;
@@ -102,10 +90,6 @@ public:
   Float_t Pitch;
   TVector3 Position;
   TVector3 Direction;
-
-  /// deprecated but keep it for the moment to avoid errors
-  Float_t dEdx_calib;
-
 };
 
 //trajectory point representation. Has position and direction information.
@@ -229,10 +213,10 @@ public:
   /// Track or Shower
   PartTypeEnum Type;
 
-  /// Forced Track ID
+  /// ID of the Pandora track (pandoraTrack; the forced one is ForcedTrack[0].ID)
   Int_t TrackID;
 
-  /// Forced shower ID
+  /// ID of the Pandora shower
   Int_t ShowerID;
 
   /// Is this the beam particle according to Pandora ?
@@ -243,12 +227,6 @@ public:
 
   ///  Pandora beam particle that passes geometric cuts
   bool isBeamPart;
-
-  /// Initial position and direction SCE corrected
-  double PositionStartSCE[4];
-  double PositionEndSCE[4];
-  double DirectionStartSCE[3];
-  double DirectionEndSCE[3];
 
   double ThetaXZ;
   double ThetaYZ;
@@ -267,27 +245,15 @@ public:
   // Vector of trajectory points
   std::vector<AnaTrajectoryPointPD> TrjPoints;
 
-  /// Libo truncated mean
-  Float_t truncLibo_dEdx;
-  
   // PID variables
   Float_t Chi2Proton;
   Float_t Chi2Muon;
   Float_t Chi2ndf;
 
   Float_t CNNscore[3];
-  Float_t vtx_CNN_michelscore;
-  Int_t   vtx_CNN_NHits;
-  
-  /// CALO variables
-  Float_t CALO[3][10];
-  
+
   /// Momentum by range for muon and proton hypotheses
   Float_t RangeMomentum[2];
-  Float_t RangeMomentum_alt[2];
-
-  /// Alternate length
-  Float_t Length_alt;
 
   /// Generation of the particle (primary particle, daughter, granddaughter, etc.)
   Int_t Generation;
@@ -317,24 +283,10 @@ public:
   /// 3D space points
   std::vector<AnaSpacePointPD> SpacePoints;
 
-  /// test
+  /// Distance to the closest particle (computed by secondaryProtonSelection)
   Double_t Distance_to_closest_particle;
 
-  // ---- OBSOLETE PID VARIABLES ----------
-  
-  /// Particle ID hypothesis used in the fit (if any)
-  Int_t FitPDG;
-  
-  /// PDG of the most probable particle hypothesis used at reconstruction level
-  Int_t ReconPDG[3]; 
-
-  /// PID variables
-  Float_t PID[3][10];
-
-  /// PIDA
-  Float_t PIDA[3]; 
-
-  /// Migue test
+  /// Daughter forced by secondaryKaonXSSelection, and whether it matches the true one
   bool forced_daughter;
   bool forced_daughter_matched;
 };
@@ -364,9 +316,6 @@ public:
   /// Is this a truth signal object? Quite useful, potentially could be added in CoreDataClasses in AnaTrueObject
   Bool_t Signal;
 
-  /// Vector Pi0 decays IDs
-  std::vector<Int_t> Pi0_decay_ID; 
-
   /// True-reco matching flag, need for 
   Bool_t Matched;
 
@@ -375,12 +324,6 @@ public:
 
   /// Generation
   Int_t Generation;
-
-  /// The particle length inside the TPC
-  Float_t LengthInTPC;
-  
-  /// The true momentum at the TPC entrance
-  Float_t MomentumInTPC;  
 
   /// True trajectory (only for the configured PDGs)
   std::vector<AnaTrueTrajPointPD> TrjPoints;
@@ -457,7 +400,6 @@ public:
   double CerenkovPressure[2];
   double BeamTrackTime;
   double BeamMomentum;
-  double BeamMomentumInTPC;
 
   int nFibers[3];
   size_t nMomenta;  
@@ -467,23 +409,7 @@ public:
 };
 
 
-/// ProtoDUNE counters
-
-class AnaWireCNN{
-public:
-  AnaWireCNN();
-  virtual ~AnaWireCNN(){}
-  AnaWireCNN(const AnaWireCNN& wire);
-
-public:
-
-  std::vector<float> adcs;
-  Int_t wire;
-  Int_t time;
-};
-
-
-// Extension of AnaBunch to include the APA wire wafeforms, needed to recompute the CNN 
+// Extension of AnaBunch with the hits without PFParticle
 class AnaBunchPD: public AnaBunch{
 public :
   
@@ -504,8 +430,6 @@ protected:
   AnaBunchPD(const AnaBunchPD& bunch);
   
 public:
-
-  std::vector<AnaWireCNN> CNNwires;
 
   /// Hits without PFParticle near the ends of the beam slice
   std::vector<AnaHitPD> UnassociatedHits;
@@ -531,7 +455,7 @@ public:
 
 };
 
-// Extension of AnaEvent to include the APA wire wafeforms, needed to recompute the CNN
+// Extension of AnaEvent with the hits without PFParticle
 class AnaEventPD: public AnaEvent{
 public :
 
@@ -555,8 +479,6 @@ protected:
   AnaEventPD(const AnaEventPD& event);
 
 public:
-
-  std::vector<AnaWireCNN> CNNwires;
 
   /// Hits without PFParticle near the ends of the beam slice (copied from the bunch)
   std::vector<AnaHitPD> UnassociatedHits;

@@ -236,16 +236,9 @@ void PDSPAnalyzerTreeConverter::FillBeamParticleInfo(std::vector<AnaTrueParticle
   part->DirectionStart[2] = reco_beam_trackDirZ;
     
   part->Length     = reco_beam_len;
-  part->Length_alt = reco_beam_alt_len;
 
   part->RangeMomentum[0] = reco_beam_momByRange_proton;
   part->RangeMomentum[1] = reco_beam_momByRange_muon;
-
-  part->RangeMomentum_alt[0] = reco_beam_momByRange_alt_proton;
-  part->RangeMomentum_alt[1] = reco_beam_momByRange_alt_muon;
-
-  part->vtx_CNN_michelscore = reco_beam_vertex_michel_score;
-  part->vtx_CNN_NHits = reco_beam_vertex_nHits;
 
   //hit information
   //TVector3 point;
@@ -262,7 +255,6 @@ void PDSPAnalyzerTreeConverter::FillBeamParticleInfo(std::vector<AnaTrueParticle
            
       part->Hits[plane].push_back(hit);
     }
-    part->truncLibo_dEdx = pdAnaUtils::ComputeTruncatedMean(0.16,0.16,(*reco_beam_calibrated_dEdX_SCE));
   }
 
   // --------- reco_beam_PFP ------------------------
@@ -388,19 +380,12 @@ void PDSPAnalyzerTreeConverter::FillDaughterParticleTrackInfo(std::vector<AnaTru
   part->DirectionStart[2] = dir.Z();
 
   part->Length     = (*reco_daughter_allTrack_len)[itrk];
-  part->Length_alt = (*reco_daughter_allTrack_alt_len)[itrk];
 
   part->RangeMomentum[0] = (*reco_daughter_allTrack_momByRange_proton)[itrk];
   part->RangeMomentum[1] = (*reco_daughter_allTrack_momByRange_muon)[itrk];
 
-  part->RangeMomentum_alt[0] = (*reco_daughter_allTrack_momByRange_alt_proton)[itrk];
-  part->RangeMomentum_alt[1] = (*reco_daughter_allTrack_momByRange_alt_muon)[itrk];
-
   part->Chi2Proton = (*reco_daughter_allTrack_Chi2_proton)[itrk];
   part->Chi2ndf    = (*reco_daughter_allTrack_Chi2_ndof)[itrk];
-
-  part->vtx_CNN_michelscore = (*reco_daughter_allTrack_vertex_michel_score)[itrk];
-  part->vtx_CNN_NHits       = (*reco_daughter_allTrack_vertex_nHits)[itrk];
 
   //fill hits info
   for(size_t plane = 2; plane < 3; plane++){   // only the last slice 
@@ -417,7 +402,6 @@ void PDSPAnalyzerTreeConverter::FillDaughterParticleTrackInfo(std::vector<AnaTru
       
       part->Hits[plane].push_back(hit);
     }
-    part->truncLibo_dEdx = pdAnaUtils::ComputeTruncatedMean(0.16,0.16,(*reco_daughter_allTrack_calibrated_dEdX_SCE)[itrk]);
   }
 
   std::pair<double,int> result = pdAnaUtils::Chi2PID(*part,13);

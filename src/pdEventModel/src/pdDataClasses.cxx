@@ -45,12 +45,8 @@ AnaHitPD::AnaHitPD(){
   Direction_NoSCE     = TVector3(kFloatUnassigned,kFloatUnassigned,kFloatUnassigned);
 
   dQdx_SCE = kFloatUnassigned;
-  dEdx_SCE = kFloatUnassigned;
-  ResidualRange_SCE = kFloatUnassigned;
 
   dQdx_elife = kFloatUnassigned;
-  dEdx_elife = kFloatUnassigned;
-  ResidualRange_elife = kFloatUnassigned;
 
   dQdx          = kFloatUnassigned;
   dEdx          = kFloatUnassigned;
@@ -59,7 +55,6 @@ AnaHitPD::AnaHitPD(){
   Position      = TVector3(kFloatUnassigned,kFloatUnassigned,kFloatUnassigned);
   Direction     = TVector3(kFloatUnassigned,kFloatUnassigned,kFloatUnassigned);
 
-  dEdx_calib    = kFloatUnassigned;
   
   UniqueID      = kIntUnassigned;
   TrueID        = kIntUnassigned;
@@ -103,12 +98,8 @@ AnaHitPD::AnaHitPD(const AnaHitPD& hit){
   Direction_NoSCE     = hit.Direction_NoSCE;
 
   dQdx_SCE = hit.dQdx_SCE;
-  dEdx_SCE = hit.dEdx_SCE;
-  ResidualRange_SCE = hit.ResidualRange_SCE;
 
   dQdx_elife = hit.dQdx_elife;
-  dEdx_elife = hit.dEdx_elife;
-  ResidualRange_elife = hit.ResidualRange_elife;
 
   dQdx          = hit.dQdx;
   dEdx          = hit.dEdx;
@@ -117,7 +108,6 @@ AnaHitPD::AnaHitPD(const AnaHitPD& hit){
   Position      = hit.Position;
   Direction     = hit.Direction;
 
-  dEdx_calib     = hit.dEdx_calib;
 }
 
 //********************************************************************
@@ -254,46 +244,19 @@ AnaParticlePD::AnaParticlePD():AnaParticle(){
   isPandora  = false;
   BeamOrigin = false;
 
-  FitPDG        = kFloatUnassigned;
-
-  for(int i = 0; i < 4; i++){
-    PositionStartSCE[i]=kFloatUnassigned;
-    PositionEndSCE[i]=kFloatUnassigned;
-  }
-  for(int i = 0; i < 3; i++){
-    DirectionStartSCE[i]=kFloatUnassigned;
-    DirectionEndSCE[i]=kFloatUnassigned;
-  }
-
   ThetaXZ = kFloatUnassigned;
   ThetaYZ = kFloatUnassigned;
 
   for (Int_t i=0;i<3;i++){
     NHitsPerPlane[i] = kIntUnassigned;
-    truncLibo_dEdx=kFloatUnassigned;
-
-    PIDA[i]=kFloatUnassigned;
-    ReconPDG[i]=kIntUnassigned;
-    for (int j=0; j<10; j++) {
-      PID[i][j]=kFloatUnassigned;
-      CALO[i][j]=kFloatUnassigned;
-    }
-
     CNNscore[i]=kFloatUnassigned;
-  }  
-  vtx_CNN_michelscore=kFloatUnassigned;
-  vtx_CNN_NHits=kIntUnassigned;
+  }
 
   Chi2Proton=kFloatUnassigned;
   Chi2Muon=kFloatUnassigned;
   Chi2ndf=kIntUnassigned;
 
-  for (int i=0; i<2; i++){
-    RangeMomentum[i] = kFloatUnassigned;
-    RangeMomentum_alt[i] = kFloatUnassigned;    
-  }
-    
-  Length_alt = kFloatUnassigned;
+  for (int i=0; i<2; i++)RangeMomentum[i] = kFloatUnassigned;
   Generation = kIntUnassigned;
 
   SliceID           = kIntUnassigned;
@@ -343,50 +306,19 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
   isPandora      = part.isPandora;
   BeamOrigin     = part.BeamOrigin;
 
-  for(int i = 0; i < 4; i++){
-    PositionStartSCE[i] = part.PositionStartSCE[i];
-    PositionEndSCE[i]   = part.PositionEndSCE[i];
-  }
-  for(int i = 0; i < 3; i++){
-    DirectionStartSCE[i] = part.DirectionStartSCE[i];
-    DirectionEndSCE[i]   = part.DirectionEndSCE[i];
-  }
-
   ThetaXZ = part.ThetaXZ;
   ThetaYZ = part.ThetaYZ;
 
-  FitPDG         = part.FitPDG;
-
   for (Int_t i=0;i<3;i++){
-
     NHitsPerPlane[i] = part.NHitsPerPlane[i];
-
-    PIDA[i]=part.PIDA[i];
-    ReconPDG[i]=part.ReconPDG[i];
-    
-    for (int j=0; j<10; j++) {
-      PID[i][j]=part.PID[i][j];
-      CALO[i][j]=part.CALO[i][j];
-    }
-
     CNNscore[i]=part.CNNscore[i];
   }
-  vtx_CNN_michelscore=part.vtx_CNN_michelscore;
-  vtx_CNN_NHits=part.vtx_CNN_NHits;
 
   Chi2Proton = part.Chi2Proton;
   Chi2Muon   = part.Chi2Muon;
   Chi2ndf    = part.Chi2ndf;
 
-  truncLibo_dEdx = part.truncLibo_dEdx;
-  
-  for (int i=0; i<2; i++){
-    RangeMomentum[i]     = part.RangeMomentum[i];  
-    RangeMomentum_alt[i] = part.RangeMomentum_alt[i];  
-  }
-
-
-  Length_alt = part.Length_alt;
+  for (int i=0; i<2; i++)RangeMomentum[i] = part.RangeMomentum[i];
   Generation = part.Generation;
 
   SliceID           = part.SliceID;
@@ -425,8 +357,8 @@ void AnaParticlePD::Print() const{
   std::cout << "-------- AnaParticlePD --------- " << std::endl;
   std::cout << "ParentID:                " << ParentID << std::endl;
   std::cout << "Type:                    " << Type << std::endl;
-  std::cout << "Forced track ID:         " << TrackID << std::endl;
-  std::cout << "Forced shower ID:        " << ShowerID << std::endl;
+  std::cout << "Track ID:                " << TrackID << std::endl;
+  std::cout << "Shower ID:               " << ShowerID << std::endl;
   std::cout << "isPandora:               " << isPandora << std::endl;
   std::cout << "BeamOrigin:              " << BeamOrigin << std::endl;
   std::cout << "PassBeamCut:             " << isBeamPart << std::endl;
@@ -439,49 +371,11 @@ void AnaParticlePD::Print() const{
   std::cout << "ShowerEnergy:            " << ShowerEnergy[0] << " " << ShowerEnergy[1] << " " << ShowerEnergy[2] << std::endl;
   std::cout << "Forced track:            " << ForcedTrack.size() << std::endl;
 
-  std::cout << "FitPDG:                  " << FitPDG << std::endl;
-  
-  std::cout << "PIDA:                    ";
-  for (int i=0;i<3;i++) std::cout << PIDA[i] << " ";
-  std::cout << std::endl;
-
-  std::cout << "ReconPDG:                ";
-  for (int i=0;i<3;i++) std::cout << ReconPDG[i] << " ";
-  std::cout << std::endl;
- 
-  std::cout << "PID[0]:                  ";
-  for (int i=0;i<10;i++) std::cout << PID[0][i] << " ";
-  std::cout << std::endl;
-
-  std::cout << "PID[1]:                  ";
-  for (int i=0;i<10;i++) std::cout << PID[1][i] << " ";
-  std::cout << std::endl;
-
-  std::cout << "PID[2]:                  ";
-  for (int i=0;i<10;i++) std::cout << PID[2][i] << " ";
-  std::cout << std::endl;
-
-  std::cout << "CALO[0]:                 ";
-  for (int i=0;i<10;i++) std::cout << CALO[0][i] << " ";
-  std::cout << std::endl;
-
-  std::cout << "CALO[1]:                 ";
-  for (int i=0;i<10;i++) std::cout << CALO[1][i] << " ";
-  std::cout << std::endl;
-
-
-  std::cout << "CALO[2]:                 ";
-  for (int i=0;i<10;i++) std::cout << CALO[2][i] << " ";
-  std::cout << std::endl;
-
   std::cout << "Chi2Proton:              " << Chi2Proton << std::endl;
   std::cout << "Chi2Muon:                " << Chi2Muon << std::endl;
   std::cout << "Chi2ndf:                 " << Chi2ndf << std::endl;
 
   std::cout << "CNN score:               " << CNNscore[0] << " " << CNNscore[1] << " " << CNNscore[2] << std::endl;
-  
-  std::cout << "vtx CNN michelscore:     " << vtx_CNN_michelscore << std::endl;
-  std::cout << "vtx CNN NHits:           " << vtx_CNN_NHits << std::endl;
   
   std::cout << "RangeMomentum:           " << RangeMomentum[0] << " " << RangeMomentum[1] << std::endl;
 
@@ -495,12 +389,9 @@ AnaTrueParticlePD::AnaTrueParticlePD():AnaTrueParticle(){
 //********************************************************************
 
   Signal = false;
-  Pi0_decay_ID.clear();
   Origin  = kIntUnassigned;
   Generation  = kIntUnassigned;
   Matched = false;
-  LengthInTPC   = kFloatUnassigned;
-  MomentumInTPC = kFloatUnassigned;
   TrjPoints.clear();
   for(int i = 0; i < 3; i++)NHitsTrue[i] = kIntUnassigned;
   EDepTrue = kFloatUnassigned;
@@ -517,13 +408,10 @@ AnaTrueParticlePD::AnaTrueParticlePD(const AnaTrueParticlePD& truePart):AnaTrueP
 //********************************************************************
 
   Signal = truePart.Signal;
-  Pi0_decay_ID = truePart.Pi0_decay_ID;
  
   Origin = truePart.Origin;
   Generation = truePart.Generation;
   Matched = truePart.Matched;
-  LengthInTPC = truePart.LengthInTPC;
-  MomentumInTPC = truePart.MomentumInTPC;
   TrjPoints = truePart.TrjPoints;
   for(int i = 0; i < 3; i++)NHitsTrue[i] = truePart.NHitsTrue[i];
   EDepTrue = truePart.EDepTrue;
@@ -537,12 +425,8 @@ void AnaTrueParticlePD::Print() const{
 
   AnaTrueParticle::Print();
   
-  if (Pi0_decay_ID.size())
-    std::cout << "First Pi0 decay ID:    " << Pi0_decay_ID[0] << std::endl;
   std::cout << "Origin:                " << Origin << std::endl;
   std::cout << "Matched:               " << Matched << std::endl; 
-  std::cout << "LengthInTPC:           " << LengthInTPC << std::endl;
-  std::cout << "MomentumInTPC:         " << MomentumInTPC << std::endl;
   std::cout << "Signal:                " << Signal << std::endl;
   std::cout << "True traj. points:     " << TrjPoints.size() << std::endl;
   std::cout << "NHitsTrue:             " << NHitsTrue[0] << " " << NHitsTrue[1] << " " << NHitsTrue[2] << std::endl;
@@ -596,7 +480,6 @@ AnaBeamPD::AnaBeamPD(){
   TOF           = kDoubleUnassigned;
   BeamTrackTime = kDoubleUnassigned;
   BeamMomentum  = kDoubleUnassigned;
-  BeamMomentumInTPC  = kDoubleUnassigned;
   for (int i=0;i<2;i++){
     CerenkovStatus[i]   = kIntUnassigned;
     CerenkovTime[i]     = kDoubleUnassigned;
@@ -628,7 +511,6 @@ AnaBeamPD::AnaBeamPD(const AnaBeamPD& beam):AnaBeam(beam){
   TOF           = beam.TOF;
   BeamTrackTime = beam.BeamTrackTime;
   BeamMomentum  = beam.BeamMomentum;
-  BeamMomentumInTPC  = beam.BeamMomentumInTPC;
   for (int i=0;i<2;i++){
     CerenkovStatus[i]   = beam.CerenkovStatus[i];
     CerenkovTime[i]     = beam.CerenkovTime[i];
@@ -660,7 +542,6 @@ void AnaBeamPD::Print() const{
   std::cout << "CerenkovTime:     " << CerenkovTime[0]     << " " << CerenkovTime[1]     << std::endl;
   std::cout << "CerenkovPressure: " << CerenkovPressure[0] << " " << CerenkovPressure[1] << std::endl;
   std::cout << "BeamMomentum:     " << BeamMomentum << std::endl;
-  std::cout << "BeamMomentumInTPC:" << BeamMomentumInTPC << std::endl;
   std::cout << "nFibers(P1,P2,P3):" << nFibers[0] << " " << nFibers[1] << " " << nFibers[2] << std::endl;
   std::cout << "nMomenta:         " << nMomenta << std::endl;
   std::cout << "nTracks:          " << nTracks << std::endl;
@@ -672,30 +553,9 @@ void AnaBeamPD::Print() const{
 }
 
 //********************************************************************
-AnaWireCNN::AnaWireCNN(){
-//********************************************************************
-
-
-  adcs.clear();
-  wire=0;
-  time=0;
-
-}
-
-//********************************************************************
-AnaWireCNN::AnaWireCNN(const AnaWireCNN& CNNwire){
-//********************************************************************
-
-  adcs = CNNwire.adcs;
-  wire = CNNwire.wire;
-  time = CNNwire.time;
-}
-
-//********************************************************************
 AnaBunchPD::AnaBunchPD():AnaBunch(){
 //********************************************************************
 
-  CNNwires.clear();
   UnassociatedHits.clear();
 }
 
@@ -709,7 +569,6 @@ AnaBunchPD::~AnaBunchPD(){
 AnaBunchPD::AnaBunchPD(const AnaBunchPD& bunch):AnaBunch(bunch){
 //********************************************************************
 
-  CNNwires         = bunch.CNNwires;
   UnassociatedHits = bunch.UnassociatedHits;
 }
 
@@ -723,7 +582,6 @@ void AnaBunchPD::Print() const{
 
   AnaBunch::Print();
   
-  std::cout << "#wires:      " << CNNwires.size() << std::endl;  
   std::cout << "#unassociated hits: " << UnassociatedHits.size() << std::endl;
 }
 
@@ -731,7 +589,6 @@ void AnaBunchPD::Print() const{
 AnaEventPD::AnaEventPD():AnaEvent(){
 //********************************************************************
 
-  CNNwires.clear();
 }
 
 //********************************************************************
@@ -744,7 +601,6 @@ AnaEventPD::~AnaEventPD(){
 AnaEventPD::AnaEventPD(const AnaEventPD& event):AnaEvent(event){
 //********************************************************************
 
-  CNNwires         = event.CNNwires;
   UnassociatedHits = event.UnassociatedHits;
 }
 
@@ -762,7 +618,6 @@ void AnaEventPD::Print() const{
   std::cout << "-------- AnaEventPD --------- " << std::endl;
 
   AnaEvent::Print();
-  std::cout << "#wires:      " << CNNwires.size() << std::endl;
 }
 
 //********************************************************************

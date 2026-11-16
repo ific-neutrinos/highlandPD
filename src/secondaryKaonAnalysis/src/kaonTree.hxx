@@ -99,8 +99,6 @@ namespace kaonTree{
     candidates_cos_dau,
     candidates_average_dedx,
     candidates_truncated_dedx,
-    candidates_vtx_michelscore,
-    candidates_vtx_nhits,
     candidates_distance_tcp,
     candidates_lkl_prot,
     candidates_lkl_kaon,
@@ -147,8 +145,6 @@ namespace kaonTree{
     candidates_dau_csdarange_muon_from_calE,
     candidates_dau_average_dedx,
     candidates_dau_truncated_dedx,
-    candidates_dau_vtx_michelscore,
-    candidates_dau_vtx_nhits,
     candidates_dau_forced,
     candidates_dau_forced_matched,
     candidates_dau_lkl_prot,
@@ -188,8 +184,6 @@ namespace kaonTree{
     candidates_gdau_chi2_ndf,
     candidates_gdau_calE,
     candidates_gdau_average_dedx,
-    candidates_gdau_vtx_michelscore,
-    candidates_gdau_vtx_nhits,
 
     //kaon candidates gdau true info
     candidates_gdau_truendau,
@@ -223,8 +217,6 @@ namespace kaonTree{
     bestcandidate_distance_dau,
     bestcandidate_cos_dau,
     bestcandidate_average_dedx,
-    bestcandidate_vtx_michelscore,
-    bestcandidate_vtx_nhits,
     bestcandidate_calE,
     bestcandidate_truncated_dedx,
 
@@ -315,8 +307,6 @@ namespace kaonTree{
     bestcandidate_dau_chi2_muon,
     bestcandidate_dau_chi2_ndf,
     bestcandidate_dau_calE,
-    bestcandidate_dau_vtx_michelscore,
-    bestcandidate_dau_vtx_nhits,
 
     bestcandidate_dau_nhits,
     bestcandidate_dau_hit_x,
