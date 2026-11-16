@@ -56,7 +56,9 @@ namespace pdAnaUtils{
 
   void ComputeParticlePositionAndDirection(AnaParticlePD* part); 
 
-  // Compute the truncated mean of an std vector
+  /// Mean dE/dx of the central part of the track: removes the first truncate_low
+  /// and the last truncate_high fractions of the hits, in their order along the
+  /// track (the values are not sorted, on purpose)
   Float_t ComputeTruncatedMean(float truncate_low, float truncate_high, const std::vector<double>& dEdx);
   Float_t ComputeTruncatedMean(float truncate_low, float truncate_high, const std::vector<AnaHitPD>& hits);
 
@@ -69,7 +71,9 @@ namespace pdAnaUtils{
   // Average dEdx
   Float_t ComputeAveragedEdxOverResRange(AnaParticlePD* part, double maxresrange = 9999);
 
-  bool IsStoppingInFV(AnaParticlePD *part);
+  /// True if the start or the end of the particle is inside the fiducial volume
+  /// (|x| < 350, 50 < y < 550, 50 < z < 645 cm). Called IsStoppingInFV before.
+  bool HasEndInFV(AnaParticlePD *part);
 
   int GetHitTPCid(AnaHitPD& hit);
   int GetPosTPCid(TVector3 pos);

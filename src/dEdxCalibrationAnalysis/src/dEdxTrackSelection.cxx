@@ -60,7 +60,7 @@ bool GetNonStoppingTracksAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   //look over the particles in the event
   for(int i = 0; i < nParts; i++){
     AnaParticlePD* part = static_cast<AnaParticlePD*>(parts[i]);
-    if(!pdAnaUtils::IsStoppingInFV(part))box.Tracks.push_back(part);
+    if(!pdAnaUtils::HasEndInFV(part))box.Tracks.push_back(part);
   }
   
   return true;  

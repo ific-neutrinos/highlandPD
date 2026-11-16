@@ -397,8 +397,9 @@ void pdAnaUtils::ComputeParticlePositionAndDirection(AnaParticlePD* part){
 
 namespace{
   // Mean of values[i_low, i_high) after removing the requested fractions at
-  // both ends of the vector. The values are NOT sorted: the hits keep their
-  // order along the track. The value type is kept so the sum is done as before.
+  // both ends of the vector. The values are not sorted on purpose: this is the
+  // mean over the central part of the track. The value type is kept so the sum
+  // is done as before.
   template<typename T, typename Getter>
   Float_t TruncatedMean(float truncate_low, float truncate_high, const std::vector<T>& values, Getter get){
 
@@ -496,7 +497,7 @@ Float_t pdAnaUtils::ComputeAveragedEdxOverResRange(AnaParticlePD* part, double m
 }
 
 //***************************************************************
-bool pdAnaUtils::IsStoppingInFV(AnaParticlePD *part){
+bool pdAnaUtils::HasEndInFV(AnaParticlePD *part){
 //***************************************************************
 
   if(!part)return false;
