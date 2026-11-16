@@ -50,6 +50,14 @@ namespace pdAnaUtils{
   std::pair< double, int > Chi2PID(const AnaParticlePD& part, const int pdg,
                                    const double maxRR = std::numeric_limits<double>::infinity());
 
+  /// Recompute Chi2Proton, Chi2Muon and Chi2ndf (the muon one; all the dE/dx
+  /// templates share binning) from the current dE/dx of the hits. To be called
+  /// by any correction or variation that changes the hit dE/dx or residual range.
+  void RecomputeChi2PID(AnaParticlePD& part);
+
+  /// Copy Chi2Proton, Chi2Muon and Chi2ndf from another particle (UndoSystematic)
+  void CopyChi2PID(AnaParticlePD& part, const AnaParticlePD& from);
+
   // Compute the track length using the trajectory points
   Float_t ComputeTrackLengthFromTrajectoryPoints(AnaParticlePD* part); 
 

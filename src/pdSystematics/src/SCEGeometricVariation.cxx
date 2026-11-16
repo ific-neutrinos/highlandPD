@@ -57,11 +57,7 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     }
    
     //modify derived quantities
-    std::pair<double,int>result = pdAnaUtils::Chi2PID(*part,2212);
-    part->Chi2Proton = result.first;
-    result = pdAnaUtils::Chi2PID(*part,13);
-    part->Chi2Muon = result.first;
-    part->Chi2ndf = result.second;
+    pdAnaUtils::RecomputeChi2PID(*part);
     part->RangeMomentum[0] = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
     part->RangeMomentum[1] = pdAnaUtils::ComputeRangeMomentum(part->Length,2212);
   }
@@ -110,9 +106,7 @@ bool SCEGeometricVariation::UndoSystematic(AnaEventC& event){
       part->Hits[2][ihit].Position.SetZ(original->Hits[2][ihit].Position.Z());
     }
 
-    part->Chi2Proton       = original->Chi2Proton;
-    part->Chi2Muon         = original->Chi2Muon;
-    part->Chi2ndf          = original->Chi2ndf;
+    pdAnaUtils::CopyChi2PID(*part, *original);
     part->RangeMomentum[0] = original->RangeMomentum[0];
     part->RangeMomentum[1] = original->RangeMomentum[1];
   }

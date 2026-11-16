@@ -44,11 +44,7 @@ void dEdxVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
       part->Hits[2][ihit].dEdx = part->Hits[2][ihit].dEdx * factor;
     
     //recompute derived quantities
-    std::pair<double, int> chi2pidprot = pdAnaUtils::Chi2PID(*part, 2212);
-    part->Chi2Proton  = chi2pidprot.first;
-    std::pair<double, int> chi2pidmuon = pdAnaUtils::Chi2PID(*part, 13);
-    part->Chi2Muon    = chi2pidmuon.first;
-    part->Chi2ndf     = chi2pidmuon.second;
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 }
 
@@ -70,9 +66,7 @@ bool dEdxVariation::UndoSystematic(AnaEventC& event){
     
 
     // reset the top level quantities
-    part->Chi2Proton = original->Chi2Proton;
-    part->Chi2ndf    = original->Chi2ndf;
-    part->Chi2Muon   = original->Chi2Muon;
+    pdAnaUtils::CopyChi2PID(*part, *original);
   }
   
   // Don't reset the spill to corrected

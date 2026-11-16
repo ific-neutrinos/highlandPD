@@ -995,3 +995,23 @@ bool pdAnaUtils::GetParticleHypothesis(Int_t pdg, std::string& name, double& mas
   default:   return false;
   }
 }
+
+//*****************************************************************************
+void pdAnaUtils::RecomputeChi2PID(AnaParticlePD& part){
+//*****************************************************************************
+
+  std::pair<double,int> chi2prot = Chi2PID(part, 2212);
+  part.Chi2Proton = chi2prot.first;
+  std::pair<double,int> chi2muon = Chi2PID(part, 13);
+  part.Chi2Muon   = chi2muon.first;
+  part.Chi2ndf    = chi2muon.second;
+}
+
+//*****************************************************************************
+void pdAnaUtils::CopyChi2PID(AnaParticlePD& part, const AnaParticlePD& from){
+//*****************************************************************************
+
+  part.Chi2Proton = from.Chi2Proton;
+  part.Chi2Muon   = from.Chi2Muon;
+  part.Chi2ndf    = from.Chi2ndf;
+}

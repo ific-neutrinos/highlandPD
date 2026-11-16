@@ -74,11 +74,7 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
     _cal->ApplyRecombination(part, ctx);
     
     //recompute derived quantities
-    std::pair<double, int> chi2pidprot = pdAnaUtils::Chi2PID(*part, 2212);
-    part->Chi2Proton  = chi2pidprot.first;
-    std::pair<double, int> chi2pidmuon = pdAnaUtils::Chi2PID(*part, 13);
-    part->Chi2Muon    = chi2pidmuon.first;
-    part->Chi2ndf     = chi2pidmuon.second;
+    pdAnaUtils::RecomputeChi2PID(*part);
   }
 
 }
@@ -102,9 +98,7 @@ bool RecombinationVariation::UndoSystematic(AnaEventC& event){
     }
 
     // reset the top level quantities
-    part->Chi2Proton = original->Chi2Proton;
-    part->Chi2ndf    = original->Chi2ndf;
-    part->Chi2Muon   = original->Chi2Muon;
+    pdAnaUtils::CopyChi2PID(*part, *original);
   }
   
 
