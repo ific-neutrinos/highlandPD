@@ -123,7 +123,7 @@ bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
     AnaTrueParticlePD* truecandidate = static_cast<AnaTrueParticlePD*>(candidate->TrueObject);
     AnaTrueParticlePD* trueforced_dau = static_cast<AnaTrueParticlePD*>(forced_dau->TrueObject);
     if(!truecandidate || !trueforced_dau)continue;
-    for(int i = 0; i < truecandidate->Daughters.size(); i++){
+    for(int i = 0; i < (int)truecandidate->Daughters.size(); i++){
       if(truecandidate->Daughters[i] == trueforced_dau->ID){
 	candidate->forced_daughter_matched = true;
 	break;

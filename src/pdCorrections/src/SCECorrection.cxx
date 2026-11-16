@@ -35,7 +35,7 @@ void SCECorrection::Apply(AnaSpillC& spillC){
     //I am really sorry but I don't now if the statement above is trueor false, or if it has any relevance in the analysis. 
     //I'm gonna ignore it (Migue, 27/03/2025)
 
-    for(int ihit = 0; ihit < part->Hits[2].size(); ihit++){
+    for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
       _sce->ApplyPositionCorrection(part->Hits[2][ihit]);
       _cal->ApplySCECorrection(part->Hits[2][ihit]);
     }

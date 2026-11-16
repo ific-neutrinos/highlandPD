@@ -479,7 +479,7 @@ bool secondaryKaonAnalysis::CheckGoodTruthKaon(AnaTrueParticlePD* part, bool che
     bool found_mu = false;
     bool found_nu = false;
     bool found_pi = false;
-    for(int idau = 0; idau < part->Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part->Daughters.size(); idau++){
       AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
       if(!dau)continue;
       if(dau->PDG==-13)found_mu = true;
@@ -495,7 +495,7 @@ bool secondaryKaonAnalysis::CheckGoodTruthKaon(AnaTrueParticlePD* part, bool che
   }
   //interacting kaons to kaon with good decay are ok
   else if(part->ProcessEnd==3 && checkchain){
-    for(int idau = 0; idau < part->Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part->Daughters.size(); idau++){
       AnaTrueParticlePD* dau = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part->Daughters[idau]);
       if(!dau)continue;
       if(dau->PDG==321)
@@ -523,18 +523,18 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   // Fill true kaons candidate info
   AnaTrueParticlePD* dau = NULL;
   if(part.ProcessEnd==2){
-    for(int idau = 0; idau < part.Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part.Daughters.size(); idau++){
       AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
       if(!dauu)continue;
       if(dauu->PDG==-13)dau = dauu;
     }
   }
   else if(part.ProcessEnd==3){
-    for(int idau = 0; idau < part.Daughters.size(); idau++){
+    for(int idau = 0; idau < (int)part.Daughters.size(); idau++){
       AnaTrueParticlePD* dauk = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,part.Daughters[idau]);
       if(!dauk)continue;
       if(dauk->PDG==321)
-	for(int idau = 0; idau < dauk->Daughters.size(); idau++){
+	for(int idau = 0; idau < (int)dauk->Daughters.size(); idau++){
 	  AnaTrueParticlePD* dauu = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles,dauk->Daughters[idau]);
 	  if(!dauu)continue;
 	  if(dauu->PDG==-13)dau = dauu;

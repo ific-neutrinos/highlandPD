@@ -40,7 +40,7 @@ void dEdxMCCorrection::Apply(AnaSpillC& spillC){
   if(!spill.GetIsMC())return;
 
   // Loop over particles
-  for(UInt_t ipart = 0; ipart < (int)bunch->Particles.size(); ipart++){
+  for(UInt_t ipart = 0; ipart < bunch->Particles.size(); ipart++){
     
     //get particle 
     AnaParticlePD* part = static_cast<AnaParticlePD*>(bunch->Particles[ipart]);
