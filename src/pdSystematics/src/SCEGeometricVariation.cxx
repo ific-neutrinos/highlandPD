@@ -58,8 +58,9 @@ void SCEGeometricVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
    
     //modify derived quantities
     pdAnaUtils::RecomputeChi2PID(*part);
-    part->RangeMomentum[0] = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
-    part->RangeMomentum[1] = pdAnaUtils::ComputeRangeMomentum(part->Length,2212);
+    //0 proton, 1 muon (AnaParticlePD::RangeMomentum)
+    part->RangeMomentum[0] = pdAnaUtils::ComputeRangeMomentum(part->Length,2212);
+    part->RangeMomentum[1] = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
   }
 }
 
