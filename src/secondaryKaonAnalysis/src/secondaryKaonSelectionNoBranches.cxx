@@ -18,9 +18,9 @@ void secondaryKaonSelectionNoBranches::DefineSteps(){
   // if "true" is added to the constructor of the step,
   // the step sequence is broken if cut is not passed (default is "false")
 
-  //copy steps from pandoraPreselection
-  AddStep(StepBase::kAction,   "FIND PANDORA TRACK",         new FindBeamTrackAction(),true);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "BEAM TRACK EXISTS",          new BeamTrackExistsCut(), true);// in pdBaseAnalysis/src/pandoraPreselection  
+  //copy steps from pdBaseSelection
+  AddStep(StepBase::kAction,   "FIND PANDORA TRACK",         new FindBeamTrackAction(),true);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "BEAM TRACK EXISTS",          new BeamTrackExistsCut(), true);// in pdBaseAnalysis/src/pdBaseSelection  
   AddStep(StepBase::kAction,   "GET VECTOR OF KAONS",        new GetKaonsAction(),     true);
   AddStep(StepBase::kCut,      "CANDIDATE EXISTS",           new EventHasKaonCut(),    true);
   AddStep(StepBase::kCut,      "EVENT HAS SUPER CANDIDATE",  new SuperCandidateCut(),  true);

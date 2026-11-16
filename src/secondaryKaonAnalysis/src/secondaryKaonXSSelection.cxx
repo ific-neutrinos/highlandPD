@@ -18,9 +18,9 @@ void secondaryKaonXSSelection::DefineSteps(){
 //********************************************************************
 
   //copy steps from pdBaseSelection
-  AddStep(StepBase::kAction,   "find beam track",            new FindBeamTrackAction(), true   );// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,    "beam particle is proton-like", new BeamPDGCut(211));
+  AddStep(StepBase::kAction,   "find beam track",            new FindBeamTrackAction(), true   );// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,    "beam particle is pion-like",   new BeamPDGCut(211));
   //select events using beam instrumentation
   //AddStep(StepBase::kCut,      "beam quality cut"    ,       new BeamQualityCut()    );
 

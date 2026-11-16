@@ -393,8 +393,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_mom_prot,         pdAnaUtils::ComputeRangeMomentum(part->Length,2212));
   output.FillVectorVar         (candidates_mom_muon,         pdAnaUtils::ComputeRangeMomentum(part->Length,13)  );
   Float_t calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(part);
-  Float_t mom  = sqrt(pow(calE,2)+2*calE*pdAnaUtils::kProtonMass);
-  Float_t csda = pdAnaUtils::ComputeCSDARange(mom, 2212);
   output.FillVectorVar         (candidates_calE,             calE           );
   output.FillVectorVar         (candidates_type,             part->Type             );
   output.FillMatrixVarFromArray(candidates_CNNscore,         part->CNNscore,       3); 
@@ -438,8 +436,6 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_dau_average_dedx,      pdAnaUtils::ComputeAveragedEdxOverResRange(dau,5));
   output.FillVectorVar         (candidates_dau_truncated_dedx,   (Float_t)pdAnaUtils::ComputeTruncatedMean(0.16,0.16,dau->Hits[2]));
   Float_t dau_calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(dau);
-  Float_t dau_mom  = sqrt(pow(calE,2)+2*calE*105.07);
-  Float_t dau_csda = pdAnaUtils::ComputeCSDARange(dau_mom, 13);
   output.FillVectorVar         (candidates_dau_calE,            dau_calE           );
   output.FillVectorVar         (candidates_dau_vtx_michelscore,  dau->vtx_CNN_michelscore);
   output.FillVectorVar         (candidates_dau_vtx_nhits,        dau->vtx_CNN_NHits);

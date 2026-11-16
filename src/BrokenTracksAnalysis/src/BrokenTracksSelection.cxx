@@ -13,9 +13,9 @@ BrokenTracksSelection::BrokenTracksSelection(bool forceBreak): SelectionBase(for
 void BrokenTracksSelection::DefineSteps(){
 //********************************************************************
 
-  AddStep(StepBase::kAction,   "find Pandora track",         new FindBeamTrackAction(),      false);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "candidate exists",           new BeamTrackExistsCut(),       false);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "beam pdg",                   new BeamMuonCut(),              false);// in pdBaseAnalysis/src/pandoraPreselection  
+  AddStep(StepBase::kAction,   "find Pandora track",         new FindBeamTrackAction(),      false);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "candidate exists",           new BeamTrackExistsCut(),       false);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "beam pdg",                   new BeamMuonCut(),              false);// in pdBaseAnalysis/src/pdBaseSelection  
   AddStep(StepBase::kCut,      "beam quality",               new BeamTrackQualityCut(),      false);
   AddStep(StepBase::kCut,      "denominator",                new TrackReachesAPABorderCut(), false);
   AddStep(StepBase::kCut,      "almost numerator",           new TrackEndsInAPABorderCut(),  false);

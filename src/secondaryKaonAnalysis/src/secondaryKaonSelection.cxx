@@ -17,9 +17,9 @@ void secondaryKaonSelection::DefineSteps(){
   // if "true" is added to the constructor of the step,
   // the step sequence is broken if cut is not passed (default is "false")
 
-  //copy steps from pandoraPreselection
-  AddStep(StepBase::kAction,   "FIND PANDORA TRACK",         new FindBeamTrackAction(),true);// in pdBaseAnalysis/src/pandoraPreselection  
-  AddStep(StepBase::kCut,      "BEAM TRACK EXISTS",           new BeamTrackExistsCut(), true);// in pdBaseAnalysis/src/pandoraPreselection  
+  //copy steps from pdBaseSelection
+  AddStep(StepBase::kAction,   "FIND PANDORA TRACK",         new FindBeamTrackAction(),true);// in pdBaseAnalysis/src/pdBaseSelection  
+  AddStep(StepBase::kCut,      "BEAM TRACK EXISTS",           new BeamTrackExistsCut(), true);// in pdBaseAnalysis/src/pdBaseSelection  
   //select events using beam instrumentation
   AddStep(StepBase::kAction,   "GET VECTOR OF KAONS",      new GetKaonsAction(),     true);
   AddStep(StepBase::kCut,      "CANDIDATE EXISTS",             new EventHasKaonCut(),    true);
@@ -100,7 +100,7 @@ bool MuonIsTrackCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
   
   //make sure there is a candidate for this branch
-  if(branchesIDs[0] > box.Candidates.size()-1)return false;
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
@@ -124,6 +124,9 @@ bool MuonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   //get the current branch  
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] >= box.Candidates.size())return false;
+
   //if there is kaon, cut in its daughter chi2
   if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
   AnaParticlePD* dau = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]->Daughters[0]);
@@ -145,6 +148,9 @@ bool MuonRangeMomCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   //get the current branch  
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   //if there is kaon, cut in its daughter range mom
   if(box.Candidates[branchesIDs[0]]->Daughters.empty())return false;
@@ -168,6 +174,9 @@ bool KaonMuonAngleCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   //get the current branch  
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   //if there is kaon, cut on the angle between it and its daughter muon
   AnaParticlePD* kaon = box.Candidates[branchesIDs[0]];
@@ -193,6 +202,9 @@ bool KaonMuonDistanceCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
   //get the current branch  
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
+
+  //make sure there is a candidate for this branch
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   //if there is kaon, cut on the distance between it and its daughter muon
   AnaParticlePD* kaon = box.Candidates[branchesIDs[0]];
@@ -221,7 +233,7 @@ bool KaonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
   //make sure there is a candidate for this branch
-  if(branchesIDs[0] > box.Candidates.size()-1)return false;
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   //if there is kaon, cut in its chi2
   AnaParticlePD* part = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
@@ -248,7 +260,7 @@ bool FVCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
   //make sure there is a candidate for this branch
-  if(branchesIDs[0] > box.Candidates.size()-1)return false;
+  if(branchesIDs[0] >= box.Candidates.size())return false;
 
   //if there is kaon, check it starts and ends inside the FV
   AnaParticlePD* part = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);

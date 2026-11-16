@@ -29,8 +29,11 @@ void RecombinationVariation::Apply(const ToyExperiment& toy, AnaEventC& event){
   Int_t A_index, B_index;
   
   // Get the systematics parameters (This can be outside the loop if it does not depend on Particle properties)
-  if(!_BP_A->GetBinValues(0.5, A_mean,  A_var,  A_index))return;
-  if(!_BP_B->GetBinValues(0.5, B_mean,  B_var,  B_index))return;
+  if(!_BP_A->GetBinValues(0.5, A_mean,  A_var,  A_index) ||
+     !_BP_B->GetBinValues(0.5, B_mean,  B_var,  B_index)){
+    std::cerr << "RecombinationVariation::Apply: cannot read the ModBox parameters from RecombinationA/B.dat. Aborting." << std::endl;
+    exit(1);
+  }
 
   // They are correlated. To throw correlated random numbers, we have to generate a vector of 2 random numbers and 
   // multiply it by the Cholesky decomposition of the correlation matrix.
