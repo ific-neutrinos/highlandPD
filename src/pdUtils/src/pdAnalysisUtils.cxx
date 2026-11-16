@@ -706,7 +706,16 @@ void pdAnaUtils::GetBeamQualityCuts(AnaEventPD* event,
   //get nominal beam momentum. If none, set it to 1.
   AnaEventInfoPD* EventInfo = static_cast<AnaEventInfoPD*>(event->EventInfo);
   int NomBeamMom = (int)EventInfo->NominalBeamMom;
-  if(NomBeamMom < 0 || NomBeamMom > 3)NomBeamMom = 1; //we still have no values for 6 and 7 GeV
+  //there are cuts for 1, 2, 3, 6 and 7 GeV; any other momentum uses the 1 GeV ones
+  if(NomBeamMom != 1 && NomBeamMom != 2 && NomBeamMom != 3 && NomBeamMom != 6 && NomBeamMom != 7){
+    static bool warned = false;
+    if(!warned){
+      std::cerr << "pdAnaUtils::GetBeamQualityCuts(): no beam quality cuts for nominal momentum "
+                << EventInfo->NominalBeamMom << " GeV, using the 1 GeV ones" << std::endl;
+      warned = true;
+    }
+    NomBeamMom = 1;
+  }
 
   //get BQC parameters depending on beam mom and MC/data
   std::stringstream ssmom;
