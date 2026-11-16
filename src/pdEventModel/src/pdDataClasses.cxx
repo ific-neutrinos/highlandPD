@@ -2,6 +2,7 @@
 
 #include "pdDataClasses.hxx"
 #include "AnalysisUtils.hxx"
+#include <iomanip>
 
 
 // define a constant value for uninitialised parameters
@@ -62,6 +63,9 @@ AnaHitPD::AnaHitPD(){
   
   UniqueID      = kIntUnassigned;
   TrueID        = kIntUnassigned;
+  RMS           = kFloatUnassigned;
+  GoodnessOfFit = kFloatUnassigned;
+  Multiplicity  = kIntUnassigned;
 
   Signal.clear();
   CNN[0]=CNN[1]=CNN[2]=kFloatUnassigned;
@@ -81,6 +85,9 @@ AnaHitPD::AnaHitPD(const AnaHitPD& hit){
   View          = hit.View;
   UniqueID      = hit.UniqueID;
   TrueID        = hit.TrueID;
+  RMS           = hit.RMS;
+  GoodnessOfFit = hit.GoodnessOfFit;
+  Multiplicity  = hit.Multiplicity;
   Signal        = hit.Signal;
   for (size_t i=0;i<3;i++)
     CNN[i]           = hit.CNN[i];
@@ -125,6 +132,7 @@ void AnaHitPD::Print() const{
   std::cout << "View:          " << View << std::endl;
   std::cout << "UniqueID:      " << UniqueID << std::endl;
   std::cout << "TrueID:        " << TrueID << std::endl;
+  std::cout << "RMS:           " << RMS << std::endl;
   std::cout << "#adcs:         " << Signal.size()  << std::endl;
   std::cout << "Integral:      " << Integral      << std::endl; 
   std::cout << "PeakTime:      " << PeakTime      << std::endl;
@@ -166,10 +174,8 @@ void AnaTrajectoryPointPD::Print() const{
 AnaSpacePointPD::AnaSpacePointPD(){
 //********************************************************************
 
-  for(int i = 0; i < 3; i++){
-    Position[i] = kFloatUnassigned;
-    HitIDs[i]   = kIntUnassigned;
-  }
+  for(int i = 0; i < 3; i++)Position[i] = kFloatUnassigned;
+  HitID = kIntUnassigned;
 }
 
 //********************************************************************
@@ -178,7 +184,39 @@ void AnaSpacePointPD::Print() const{
 
   std::cout << "-------- AnaSpacePointPD --------- " << std::endl;
   std::cout << "Position:      " << "( " << Position[0] << ", " << Position[1] << ", " << Position[2] << ")" << std::endl;
-  std::cout << "HitIDs:        " << HitIDs[0] << " " << HitIDs[1] << " " << HitIDs[2] << std::endl;
+  std::cout << "HitID:         " << HitID << std::endl;
+}
+
+//********************************************************************
+AnaForcedTrackPD::AnaForcedTrackPD(){
+//********************************************************************
+
+  ID = kIntUnassigned;
+  for(int i = 0; i < 3; i++){
+    PositionStart[i]  = kFloatUnassigned;
+    PositionEnd[i]    = kFloatUnassigned;
+    DirectionStart[i] = kFloatUnassigned;
+    DirectionEnd[i]   = kFloatUnassigned;
+  }
+  Length     = kFloatUnassigned;
+  Chi2Proton = kFloatUnassigned;
+  Chi2Muon   = kFloatUnassigned;
+  Chi2ndf    = kFloatUnassigned;
+}
+
+//********************************************************************
+void AnaForcedTrackPD::Print() const{
+//********************************************************************
+
+  std::cout << "-------- AnaForcedTrackPD --------- " << std::endl;
+  std::cout << "ID:            " << ID << std::endl;
+  std::cout << "PositionStart: " << "( " << PositionStart[0] << ", " << PositionStart[1] << ", " << PositionStart[2] << ")" << std::endl;
+  std::cout << "PositionEnd:   " << "( " << PositionEnd[0] << ", " << PositionEnd[1] << ", " << PositionEnd[2] << ")" << std::endl;
+  std::cout << "Length:        " << Length << std::endl;
+  std::cout << "Chi2Proton:    " << Chi2Proton << std::endl;
+  std::cout << "Chi2Muon:      " << Chi2Muon << std::endl;
+  std::cout << "Hits:          " << Hits[0].size() << " " << Hits[1].size() << " " << Hits[2].size() << std::endl;
+  std::cout << "TrjPoints:     " << TrjPoints.size() << std::endl;
 }
 
 //********************************************************************
@@ -263,11 +301,20 @@ AnaParticlePD::AnaParticlePD():AnaParticle(){
   PandoraTrackScore = kFloatUnassigned;
   T0                = kFloatUnassigned;
   SpacePoints.clear();
+  BeamCosmicScore   = kFloatUnassigned;
+  for(int i = 0; i < 3; i++){
+    PandoraVertex[i] = kFloatUnassigned;
+    ShowerEnergy[i]  = kFloatUnassigned;
+    ShowerdEdx[i]    = kFloatUnassigned;
+  }
+  ShowerOpeningAngle = kFloatUnassigned;
+  ForcedTrack.clear();
 
   Distance_to_closest_particle = kFloatUnassigned;
   
   for (int i=0; i<3; i++){
     Hits[i].clear();
+    HitsNoCalo[i].clear();
   }
 
   TrjPoints.clear();
@@ -347,11 +394,20 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
   PandoraTrackScore = part.PandoraTrackScore;
   T0                = part.T0;
   SpacePoints       = part.SpacePoints;
+  BeamCosmicScore   = part.BeamCosmicScore;
+  for(int i = 0; i < 3; i++){
+    PandoraVertex[i] = part.PandoraVertex[i];
+    ShowerEnergy[i]  = part.ShowerEnergy[i];
+    ShowerdEdx[i]    = part.ShowerdEdx[i];
+  }
+  ShowerOpeningAngle = part.ShowerOpeningAngle;
+  ForcedTrack        = part.ForcedTrack;
 
   Distance_to_closest_particle = part.Distance_to_closest_particle;
 
   for (int i=0; i<3; i++){
-    Hits[i] = part.Hits[i];
+    Hits[i]       = part.Hits[i];
+    HitsNoCalo[i] = part.HitsNoCalo[i];
   }
 
   TrjPoints = part.TrjPoints;
@@ -378,6 +434,10 @@ void AnaParticlePD::Print() const{
   std::cout << "IsClearCosmic:           " << IsClearCosmic << std::endl;
   std::cout << "PandoraTrackScore:       " << PandoraTrackScore << std::endl;
   std::cout << "T0:                      " << T0 << std::endl;
+  std::cout << "BeamCosmicScore:         " << BeamCosmicScore << std::endl;
+  std::cout << "PandoraVertex:           " << PandoraVertex[0] << " " << PandoraVertex[1] << " " << PandoraVertex[2] << std::endl;
+  std::cout << "ShowerEnergy:            " << ShowerEnergy[0] << " " << ShowerEnergy[1] << " " << ShowerEnergy[2] << std::endl;
+  std::cout << "Forced track:            " << ForcedTrack.size() << std::endl;
 
   std::cout << "FitPDG:                  " << FitPDG << std::endl;
   
@@ -426,6 +486,7 @@ void AnaParticlePD::Print() const{
   std::cout << "RangeMomentum:           " << RangeMomentum[0] << " " << RangeMomentum[1] << std::endl;
 
   std::cout << "Stored hits in plane 0,1,2:  " << Hits[0].size() << " " << Hits[1].size() << " " << Hits[2].size() << std::endl;    
+  std::cout << "Hits without calorimetry: " << HitsNoCalo[0].size() << " " << HitsNoCalo[1].size() << " " << HitsNoCalo[2].size() << std::endl;
   std::cout << "Space points:            " << SpacePoints.size() << std::endl;
 }
 
@@ -441,6 +502,8 @@ AnaTrueParticlePD::AnaTrueParticlePD():AnaTrueParticle(){
   LengthInTPC   = kFloatUnassigned;
   MomentumInTPC = kFloatUnassigned;
   TrjPoints.clear();
+  for(int i = 0; i < 3; i++)NHitsTrue[i] = kIntUnassigned;
+  EDepTrue = kFloatUnassigned;
 }
 
 //********************************************************************
@@ -462,6 +525,8 @@ AnaTrueParticlePD::AnaTrueParticlePD(const AnaTrueParticlePD& truePart):AnaTrueP
   LengthInTPC = truePart.LengthInTPC;
   MomentumInTPC = truePart.MomentumInTPC;
   TrjPoints = truePart.TrjPoints;
+  for(int i = 0; i < 3; i++)NHitsTrue[i] = truePart.NHitsTrue[i];
+  EDepTrue = truePart.EDepTrue;
 }
 
 //********************************************************************
@@ -480,6 +545,44 @@ void AnaTrueParticlePD::Print() const{
   std::cout << "MomentumInTPC:         " << MomentumInTPC << std::endl;
   std::cout << "Signal:                " << Signal << std::endl;
   std::cout << "True traj. points:     " << TrjPoints.size() << std::endl;
+  std::cout << "NHitsTrue:             " << NHitsTrue[0] << " " << NHitsTrue[1] << " " << NHitsTrue[2] << std::endl;
+  std::cout << "EDepTrue:              " << EDepTrue << std::endl;
+}
+
+//********************************************************************
+AnaDataQualityPD::AnaDataQualityPD():AnaDataQuality(){
+//********************************************************************
+
+  for(int i = 0; i < 6; i++)NActiveFembs[i] = kIntUnassigned;
+  TimeStampConsistent         = kIntUnassigned;
+  TimeStampConsistentBeamSide = kIntUnassigned;
+  TimingTimeStamp             = kDoubleUnassigned;
+  UnstableHV                  = false;
+}
+
+//********************************************************************
+AnaDataQualityPD::AnaDataQualityPD(const AnaDataQualityPD& dq):AnaDataQuality(dq){
+//********************************************************************
+
+  for(int i = 0; i < 6; i++)NActiveFembs[i] = dq.NActiveFembs[i];
+  TimeStampConsistent         = dq.TimeStampConsistent;
+  TimeStampConsistentBeamSide = dq.TimeStampConsistentBeamSide;
+  TimingTimeStamp             = dq.TimingTimeStamp;
+  UnstableHV                  = dq.UnstableHV;
+}
+
+//********************************************************************
+void AnaDataQualityPD::Print() const{
+//********************************************************************
+
+  std::cout << "-------- AnaDataQualityPD --------- " << std::endl;
+  std::cout << "GoodDaq:              " << GoodDaq << std::endl;
+  std::cout << "NActiveFembs:         ";
+  for(int i = 0; i < 6; i++)std::cout << NActiveFembs[i] << " ";
+  std::cout << std::endl;
+  std::cout << "TimeStampConsistent:  " << TimeStampConsistent << " (beam side " << TimeStampConsistentBeamSide << ")" << std::endl;
+  std::cout << "TimingTimeStamp:      " << std::setprecision(15) << TimingTimeStamp << std::setprecision(6) << std::endl;
+  std::cout << "UnstableHV:           " << UnstableHV << std::endl;
 }
 
 //********************************************************************

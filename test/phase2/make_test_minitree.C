@@ -59,6 +59,8 @@ namespace {
         p.Position[0] = i; p.Momentum[2] = i; p.Process = tp->ID;
         tp->TrjPoints.push_back(p);
       }
+      for(int pl = 0; pl < 3; pl++)tp->NHitsTrue[pl] = pl+1;
+      tp->EDepTrue = tp->ID % 100;
     }
     for(AnaBunchC* bc : spill->Bunches){
       AnaBunchPD* bunch = static_cast<AnaBunchPD*>(bc);
@@ -71,7 +73,18 @@ namespace {
         part->IsClearCosmic = true;
         part->PandoraTrackScore = 0.5;
         part->SpacePoints.assign(kNSP, AnaSpacePointPD());
-        for(int i = 0; i < kNSP; i++)part->SpacePoints[i].HitIDs[2] = part->UniqueID*10+i;
+        for(int i = 0; i < kNSP; i++)part->SpacePoints[i].HitID = part->UniqueID*10+i;
+        for(int pl = 0; pl < 3; pl++){
+          part->HitsNoCalo[pl].assign(pl+1, AnaHitPD());
+          part->HitsNoCalo[pl][pl].UniqueID = part->UniqueID;
+        }
+        part->BeamCosmicScore = 0.25;
+        AnaForcedTrackPD ft;
+        ft.ID = part->UniqueID;
+        ft.Chi2Muon = 2*part->UniqueID;
+        ft.Hits[2].assign(2, AnaHitPD());
+        ft.Hits[2][1].dEdx = 2.5;
+        part->ForcedTrack.assign(1, ft);
         for(int pl = 0; pl < 3; pl++)
           for(size_t h = 0; h < part->Hits[pl].size(); h++){
             part->Hits[pl][h].UniqueID = h;
@@ -109,7 +122,11 @@ int make_test_minitree(const char* in, const char* out, int n = 200){
     // como un spill); sin beam slice (bunch vacío, HasPandora = false) o con DQ malo (sin bunch)
     spill = new AnaSpillPD();
     spill->EventInfo   = spillIn->EventInfo->Clone();
-    spill->DataQuality = spillIn->DataQuality->Clone();
+    AnaDataQualityPD* dq = new AnaDataQualityPD();
+    for(int apa = 0; apa < 6; apa++)dq->NActiveFembs[apa] = 20-apa;
+    dq->UnstableHV = true;
+    dq->TimingTimeStamp = 1537315216.123456;
+    spill->DataQuality = dq;
     AnaBeamPD* beam = new AnaBeamPD();
     beam->BeamParticle = new AnaParticlePD();
     beam->SpillsSincePreviousSavedSpill = 1;
@@ -125,7 +142,7 @@ int make_test_minitree(const char* in, const char* out, int n = 200){
       spill->Bunches.push_back(bunch);
     }
     else
-      static_cast<AnaDataQuality*>(spill->DataQuality)->GoodDaq = false;
+      dq->GoodDaq = false;
     tout->Fill();
     delete spill;
     delete spillIn;
@@ -150,6 +167,7 @@ int check_test_minitree(const char* file){
 
   TFile f(file);
   TTree* t = (TTree*)f.Get("MiniTree");
+  int ndq = 0;
   int nerr = 0, nparts = 0, nsp = 0, ntraj = 0, nunas = 0;
   for(Long64_t i = 0; i < t->GetEntries(); i++){
     AnaSpill* raw = ReadSpill(t, i);
@@ -161,10 +179,19 @@ int check_test_minitree(const char* file){
       ntraj += tp->TrjPoints.size();
       if(static_cast<AnaEventInfoPD*>(spill->EventInfo)->Event > 0 &&
          (tp->TrjPoints.size() != 2 || tp->TrjPoints[1].Momentum[2] != 1 || tp->TrjPoints[1].Position[0] != 1 ||
-          tp->TrjPoints[0].Process != tp->ID)){
+          tp->TrjPoints[0].Process != tp->ID || tp->NHitsTrue[2] != 3 || tp->EDepTrue != tp->ID % 100)){
         if(!nerr)std::cout << "Primer error: true " << tp->ID << " de la entrada " << i << " con " << tp->TrjPoints.size() << " puntos" << std::endl;
         nerr++;
       }
+    }
+    // los eventos marcados llevan AnaDataQualityPD
+    if(static_cast<AnaEventInfoPD*>(spill->EventInfo)->Event < 0){
+      AnaDataQualityPD* dq = dynamic_cast<AnaDataQualityPD*>(spill->DataQuality);
+      if(!dq || dq->NActiveFembs[5] != 15 || !dq->UnstableHV || dq->TimingTimeStamp != 1537315216.123456){
+        if(!nerr)std::cout << "Primer error: calidad de datos de la entrada " << i << std::endl;
+        nerr++;
+      }
+      ndq++;
     }
     for(AnaBunchC* bc : spill->Bunches){
       AnaBunchPD* bunch = static_cast<AnaBunchPD*>(bc);
@@ -174,7 +201,10 @@ int check_test_minitree(const char* file){
         nparts++;
         nsp += p->SpacePoints.size();
         if(p->SliceID != kSlice || p->T0 != kT0 || !p->IsClearCosmic || (int)p->SpacePoints.size() != kNSP ||
-           p->SpacePoints[kNSP-1].HitIDs[2] != p->UniqueID*10+kNSP-1){
+           p->SpacePoints[kNSP-1].HitID != p->UniqueID*10+kNSP-1 ||
+           p->HitsNoCalo[2].size() != 3 || p->HitsNoCalo[2][2].UniqueID != p->UniqueID ||
+           p->BeamCosmicScore != 0.25f || p->ForcedTrack.size() != 1 || p->ForcedTrack[0].Chi2Muon != 2*p->UniqueID ||
+           p->ForcedTrack[0].Hits[2].size() != 2 || p->ForcedTrack[0].Hits[2][1].dEdx != 2.5f){
           if(!nerr)std::cout << "Primer error: partícula " << p->UniqueID << " de la entrada " << i << std::endl;
           nerr++;
         }
@@ -190,7 +220,7 @@ int check_test_minitree(const char* file){
     delete raw;
   }
   std::cout << t->GetEntries() << " entradas, " << nparts << " partículas, " << nsp << " space points, "
-            << ntraj << " puntos de trayectoria true, " << nunas << " hits no asociados" << std::endl;
+            << ntraj << " puntos de trayectoria true, " << nunas << " hits no asociados, " << ndq << " AnaDataQualityPD" << std::endl;
   std::cout << (nerr ? "ERROR: " : "OK: ") << nerr << " valores distintos de los escritos" << std::endl;
   return nerr ? 1 : 0;
 }

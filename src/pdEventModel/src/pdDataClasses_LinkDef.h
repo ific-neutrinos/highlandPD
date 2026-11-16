@@ -12,4 +12,6 @@
 #pragma link C++ class AnaWireID+;
 #pragma link C++ class AnaSpacePointPD+;
 #pragma link C++ class AnaTrueTrajPointPD+;
+#pragma link C++ class AnaForcedTrackPD+;
+#pragma link C++ class AnaDataQualityPD+;
 #endif

@@ -63,6 +63,11 @@ public:
   /// ID of the true particle that deposits most energy in this hit (MC only)
   Int_t TrueID;
 
+  /// Hit fit: width (ticks), goodness of fit and number of hits fitted together
+  Float_t RMS;
+  Float_t GoodnessOfFit;
+  Int_t   Multiplicity;
+
   Float_t CNN[3];
   
   /// wave form associated to this hit
@@ -141,8 +146,35 @@ public:
 
   Float_t Position[3];
 
-  /// UniqueID of the hit used in each plane (-999 if none)
-  Int_t HitIDs[3];
+  /// UniqueID of its hit: Pandora builds one space point per 2D hit
+  Int_t HitID;
+};
+
+/// Track fit forced on a PFParticle without track (shower-like): pandora2Track and its calorimetry.
+/// Value type kept apart from the AnaParticlePD members so that the analyses do not change
+class AnaForcedTrackPD{
+public:
+  AnaForcedTrackPD();
+
+  /// Dump the object to screen.
+  void Print() const;
+
+  Int_t   ID;
+  Float_t PositionStart[3];
+  Float_t PositionEnd[3];
+  Float_t DirectionStart[3];
+  Float_t DirectionEnd[3];
+  Float_t Length;
+
+  /// PID with the collection plane calorimetry
+  Float_t Chi2Proton;
+  Float_t Chi2Muon;
+  Float_t Chi2ndf;
+
+  /// Hits with calorimetry, for each plane
+  std::vector<AnaHitPD> Hits[3];
+
+  std::vector<AnaTrajectoryPointPD> TrjPoints;
 };
 
 /// True trajectory point, to follow the chain of the K+- (only for the configured PDGs)
@@ -221,8 +253,13 @@ public:
   double ThetaXZ;
   double ThetaYZ;
 
-  /// Vector of hits for each plane
+  /// Vector of hits for each plane, with calorimetry
   std::vector<AnaHitPD> Hits[3];
+
+  /// Hits of the PFParticle without calorimetry, for each plane: those of tracks that are not
+  /// in the calorimetry (mostly 2D hits without 3D point) and all those of showers and
+  /// PFParticles without track
+  std::vector<AnaHitPD> HitsNoCalo[3];
 
   /// Total Number of hits in each wire plane (The vector of Hits above might be a subsample)
   Int_t NHitsPerPlane[3];
@@ -264,6 +301,18 @@ public:
 
   /// T0 of the PFParticle (-999 if none)
   Float_t T0;
+
+  /// Pandora beam/cosmic score and vertex
+  Float_t BeamCosmicScore;
+  Float_t PandoraVertex[3];
+
+  /// Shower information (shower-like PFParticles), for each plane
+  Float_t ShowerEnergy[3];
+  Float_t ShowerdEdx[3];
+  Float_t ShowerOpeningAngle;
+
+  /// Track fit forced on PFParticles without track (0 or 1 elements)
+  std::vector<AnaForcedTrackPD> ForcedTrack;
 
   /// 3D space points
   std::vector<AnaSpacePointPD> SpacePoints;
@@ -335,6 +384,47 @@ public:
 
   /// True trajectory (only for the configured PDGs)
   std::vector<AnaTrueTrajPointPD> TrjPoints;
+
+  /// Hits in each plane where this particle deposits most energy, and energy (MeV) it deposits in
+  /// all the hits of the event: to know whether it was reconstructed and where (MC only)
+  Int_t   NHitsTrue[3];
+  Float_t EDepTrue;
+};
+
+/// Data quality of ProtoDUNE-SP: what the FEMB and unstable HV filters check, saved instead of
+/// filtering (data only)
+class AnaDataQualityPD: public AnaDataQuality{
+public :
+
+  AnaDataQualityPD();
+  virtual ~AnaDataQualityPD(){}
+
+  /// Clone this object.
+  virtual AnaDataQualityPD* Clone() {
+    return new AnaDataQualityPD(*this);
+  }
+
+  /// Dump the object to screen.
+  virtual void Print() const;
+
+protected:
+
+  /// Copy constructor is protected, as Clone() should be used to copy this object.
+  AnaDataQualityPD(const AnaDataQualityPD& dq);
+
+public:
+
+  /// Number of active FEMBs in each APA (20 = all). -999 if the raw digits are not in the input
+  Int_t NActiveFembs[6];
+
+  /// Timestamps consistent among all the APAs and among the beam-side ones (0, 2, 4):
+  /// 1 yes, 0 no, -999 if the raw timestamps are not in the input
+  Int_t TimeStampConsistent;
+  Int_t TimeStampConsistentBeamSide;
+
+  /// Time from the timing system (s) and whether it is in a period of unstable HV
+  Double_t TimingTimeStamp;
+  Bool_t   UnstableHV;
 };
 
 /// Extension of AnaEvent to include specific information of the ProtoDUNE beam line instrumentation
