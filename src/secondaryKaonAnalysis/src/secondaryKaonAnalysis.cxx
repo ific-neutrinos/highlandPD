@@ -594,6 +594,8 @@ void secondaryKaonAnalysis::FillCategories(){
     // ---------- best kaon candidate variables --------------
     if(box().Candidates.size()>0){
       anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]), "bestcandidate");
+      //the signal flag of the true kaon is needed by the category (also when the candidates block is off)
+      SetIsSignal(box().Candidates[branchmax]);
       kaonAnaUtils::FillBestCandidateParticleReducedCategory(static_cast<AnaParticlePD*>(box().Candidates[branchmax]));
       if(!box().Candidates[branchmax]->Daughters.empty())
 	anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]->Daughters[0]), "bestcandidatedau");
