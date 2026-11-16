@@ -13,6 +13,7 @@
 // Devuelve el número de comprobaciones que fallan (0 = todo bien).
 
 #include "SpaceCharge.hxx"
+#include "Parameters.hxx"
 #include "TRandom3.h"
 #include "TMath.h"
 #include <iostream>
@@ -89,6 +90,10 @@ int Compare(const char* title, const SpaceCharge& nominal, const RefSCE& ref,
 } // namespace
 
 int test_sce_voxel(int npoints = 5000){
+
+  // SpaceCharge lee el nombre del mapa de pdUtils.parameters.dat. Fuera de un
+  // análisis no hay fichero de override, así que se marca ese punto como pasado.
+  ND::params().SetReadParamOverrideFilePointPassed();
 
   SpaceCharge nominal;
   nominal.Initialize();
