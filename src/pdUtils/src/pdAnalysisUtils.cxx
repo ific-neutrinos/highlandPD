@@ -675,8 +675,7 @@ Float_t pdAnaUtils::ComputeDistanceMotherDaughter(AnaParticlePD* mother, AnaPart
 //***************************************************************
 
   if(!mother || !daughter){
-    std::cerr << "pdAnaUtils::ComputeDistanceMotherDaughter(). One of the particles does not exist" << std::endl;
-    std::cout << "Returning -999" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeDistanceMotherDaughter(). One of the particles does not exist. Returning -999" << std::endl;
     return -999.;
   }
   
@@ -691,8 +690,7 @@ Float_t pdAnaUtils::ComputeCosMotherDaughter(AnaParticlePD* mother, AnaParticleP
 //***************************************************************
 
   if(!mother || !daughter){
-    std::cerr << "pdAnaUtils::ComputeCosMotherDaughter(). One of the particles does not exist" << std::endl;
-    std::cout << "Returning -999" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeCosMotherDaughter(). One of the particles does not exist. Returning -999" << std::endl;
     return -999.;
   }
   
@@ -706,8 +704,7 @@ Float_t pdAnaUtils::ComputeAveragedEdxOverResRange(AnaParticlePD* part, double m
 //***************************************************************
 
   if(!part){
-    std::cerr << "pdAnaUtils::ComputeAveragedEdxOverResRange(). Particle does not exist" << std::endl;
-    std::cout << "Returning -999" << std::endl;
+    std::cerr << "pdAnaUtils::ComputeAveragedEdxOverResRange(). Particle does not exist. Returning -999" << std::endl;
     return -999.;
   }
   

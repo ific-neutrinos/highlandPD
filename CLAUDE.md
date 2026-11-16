@@ -122,10 +122,7 @@ Resuelto:
 - `Chi2ndf` tomado del muón: no es un bug. Todas las variaciones y el conversor lo hacen igual, y las cuatro plantillas de dE/dx tienen el mismo binning (325 bins en 0-26 cm), así que el ndf no depende de la hipótesis.
 - `getenv`: solo queda uno vivo sin comprobar, en `dQdxXCalibration.cxx:91` (fichero personal, ver arriba). Los demás son de `pdDataFiles` o están comentados.
 
-Pendiente (sin cambio de resultados):
-
-- Pasar los mensajes de error de `std::cout` a `std::cerr`.
-- Textos de `Calorimetry`: los de YZ dicen "X correction".
+- Mensajes de error por `std::cerr` (los últimos estaban en `SCEVariationBase` y en las utilidades madre-hija de `pdAnalysisUtils`) y textos de `Calorimetry` corregidos. Los `std::cout` que quedan son `Print()` y mensajes de inicialización o finalización. `coherentfit/` (no se compila) no se ha tocado.
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 

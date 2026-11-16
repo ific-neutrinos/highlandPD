@@ -22,10 +22,10 @@ SCEVariationBase::SCEVariationBase():EventVariationBase(),BinnedParams(pd::DataD
 
     //check we have enough bins to run this systematic, otherwise exit
     if(GetNBins() > (int)NMAXSYSTSOURCEBINS){
-      std::cout << "SCEVariationBase::SCEVariationBase()." << std::endl;
-      std::cout << "the source files has more bins than allowed for the systematic propagation!" << std::endl;
-      std::cout << "N MAX BINS allowed " << NMAXSYSTSOURCEBINS << std::endl;
-      std::cout << "N BINS on source   " << GetNBins() << std::endl;
+      std::cerr << "SCEVariationBase::SCEVariationBase()." << std::endl;
+      std::cerr << "the source files has more bins than allowed for the systematic propagation!" << std::endl;
+      std::cerr << "N MAX BINS allowed " << NMAXSYSTSOURCEBINS << std::endl;
+      std::cerr << "N BINS on source   " << GetNBins() << std::endl;
       std::cout << "if you need more bins, look at psyckeUtils/src/BinnedParams.hxx" << std::endl;
       std::exit(1);
     }
