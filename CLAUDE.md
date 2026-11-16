@@ -174,9 +174,32 @@ Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `ph
 - `Clone()` de un spill **no clona la truth**: el clon comparte `TrueParticles` y `TrueVertices` con el original (`isClone = true`) y solo el original la borra. Hay que borrar el clon antes que el original. Antes el módulo nunca borraba el original y perdía la truth en cada evento.
 - Las clases de `pdDataClasses` no tienen `ClassDef`: ROOT las versiona por checksum, así que añadir o quitar miembros no rompe la lectura de ficheros antiguos.
 
+### Compilación en FNAL (en curso; estado al cerrar el 16-nov-2026)
+
+- Push hecho de `phase2/minitrees` (highlandPD y highlandAnalysis) y del tag `pre-phase2`. Commits finales: highlandPD `25c54dc` (y la actualización de este fichero), highlandAnalysis `8388374`.
+- Área de mrb del usuario: `/exp/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00` (dentro de Apptainer SL7 en dunegpvm). `srcs/` solo tiene `protoduneana` (v09_56_00d00 más 5 commits locales del usuario); highlandAnalysis se compila desde ahí. Su CMake busca highland y highlandPD en `$MRB_INSTALL/highland/{highland,highlandPD}` (ficheros `HIGHLANDConfig.cmake` y `HIGHLAND_PDConfig.cmake`, que generan sus builds).
+- highland y highlandPD ya están compilados allí con la rama nueva, en el entorno de dunesw v09_56_00d00 (`-q e20:prof`). El `setup.sh` de highland solo carga sus productos fijos (los de dunesw v10) si `TBBROOT` y `ROOTSYS` están vacíos, así que hay que hacer el `setup dunesw ...` antes. Para compilar el módulo no hace falta cargar los `setup.sh` de highland y highlandPD.
+- **Problema abierto: `mrb i` falla configurando protoduneana** (`CetAddTransitiveDependency.cmake`, "Unknown arguments" en el `find_package` de Pythia6 de nusystematics). Causa: el mrb actual (y también mrb v5_19_12) configura el cetmodules más nuevo de cvmfs, v3_27_04, que trae cmake 3.27.4; larsoft v09_56_00 pide cetmodules v3_16_00 y protoduneana/dunesw v09_56 cetbuildtools v8_20_00. mrb v4_04_06 (el arreglo del antiguo `setup.backup`, para un área de v09_14) no vale: el área pide mrb >= v5.
+- **Siguiente paso**, en un shell nuevo:
+  ```bash
+  source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
+  unsetup mrb; setup mrb v5_19_12
+  ups list -aK+ cetmodules | grep v3_16_00; ups list -aK+ cmake | grep v3_22_2   # comprobar que existen
+  unsetup cetmodules; unsetup cmake
+  setup cmake v3_22_2
+  setup cetmodules v3_16_00
+  source localProducts*/setup
+  mrbsetenv
+  ups active | grep -iE "cetmodules|cetbuildtools|^cmake"   # deben salir v3_16_00 y v3_22_2
+  cd $MRB_BUILDDIR && mrb z && mrbsetenv && mrb i -j8
+  ```
+  Volver a mirar `ups active` tras el segundo `mrbsetenv`. Si esas versiones no existen, elegir las más cercanas de la época (mayo de 2022). Si compila: tag `dunesw_v09_56_00d00` en highlandAnalysis y apuntar la receta en un README de highlandAnalysis (el `setup.backup` que la guardaba para v09_14 se borró; sigue en `pre-phase2`).
+- Para ejecutar: `dEdxrestemplates.root` tiene que estar en el directorio de `lar` (o poner la ruta completa en `PIDFilename`).
+- Propuesta pendiente de respuesta del usuario: en el `setup.sh` de highland, usar el entorno de ups si ya hay un ROOT configurado y tomar `NLOHMANN_JSON_DIR` de ups (`${NLOHMANN_JSON_DIR:-$nlohmann_json_dir}`), para que el mismo script valga para v09 y v10.
+
 ### Pendiente
 
-- Compilar el módulo en FNAL y correrlo sobre unos pocos eventos de datos y MC; después, las pruebas de tamaño y tiempo de `phase2.md` (sobre todo `SaveTrueHitCounts` y `CosmicsMode` 3-4).
+- Compilar el módulo en FNAL (ver arriba) y correrlo sobre unos pocos eventos de datos y MC; después, las pruebas de tamaño y tiempo de `phase2.md` (sobre todo `SaveTrueHitCounts` y `CosmicsMode` 3-4).
 - Bug de highland en `ConvertProcess` (`"kaon.Inelastic"`, ver Fase 4): hace falta para los procesos de la cadena del K-.
 - `BeamTrackTime` se guarda como `GetT0Sec() + 1e-9·GetT0Nano()`: en un double, los nanosegundos solo se resuelven a ~0,2 µs. Decidir qué tiempo se quiere.
 - `TrueID` de los hits es el `trackID` del backtracker tal cual (negativo para secundarios de showers EM).
