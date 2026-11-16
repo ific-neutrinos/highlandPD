@@ -80,8 +80,14 @@ Float_t pdAnaUtils::ComputeRangeMomentum(double trkrange, int pdg){
   }
 
     
+  if(abs(pdg) != 13 && abs(pdg) != 2212){
+    std::cerr << "pdAnaUtils::ComputeRangeMomentum: only implemented for muons and protons, got PDG "
+              << pdg << ". Returning -999." << std::endl;
+    return -999.;
+  }
+
   double KE, Momentum, M;
-  constexpr double Muon_M = 105.7, Proton_M = 938.272;
+  constexpr double Muon_M = kMuonMass, Proton_M = kProtonMass;
   
   if (abs(pdg) == 13) {
     M = Muon_M;
@@ -123,8 +129,14 @@ Float_t pdAnaUtils::ComputeCSDARange(double beammom, int pdg){
     return -1.;
   }
 
+  if(abs(pdg) != 13 && abs(pdg) != 2212){
+    std::cerr << "pdAnaUtils::ComputeCSDARange: only implemented for muons and protons, got PDG "
+              << pdg << ". Returning -1." << std::endl;
+    return -1.;
+  }
+
   double KE, M, CSDARange;
-  constexpr double Muon_M = 105.7, Proton_M = 938.272;
+  constexpr double Muon_M = kMuonMass, Proton_M = kProtonMass;
   
   if (abs(pdg) == 13) {
     M = Muon_M;
@@ -853,9 +865,9 @@ Double_t pdAnaUtils::EstimateTrueMomAtAPABorder(AnaParticlePD* part){
   }
 
   double mass;
-  if(abs(truePart->PDG) == 211)mass       = 139.57;
-  else if(abs(truePart->PDG) == 321)mass  = 493.7;
-  else if(abs(truePart->PDG) == 2212)mass = 938.27;
+  if(abs(truePart->PDG) == 211)mass       = kPionMass;
+  else if(abs(truePart->PDG) == 321)mass  = kKaonMass;
+  else if(abs(truePart->PDG) == 2212)mass = kProtonMass;
   else return momf;
 
   double momi = truePart->Momentum*1000;
@@ -1103,27 +1115,16 @@ Float_t pdAnaUtils::GetdEdxLikelihood(AnaParticlePD* part, Int_t PDG){
 
   //basic checks
   if(part->Hits[2].empty())return -999.;
-  if(PDG != 13 && PDG != 211 && PDG != 321 && PDG != 2212)return -999.;
 
   //get necessary information
   std::string ssparticle;
-  Float_t mass;
-  if(PDG == 13){
-    ssparticle = "muon";
-    mass = 105.66;
+  double hypothesis_mass;
+  if(!GetParticleHypothesis(PDG, ssparticle, hypothesis_mass)){
+    std::cerr << "pdAnaUtils::GetdEdxLikelihood: no particle hypothesis for PDG " << PDG
+              << " (only 13, 211, 321, 2212). Returning -999." << std::endl;
+    return -999.;
   }
-  else if(PDG == 211){
-    ssparticle = "pion";
-    mass = 139.57;
-  }
-  else if(PDG == 321){
-    ssparticle = "kaon";
-    mass = 493.677;
-  }
-  else{
-    ssparticle = "proton";
-    mass = 938.272;
-  }
+  Float_t mass = hypothesis_mass;
   const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
@@ -1155,27 +1156,16 @@ Float_t pdAnaUtils::GetdEdxLikelihood_UpToRR(AnaParticlePD* part, Int_t PDG, con
 
   //basic checks
   if(part->Hits[2].empty())return -999.;
-  if(PDG != 13 && PDG != 211 && PDG != 321 && PDG != 2212)return -999.;
 
   //get necessary information
   std::string ssparticle;
-  Float_t mass;
-  if(PDG == 13){
-    ssparticle = "muon";
-    mass = 105.66;
+  double hypothesis_mass;
+  if(!GetParticleHypothesis(PDG, ssparticle, hypothesis_mass)){
+    std::cerr << "pdAnaUtils::GetdEdxLikelihood_UpToRR: no particle hypothesis for PDG " << PDG
+              << " (only 13, 211, 321, 2212). Returning -999." << std::endl;
+    return -999.;
   }
-  else if(PDG == 211){
-    ssparticle = "pion";
-    mass = 139.57;
-  }
-  else if(PDG == 321){
-    ssparticle = "kaon";
-    mass = 493.677;
-  }
-  else{
-    ssparticle = "proton";
-    mass = 938.272;
-  }
+  Float_t mass = hypothesis_mass;
   const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
@@ -1243,27 +1233,16 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange(AnaParticlePD*
 
   //basic checks
   if(part->Hits[2].empty())return std::make_pair(-999.,-999.);
-  if(PDG != 13 && PDG != 211 && PDG != 321 && PDG != 2212)return std::make_pair(-999.,-999.);
 
   //get necessary information
   std::string ssparticle;
-  Float_t mass;
-  if(PDG == 13){
-    ssparticle = "muon";
-    mass = 105.66;
+  double hypothesis_mass;
+  if(!GetParticleHypothesis(PDG, ssparticle, hypothesis_mass)){
+    std::cerr << "pdAnaUtils::GetdEdxLikelihoodFreeRange: no particle hypothesis for PDG " << PDG
+              << " (only 13, 211, 321, 2212). Returning -999." << std::endl;
+    return std::make_pair(-999.,-999.);
   }
-  else if(PDG == 211){
-    ssparticle = "pion";
-    mass = 139.57;
-  }
-  else if(PDG == 321){
-    ssparticle = "kaon";
-    mass = 493.677;
-  }
-  else{
-    ssparticle = "proton";
-    mass = 938.272;
-  }
+  Float_t mass = hypothesis_mass;
   const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
@@ -1289,27 +1268,16 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR(AnaPart
 
   //basic checks
   if(part->Hits[2].empty())return std::make_pair(-999.,-999.);
-  if(PDG != 13 && PDG != 211 && PDG != 321 && PDG != 2212)return std::make_pair(-999.,-999.);
 
   //get necessary information
   std::string ssparticle;
-  Float_t mass;
-  if(PDG == 13){
-    ssparticle = "muon";
-    mass = 105.66;
+  double hypothesis_mass;
+  if(!GetParticleHypothesis(PDG, ssparticle, hypothesis_mass)){
+    std::cerr << "pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR: no particle hypothesis for PDG " << PDG
+              << " (only 13, 211, 321, 2212). Returning -999." << std::endl;
+    return std::make_pair(-999.,-999.);
   }
-  else if(PDG == 211){
-    ssparticle = "pion";
-    mass = 139.57;
-  }
-  else if(PDG == 321){
-    ssparticle = "kaon";
-    mass = 493.677;
-  }
-  else{
-    ssparticle = "proton";
-    mass = 938.272;
-  }
+  Float_t mass = hypothesis_mass;
   const TGraph* tg_ke = &pd::services().PID().GetKEvsRange(ssparticle);
 
   //get dedx vs rr graph for particle
@@ -1327,4 +1295,17 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR(AnaPart
   delete tg;
   
   return result;
+}
+
+//*****************************************************************************
+bool pdAnaUtils::GetParticleHypothesis(Int_t pdg, std::string& name, double& mass){
+//*****************************************************************************
+
+  switch(pdg){
+  case 13:   name = "muon";   mass = kMuonMass;   return true;
+  case 211:  name = "pion";   mass = kPionMass;   return true;
+  case 321:  name = "kaon";   mass = kKaonMass;   return true;
+  case 2212: name = "proton"; mass = kProtonMass; return true;
+  default:   return false;
+  }
 }

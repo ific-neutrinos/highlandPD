@@ -393,7 +393,7 @@ void kaonTree::FillKaonVariables_KaonCandidatesReco(OutputManager& output, AnaPa
   output.FillVectorVar         (candidates_mom_prot,         pdAnaUtils::ComputeRangeMomentum(part->Length,2212));
   output.FillVectorVar         (candidates_mom_muon,         pdAnaUtils::ComputeRangeMomentum(part->Length,13)  );
   Float_t calE = (Float_t)pdAnaUtils::ComputeDepositedEnergy(part);
-  Float_t mom  = sqrt(pow(calE,2)+2*calE*938.27);
+  Float_t mom  = sqrt(pow(calE,2)+2*calE*pdAnaUtils::kProtonMass);
   Float_t csda = pdAnaUtils::ComputeCSDARange(mom, 2212);
   output.FillVectorVar         (candidates_calE,             calE           );
   output.FillVectorVar         (candidates_type,             part->Type             );

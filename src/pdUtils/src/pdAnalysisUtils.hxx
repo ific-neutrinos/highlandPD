@@ -11,6 +11,18 @@
 
 namespace pdAnaUtils{
 
+  /// Particle masses (MeV), PDG 2022. Use these instead of local values.
+  constexpr double kMuonMass   = 105.6583755;
+  constexpr double kPionMass   = 139.57039;
+  constexpr double kKaonMass   = 493.677;
+  constexpr double kProtonMass = 938.27208816;
+
+  /// Name ("muon", "pion", "kaon", "proton") and mass (MeV) of a particle
+  /// hypothesis (PDG 13, 211, 321, 2212). Returns false for any other PDG;
+  /// callers must then report it and skip the calculation.
+  bool GetParticleHypothesis(Int_t pdg, std::string& name, double& mass);
+
+
   /// Computes the range momentum
   Float_t ComputeRangeMomentum(double trkrange, int pdg);
 

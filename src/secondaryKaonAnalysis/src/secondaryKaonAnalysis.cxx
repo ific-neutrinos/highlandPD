@@ -463,7 +463,7 @@ bool secondaryKaonAnalysis::CheckFillTruthTree(AnaTrueParticlePD* part){
     return false;
   bool result = CheckGoodTruthKaon(part);
   if(result){
-    double true_KE = sqrt(pow(part->Momentum*1000,2)+pow(493.677,2))-493.677;
+    double true_KE = sqrt(pow(part->Momentum*1000,2)+pow(pdAnaUtils::kKaonMass,2))-pdAnaUtils::kKaonMass;
     if(true_KE<30)result = false;
   }
   return result;
