@@ -109,7 +109,9 @@ Encontrado en la auditoría, pendiente:
 - Masas: constantes `pdAnaUtils::k{Muon,Pion,Kaon,Proton}Mass` (PDG 2022) y `pdAnaUtils::GetParticleHypothesis(pdg, nombre, masa)`. Las funciones que dependen de la hipótesis avisan por `std::cerr` y devuelven -999 (o -1 en `ComputeCSDARange`) si el PDG no está soportado; no usar valores locales.
 - Pendiente: `dQdxXCalibration` lee `$HIGHLANDPDPATH/yz_corrections_mc_lifetime_mypc.root`, que no está en el repo. Las macros de `dEdxCalibrationAnalysis` tienen rutas personales de Fermilab.
 
-## Fase 2 (después del test de regresión): bugs que cambian resultados
+## Fase 2 de la limpieza (después del test de regresión): bugs que cambian resultados
+
+No confundir con `phase2.md` (ampliar los minitrees para los análisis de kaones), que es otro plan, paralelo a esta limpieza.
 
 Cada uno en su propio commit, comparando micro-trees antes y después. Es lo último que queda en highlandPD antes de pasar a highland.
 
@@ -142,7 +144,7 @@ Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 - Calibraciones: el efecto de `SCECalorimetricVariation` no llega a `dQdx_elife` (lo que rellenan las calibraciones X/YZ) porque la llamada a la lifetime está comentada; y el dE/dx que recalcula `LifetimeVariation` parte de `hit.dQdx`, que no recoge la variación. Validar cuando haya un minitree de calibración.
 - `secondaryKaonXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210. Pregunta abierta: ¿usar la misma definición que `secondaryKaonAnalysis`?
 
-Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario lo pida (antes, revisar `phase2.md`).
+Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario lo pida. Revisado `phase2.md` (16-nov): la rama no quita nada del event model que ese plan necesite (solo `PDCounters`, sin uso, y comentarios). Conviene hacer el merge de esta rama antes de crear la de `phase2.md` desde `develop`.
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
@@ -156,7 +158,7 @@ Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario 
   - `CreateMiniTreeCandidates` vs `CreateMiniTreeEventCandidates`: 76 % iguales.
 - `pdBaseAnalysis` debería registrar las correcciones y sistemáticos estándar, activables por parámetros. `pdExampleAnalysis` no usa sistemáticos.
 - `EventBoxPD::FillLongTracks` usa `anaUtils::GetAllTracksUsingDet`, que hace `static_cast<AnaTrackB*>` sobre `AnaParticlePD`. Ver el `CLAUDE.md` de highland.
-- `pdDataClasses`:
+- `pdDataClasses` (ojo: `phase2.md` decide no quitar nada de las clases por ahora, y necesita `EmptyEvent`, `HasPandora` y `BeamMomentum`):
   - Miembros marcados como prueba u obsoletos: `Distance_to_closest_particle` (l.224), `forced_daughter`/`forced_daughter_matched` (l.241-242), `AnaHitPD::dEdx_calib`.
   - `EmptyEvent` y `HasPandora` "should probably go in DataQuality".
   - `CNNwires` está en `AnaBunchPD` y en `AnaEventPD`.
@@ -171,6 +173,7 @@ Siguiente paso: push de `cleanup/highlandPD` y PR a `develop` cuando el usuario 
   - `ToyBoxPD::Reset` repite lo de `ToyBoxB`. `EventBoxPD` con varios grupos de objetos es difícil de usar.
   - Cortes de calidad del haz por energía y run; versionado (tag por presentación); dependencias entre paquetes y ficheros de parámetros.
   - Los diccionarios salen en `build/` y no en `build/dict` (CMake no acepta `/` en los nombres).
+- Bug de highland (`psycheEventModel/src/BaseDataClasses.cxx:1583`): `ConvertProcess` espera `"kaon.Inelastic"` en vez de `"kaon-Inelastic"`, así que el inelástico de K- no se reconoce. Afecta a `phase2.md` (cadena del K±).
 - Coordinación con highland: `EventBoxId` de highland define `kEventBoxPD`, `kEventBoxKaon` y `kEventBoxdEdx`. Cuando highland permita registrar IDs desde fuera, moverlos aquí.
 
 ## Mapa del event model
