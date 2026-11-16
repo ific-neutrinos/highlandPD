@@ -1,6 +1,6 @@
 void binning(){
 
-  std::string filename = "/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00/localProducts_larsoft_v09_56_00_e20_prof/highland/highlandPD/src/pdUtils/data/SCE_DataDriven_180kV_v4.root";
+  std::string filename = std::string(gSystem->Getenv("PDUTILSROOT"))+"/data/SCE_DataDriven_180kV_v4.root";
   TFile* rfile = TFile::Open(filename.c_str());
   
   TH3F* h = (TH3F*)rfile->Get("RecoBkwd_Displacement_X_Neg");

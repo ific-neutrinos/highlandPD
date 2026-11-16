@@ -1,7 +1,7 @@
 {
 
   // load input files 
-  gROOT->ProcessLine((".L " + string(gSystem->Getenv("KAONANALYSISROOT")) + "/macros/load.C").c_str());
+  gROOT->ProcessLine((".L " + string(gSystem->Getenv("SECONDARYKAONANALYSISROOT")) + "/macros/load.C").c_str());
   
   bool save_plots=false;
   bool wait_primi=true;

@@ -12,10 +12,9 @@ bool IsYContained(const double y){return (y > 0 && y < YMAX);}
 
 bool IsZContained(const double z){return (z > 0 && z < ZMAX);}
 
-void yz(){
+void yz(const std::string& filename){
 
   //file name
-  std::string filename = "/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00/localProducts_larsoft_v09_56_00_e20_prof/highland/highlandPD/dedx.root";
   //open root file
   TFile* rfile = TFile::Open(filename.c_str());
   TTree* tree  = (TTree*)rfile->Get("ana");

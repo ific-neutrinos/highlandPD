@@ -71,11 +71,10 @@ bool IsValidHit(const double z,    const double y,
 }
 
 //********************************************
-void toy_yz_branch(){
+void toy_yz_branch(const std::string& filename){
 //********************************************
   
   //file name
-  std::string filename = "/dune/data/users/miagarc/toy_lifetime.root";
   //open root file
   TFile* rfile = TFile::Open(filename.c_str());
   TTree* tree  = (TTree*)rfile->Get("all_syst");

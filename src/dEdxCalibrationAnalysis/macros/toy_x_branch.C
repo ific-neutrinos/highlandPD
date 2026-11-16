@@ -59,7 +59,7 @@ Double_t Langaus(Double_t *x, Double_t *par) {
   return (par[2] * step * sum * invsq2pi / par[3]);
 }
 
-TFile* ef = TFile::Open("/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00/localProducts_larsoft_v09_56_00_e20_prof/highland/highlandPD/src/pdUtils/data/SCE_DataDriven_180kV_v4.root");
+TFile* ef = TFile::Open((std::string(gSystem->Getenv("PDUTILSROOT"))+"/data/SCE_DataDriven_180kV_v4.root").c_str());
 TH3F* Ex  =(TH3F*)ef->Get("Reco_ElecField_X_Neg");
 TH3F* Ey  =(TH3F*)ef->Get("Reco_ElecField_Y_Neg");
 TH3F* Ez  =(TH3F*)ef->Get("Reco_ElecField_Z_Neg");
@@ -97,11 +97,10 @@ bool IsValidHit(const double x, const double y, const double z,
 }
 
 //********************************************
-void toy_x_branch(){
+void toy_x_branch(const std::string& filename){
 //********************************************
   
   //file name
-  std::string filename = "/dune/data/users/miagarc/toy_lifetime.root";
   //open root file
   TFile* rfile = TFile::Open(filename.c_str());
   TTree* tree  = (TTree*)rfile->Get("all_syst");
