@@ -146,6 +146,25 @@ Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 
 Rama `cleanup/highlandPD` subida y PR a `develop` abierta (16-nov-2026), pendiente de revisión y merge. Revisado `phase2.md` (16-nov): la rama no quita nada del event model que ese plan necesite (solo `PDCounters`, sin uso, y comentarios). Conviene hacer el merge de esta rama antes de crear la de `phase2.md` desde `develop`.
 
+## Fase 2 de phase2.md: minitrees ampliados (en curso, 16-nov-2026)
+
+Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `phase2/minitrees` en highlandPD (desde `develop`) y en `../highlandAnalysis` (repo `ific-neutrinos/highlandAnalysis`, desde `master`, que va 6 commits por delante de su `develop`). Sin push.
+
+- `highlandAnalysis/CreateHighlandMiniTree_module.cc` es el módulo de LArSoft que escribe los minitrees. **Aquí no se puede compilar**: no hay LArSoft. Las firmas se han comprobado con las cabeceras de dunesw v09_56_00d00 (protoduneana v09_56_00d00, larsim v09_24_03, lardataobj v09_09_00, lardata v09_09_00, larcorealg v09_06_05, nusimdata v1_25_02), bajadas de GitHub. Hay que compilarlo en dunegpvm con esa versión.
+- Hecho en el módulo: los 7 bugs de `phase2.md`, toda la información nueva, flags en `CreateHighlandMiniTree.fcl` (los antiguos `Cosmics` y `WasteTime` ya no se usan; `Cosmics: true` equivale a `CosmicsMode: 3`). Los eventos con DQ malo o sin beam slice se guardan marcados (`GoodDaq`, `HasPandora`, `EmptyEvent`), siempre con un `Beam` y un bunch, aunque estén vacíos: las correcciones de highlandPD usan `Bunches[0]` y `Beam`.
+- Hecho en highlandPD: constructores de copia que perdían miembros (test idéntico a `fixA/`) y miembros y clases nuevas (idéntico a `fixA/`). `test/phase2/run_test_minitree.C` escribe un minitree sintético con los miembros nuevos y eventos marcados y comprueba la ida y vuelta; `secondaryKaon`, `secondaryKaonXS` y `secondaryProton` corren sobre él y no seleccionan los eventos marcados.
+- Cómo funcionan los minitrees (comprobado):
+  - El módulo escribe la rama `Spill` como `AnaSpillPD`. Los minitrees de 2023 la tienen como `AnaSpill` (pasaron por `CreateMiniTree` de highland, por eso llevan el árbol `config`). highland lee los dos con un `AnaSpill*`: ROOT acepta un puntero a la clase base, y dentro los objetos son `AnaBunchPD`, `AnaParticlePD`, etc.
+  - Tras `GetEntry` hay que llamar a `CopyVectorsIntoArrays()` y `RedoLinks()`, como `MiniTreeConverter::GetSpill`.
+  - `Clone()` de un spill **no clona la truth**: el clon comparte `TrueParticles` y `TrueVertices` con el original (`isClone = true`) y solo el original la borra. Hay que borrar el clon antes que el original. Antes el módulo nunca borraba el original y perdía la truth en cada evento.
+  - Las clases de `pdDataClasses` no tienen `ClassDef`: ROOT las versiona por checksum, así que añadir miembros no rompe la lectura de ficheros antiguos.
+- Pendiente:
+  - Compilar el módulo y correrlo sobre unos cientos de eventos de datos y MC (pruebas de tamaño de `phase2.md`).
+  - Bug de highland en `ConvertProcess` (`"kaon.Inelastic"`, ver Fase 4): hace falta para los procesos de la cadena del K-.
+  - `BeamTrackTime` se guarda como `GetT0Sec() + 1e-9·GetT0Nano()`: en un double, los nanosegundos solo se resuelven a ~0,2 µs. Decidir qué tiempo se quiere.
+  - `TrueID` de los hits es el `trackID` del backtracker tal cual (negativo para secundarios de showers EM).
+  - Los análisis de highlandPD aún no usan la información nueva.
+
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
 - Separar el núcleo `pd*` (una librería) de los análisis (una librería y un ejecutable cada uno, opcionales vía CMake).
