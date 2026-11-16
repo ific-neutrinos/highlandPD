@@ -63,7 +63,7 @@ bool secondaryKaonXSAnalysis::Initialize(){
 
   _ApplySCECorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection");
   _ApplydEdxCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplydEdxCorrection");
-  _ApplyRecombinationCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.ApplyRecombinationCorrection");
+  _ApplyRecombinationCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationCorrection");
   
   // Define standard categories for color drawing
   if(_FillBeamParticleInfo)
