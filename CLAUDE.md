@@ -109,17 +109,23 @@ Encontrado en la auditoría, pendiente:
 
 ## Fase 2 (después del test de regresión): bugs que cambian resultados
 
-Cada uno en su propio commit, comparando micro-trees antes y después.
+Cada uno en su propio commit, comparando micro-trees antes y después. Es lo último que queda en highlandPD antes de pasar a highland.
 
-- `pdSystematics/src/SCEVariation.hxx:33` y `SCEGeometricVariation.hxx:30`: `SpaceCharge* _sce[100]` indexado por `toy_index`. Con `NumberOfToys > 100` se escribe fuera del array. Además crea 100 `SpaceCharge` al inicializar.
-- *(Código muerto, ya eliminado.)* `pdSystematics/src/dQdxXCalVariation.cxx:43` y `dQdxYZCalVariation.cxx:44`: `dQdx * (Cal*(1+σ·v)) / Cal`. La calibración se cancela y queda un escalado global, idéntico a `dQdxNormVariation`. Confirmar con el usuario qué se pretendía (¿variación por bins en X o en YZ?).
-- *(Código muerto, ya eliminado. `dEdxVariation`, que sí se usa, tiene el mismo patrón: `return` en el bucle de hits y `Chi2ndf` del muón.)* `pdSystematics/src/dQdxCalVariation.cxx:40`: `return` dentro del bucle de hits si `GetBinValues` falla. Las partículas restantes quedan sin variar y la actual a medias. En la línea 53, `Chi2ndf` se toma del muón; en las demás variaciones se toma del protón.
-- `pdUtils/src/pdAnalysisUtils.cxx:48`: `TFile` global abierto en la inicialización estática con `getenv("PDUTILSROOT")` sin comprobar. Si la variable no existe, casca al cargar la librería.
-- `pdUtils/src/pdAnalysisUtils.cxx:1174,1230,1320,1368`: `TFile::Open("ke_vs_range.root")` en cada llamada a `GetdEdxLikelihood*`, unas 10 veces por candidato desde `secondaryKaonAnalysis/src/kaonTree.cxx`.
-- `secondaryKaonAnalysis/src/secondaryKaonAnalysis.cxx:145`: el índice `kdQdxCalibration` se registra con `dEdxVariation`. Resuelto: `dEdxVariation` sustituyó a `dQdxCalVariation` y heredó su índice. Solo queda renombrar el índice.
-- **Rendimiento:** hay unas 20 instancias de `Calorimetry` y `SpaceCharge` (una por corrección o sistemático, más una por toy en SCE). Cada `Calorimetry` crea su propio `SpaceCharge` y relee los mismos ficheros (entre ellos `mc_prod4_dQdx_YZCal.txt`, de 4,4 MB). Hay que pasar a una instancia compartida.
-- `Calorimetry.cxx`: constantes cableadas (E-field, ModBox A/B, v_drift, APA x) que deberían ir a `pdUtils.parameters.dat`.
-- 37 `getenv` sin comprobar.
+Resuelto:
+
+- `SpaceCharge* _sce[100]` por toy en las variaciones de SCE: ya no hay mapas por toy (servicio de SCE, paso 2).
+- `TFile` global abierto con `getenv` en la inicialización estática de `pdAnalysisUtils` y `TFile::Open("ke_vs_range.root")` en cada `GetdEdxLikelihood*`: ahora lo da `pd::services().PID()`.
+- Unas 20 instancias de `Calorimetry` y `SpaceCharge`: una compartida de cada una (`pd::services()`).
+- Constantes de `Calorimetry` en `pdUtils.parameters.dat`.
+- Masas de las partículas unificadas (commit `b3f8885`).
+- `dEdxVariation`: la σ y la variación del toy se leen una vez antes del bucle (había un `return` dentro del bucle de hits que dejaba el evento a medias); si no se puede leer, error y `exit(1)`. Sin cambio de resultados: `dEdx.dat` tiene un solo bin y se consulta siempre en 0,5. Dentro de un toy es un escalado coherente de todos los hits (`1 + 0,03·N(0,1)`, una variación por toy).
+- `Chi2ndf` tomado del muón: no es un bug. Todas las variaciones y el conversor lo hacen igual, y las cuatro plantillas de dE/dx tienen el mismo binning (325 bins en 0-26 cm), así que el ndf no depende de la hipótesis.
+- `getenv`: solo queda uno vivo sin comprobar, en `dQdxXCalibration.cxx:91` (fichero personal, ver arriba). Los demás son de `pdDataFiles` o están comentados.
+
+Pendiente (sin cambio de resultados):
+
+- Pasar los mensajes de error de `std::cout` a `std::cerr`.
+- Textos de `Calorimetry`: los de YZ dicen "X correction".
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
