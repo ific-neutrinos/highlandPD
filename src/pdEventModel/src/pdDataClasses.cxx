@@ -68,8 +68,7 @@ AnaHitPD::AnaHitPD(){
 AnaHitPD::AnaHitPD(const AnaHitPD& hit){
 //********************************************************************
 
-  WireID.Plane  = hit.WireID.Plane;
-  WireID.Wire   = hit.WireID.Wire; 
+  WireID        = hit.WireID;
   Integral      = hit.Integral;     
   PeakTime      = hit.PeakTime;     
   PeakAmplitude = hit.PeakAmplitude;
@@ -235,8 +234,8 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
 //********************************************************************
 
   ParentID       = part.ParentID;
-  TrackID        = part.ParentID;
-  ShowerID       = part.ParentID;
+  TrackID        = part.TrackID;
+  ShowerID       = part.ShowerID;
 
   Type           = part.Type;
   IsCandidate    = part.IsCandidate;
@@ -244,8 +243,14 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
   isPandora      = part.isPandora;
   BeamOrigin     = part.BeamOrigin;
 
-  for(int i = 0; i < 4; i++)PositionStartSCE[i]=part.PositionStart[i];
-  for(int i = 0; i < 3; i++)DirectionStartSCE[i]=part.DirectionStart[i];
+  for(int i = 0; i < 4; i++){
+    PositionStartSCE[i] = part.PositionStartSCE[i];
+    PositionEndSCE[i]   = part.PositionEndSCE[i];
+  }
+  for(int i = 0; i < 3; i++){
+    DirectionStartSCE[i] = part.DirectionStartSCE[i];
+    DirectionEndSCE[i]   = part.DirectionEndSCE[i];
+  }
 
   ThetaXZ = part.ThetaXZ;
   ThetaYZ = part.ThetaYZ;
@@ -384,8 +389,8 @@ AnaTrueParticlePD::~AnaTrueParticlePD(){
 AnaTrueParticlePD::AnaTrueParticlePD(const AnaTrueParticlePD& truePart):AnaTrueParticle(truePart){
 //********************************************************************
 
-  for (UInt_t i=0;i<truePart.Pi0_decay_ID.size();i++)
-    Pi0_decay_ID.push_back(truePart.Pi0_decay_ID[i]);
+  Signal = truePart.Signal;
+  Pi0_decay_ID = truePart.Pi0_decay_ID;
  
   Origin = truePart.Origin;
   Generation = truePart.Generation;
