@@ -307,6 +307,7 @@ void pdExampleAnalysis::FillMicroTrees(bool addBase){
       AnaParticlePD* dau = static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]);
       standardPDTree::FillStandardVariables_BeamParticleDaughtersReco(output(), dau);
       standardPDTree::FillStandardVariables_BeamParticleDaughtersTrue(output(), dau);
+      standardPDTree::FillStandardVariables_BeamParticleDaughtersHitsReco(output(), dau, NMAXHITSPERPLANE);
       output().IncrementCounter(seltrk_ndau);
     }    
   }
