@@ -27,7 +27,6 @@ namespace standardPDTree{
 
 
   // Methods to fill the standard sets of variables in the output tree
-  void FillStandardVariables_CountersTrue(OutputManager& output, PDCounters& counters);
   
   void FillStandardVariables_EventInfo(OutputManager& output, AnaEventPD* event);
 

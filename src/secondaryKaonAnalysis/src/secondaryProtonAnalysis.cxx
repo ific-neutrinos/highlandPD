@@ -25,7 +25,6 @@
 #include "HitPitchSCECorrection.hxx"
 #include "HitPositionSCECorrection.hxx"
 #include "ParticlePositionSCECorrection.hxx"
-#include "DaughterFinderCorrection.hxx"
 #include "dEdxMCCorrection.hxx"
 
 //********************************************************************

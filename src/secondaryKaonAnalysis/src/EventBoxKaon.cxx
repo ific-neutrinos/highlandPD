@@ -71,50 +71,6 @@ void boxUtils::FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDet
 }
 
 //********************************************************************
-void boxUtils::FillTrueCandidatesAndDaughters(AnaEventB& event){
-//********************************************************************
-  
-  (void)event;
-  /*//  This method fills the EventBoxKaon with  the true candidate and its daughters for later use
-  EventBoxB* EventBox = event.EventBoxes[EventBoxId::kEventBoxKaon];
-
-  std::vector<AnaTrueParticle*> trueParts;
-  int nCandidateAndDaughters = 0; 
-
-  // Get all true parts in the event
-  AnaTrueParticleB** parts = event.TrueParticles;
-  Int_t nParts             = event.nTrueParticles;
-
-  for(Int_t i = 0; i < nParts; i++){    
-    AnaTrueParticlePD* part = static_cast<AnaTrueParticlePD*>(parts[i]);
-    if (part->ProcessStart == AnaTrueParticle::primary){
-      trueParts[nCandidateAndDaughters] = part;
-      nCandidateAndDaughters++;
-      const std::vector<Int_t>& daughtersIDs = part->Daughters;
-      for (UInt_t j=0;j<daughtersIDs.size(); ++j){      
-        AnaTrueParticleB* dau = anaUtils::GetTrueParticleByID(event, daughtersIDs[j]);
-        if (!dau) continue;
-        trueParts[nCandidateAndDaughters] = static_cast<AnaTrueParticle*>(dau);
-        nCandidateAndDaughters++;
-      }
-      break;
-    }
-  }
-      
-  EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters]=0;
-  anaUtils::CreateArray(EventBox->TrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters], nCandidateAndDaughters);
-
-  for (Int_t i=0;i<nCandidateAndDaughters; ++i){
-    AnaTrueParticleB* part = trueParts[i];
-    EventBox->TrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters][EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters]++] = part;
-  }
-
-  anaUtils::ResizeArray(EventBox->TrueObjectsInGroup [EventBoxKaon::kCandidateAndDaughters], 
-                        EventBox->nTrueObjectsInGroup[EventBoxKaon::kCandidateAndDaughters],
-                        nCandidateAndDaughters);*/
-}
-
-//********************************************************************
 void boxUtils::FillKaonXS(AnaEventB& event, SubDetId::SubDetEnum det){
 //********************************************************************
 

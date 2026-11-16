@@ -10,28 +10,8 @@ The single systematics configuration (when EnableSingle...SystConfigurations = 0
 or the all systematics configuration (when EnableAllSystematics = 0)
 need to be enabled in baseAnalysis parameter file
 
- < pdExampleAnalysis.Systematics.EnabledEdx              = 0 >
  < pdExampleAnalysis.Systematics.EnableHit               = 0 >	
 
-
---- Corrections -----------
-
- < pdExampleAnalysis.Corrections.EnabledEdx             = 0 >
- < pdExampleAnalysis.Corrections.EnabledEdxData         = 0 >
- < pdExampleAnalysis.Corrections.EnabledBrokenTrackData = 0 >  
- < pdExampleAnalysis.Corrections.EnabledBeamMom         = 0 >   
- < pdExampleAnalysis.Corrections.EnabledBeamMomSmearing = 0 >    
- < pdExampleAnalysis.Corrections.EnabledCryoWallBeamMom = 0 >   
- < pdExampleAnalysis.Corrections.EnabledHitPositionSCE  = 0 >
-
---- Other Parameters -----------
-
- < pdExampleAnalysis.Corrections.SeedValue              = 1 >
-
-
---- Other Parameters -----------
-
- < pdExampleAnalysis.ElectronVeto                       = 1 >
 
 ###############################################################################
   baseAnalysis parameters

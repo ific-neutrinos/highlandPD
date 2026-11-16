@@ -1,10 +1,4 @@
 --- SCE parameters --------
- < pdUtils.SCE.EnableSimSpatialSCE = 1   >
- < pdUtils.SCE.EnableSimEfieldSCE  = 0   >	
- < pdUtils.SCE.EnableCalSpatialSCE = 0   >	
- < pdUtils.SCE.EnableCalEfieldSCE  = 1   >
- < pdUtils.SCE.Efield              = 500 >
-
 Space charge map (in pdUtils/data). The alternative map is SCE_Alternate_v4_EField.root
  < pdUtils.SCE.MapFile = SCE_DataDriven_180kV_v4.root >
 

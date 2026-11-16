@@ -8,7 +8,6 @@
 --- Selection -------------		     
  < secondaryKaonAnalysis.UseDetailedSelection                  = 0 >
  < secondaryKaonAnalysis.XSSelection                           = 0 >
- < secondaryKaonAnalysis.XSSelection.BeamPDGFilter           = 211 >
 
 --- Output tree ------------
  < secondaryKaonAnalysis.FillBeamInstrumentationInfo           = 0 >

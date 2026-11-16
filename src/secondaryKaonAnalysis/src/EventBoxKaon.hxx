@@ -34,7 +34,6 @@ namespace boxUtils{
 
   //relevant particles for the secondary kaon analysis (candidates and daughters)
   void FillKaonCandidatesAndDaughters(AnaEventB& event, SubDetId::SubDetEnum det = SubDetId::kSubdet1);
-  void FillTrueCandidatesAndDaughters(AnaEventB& event);
 
   //relevant particles for the XS analysis
   void FillKaonXS(AnaEventB& event, SubDetId::SubDetEnum det = SubDetId::kSubdet1);

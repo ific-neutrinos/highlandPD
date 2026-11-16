@@ -34,7 +34,6 @@ protected:
 
 private:
 
-  Int_t _BeamPDGFilter;
 
 };
 

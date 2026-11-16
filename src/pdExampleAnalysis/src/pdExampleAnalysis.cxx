@@ -354,7 +354,6 @@ void pdExampleAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   pdBaseAnalysis::FillTruthTree(part);
 
   // Fill standard variables for the PD analysis
-  //  standardPDTree::FillStandardVariables_CountersTrue(output(), _globalCounters);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(    output(), GetSpill().Beam);
 
 }

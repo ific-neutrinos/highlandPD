@@ -2,47 +2,6 @@
 #include "BasicUtils.hxx"
 #include "pdAnalysisUtils.hxx"
 
-//********************************************************************
-pdBaseSelection::pdBaseSelection(bool forceBreak):SelectionBase(forceBreak,EventBoxId::kEventBoxPD) {
-//********************************************************************  
-}
-
-//********************************************************************
-void pdBaseSelection::DefineSteps(){
-//********************************************************************
-
-  AddStep(StepBase::kCut,    "event quality",     new EventQualityCut(),           true);
-  AddStep(StepBase::kAction, "find beam track",   new FindBeamTrackAction());  
-  AddStep(StepBase::kCut,    "beam trakc exists", new BeamTrackExistsCut());
-
-  SetBranchAlias(0,"dummy");
-  
-  // No preselection for the moment
-  SetPreSelectionAccumLevel(-1);
-
-}
-
-//**************************************************
-bool EventQualityCut::Apply(AnaEventC& eventC, ToyBoxB& box) const{
-//**************************************************
-
-  (void)box;
-
-  AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 
-
-  if(event.GetIsMC())  return true;              // This is MC, ignore DQ. 
-
-  if (enableDQCut) {
-    if(!event.DataQuality->GoodDaq ) return false;  // Bad Detector Data quality
-  }
-
-  if (enableBeamQualityCut) {
-    if(!event.Beam->GoodSpill ) return false;      // Bad Spill
-  }
-
-  return true;
-}
-
 //**************************************************
 bool FindBeamTrackAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 //**************************************************
@@ -138,17 +97,4 @@ bool BeamQualityCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   //check cut
   if(normalized_x < 3 && normalized_y < 3 && normalized_z < 3 && cos > min_cos)return true;
   else return false;
-}
-
-//**************************************************
-void pdBaseSelection::InitializeEvent(AnaEventC& eventC){
-//**************************************************
-
-  AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 
-
-  // Create the appropriate EventBox if it does not exist yet
-  if (!event.EventBoxes[EventBoxId::kEventBoxPD])
-    event.EventBoxes[EventBoxId::kEventBoxPD] = new EventBoxPD();
-  
-  boxUtils::FillCandidateAndDaughters(event);
 }
