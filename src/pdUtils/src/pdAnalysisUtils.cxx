@@ -872,10 +872,10 @@ Float_t pdAnaUtils::dEdxLikelihood(TGraph* tg, const TGraph* tg_ke,
 namespace{
   // Common part of the GetdEdxLikelihood* functions: particle hypothesis and
   // dE/dx vs residual range graph of the collection plane hits, ignoring the
-  // first and the last hit. Hits above maxRR are skipped, and so are hits
-  // outside 1 < dE/dx < 100 if requested. Returns false (after reporting it)
-  // if there is no hypothesis for this PDG.
-  bool PrepareLikelihood(const char* caller, AnaParticlePD* part, Int_t PDG, double maxRR, bool dEdxWindow,
+  // first and the last hit, the hits outside 1 < dE/dx < 100 and those above
+  // maxRR. Returns false (after reporting it) if there is no hypothesis for
+  // this PDG.
+  bool PrepareLikelihood(const char* caller, AnaParticlePD* part, Int_t PDG, double maxRR,
                          Float_t& mass, const TGraph*& tg_ke, TGraph*& tg){
 
     std::string ssparticle;
@@ -892,7 +892,7 @@ namespace{
     for(int ihit = 1; ihit < (int)part->Hits[2].size()-1; ihit++){
       const AnaHitPD& hit = part->Hits[2][ihit];
       if(hit.ResidualRange > maxRR)continue;
-      if(dEdxWindow && (hit.dEdx<1 || hit.dEdx>100))continue;
+      if(hit.dEdx<1 || hit.dEdx>100)continue;
       dedx.push_back(hit.dEdx);
       rr.push_back(hit.ResidualRange);
     }
@@ -917,7 +917,7 @@ Float_t pdAnaUtils::GetdEdxLikelihood_UpToRR(AnaParticlePD* part, Int_t PDG, con
   if(part->Hits[2].empty())return -999.;
 
   Float_t mass; const TGraph* tg_ke; TGraph* tg;
-  if(!PrepareLikelihood("GetdEdxLikelihood", part, PDG, maxRR, false, mass, tg_ke, tg))return -999.;
+  if(!PrepareLikelihood("GetdEdxLikelihood", part, PDG, maxRR, mass, tg_ke, tg))return -999.;
 
   Float_t result = dEdxLikelihood(tg,tg_ke,mass);
   delete tg;
@@ -969,11 +969,10 @@ std::pair<Float_t,Float_t> pdAnaUtils::dEdxLikelihoodFreeRange(TGraph* tg, const
 std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange(AnaParticlePD* part, Int_t PDG){
 //***************************************************************
 
-  // Unlike the _UpToRR version, only hits with 1 < dE/dx < 100 are used
   if(part->Hits[2].empty())return std::make_pair(-999.,-999.);
 
   Float_t mass; const TGraph* tg_ke; TGraph* tg;
-  if(!PrepareLikelihood("GetdEdxLikelihoodFreeRange", part, PDG, kNoRRLimit, true, mass, tg_ke, tg))
+  if(!PrepareLikelihood("GetdEdxLikelihoodFreeRange", part, PDG, kNoRRLimit, mass, tg_ke, tg))
     return std::make_pair(-999.,-999.);
 
   std::pair<Float_t,Float_t> result = dEdxLikelihoodFreeRange(tg,tg_ke,mass);
@@ -988,7 +987,7 @@ std::pair<Float_t,Float_t> pdAnaUtils::GetdEdxLikelihoodFreeRange_UpToRR(AnaPart
   if(part->Hits[2].empty())return std::make_pair(-999.,-999.);
 
   Float_t mass; const TGraph* tg_ke; TGraph* tg;
-  if(!PrepareLikelihood("GetdEdxLikelihoodFreeRange_UpToRR", part, PDG, maxRR, false, mass, tg_ke, tg))
+  if(!PrepareLikelihood("GetdEdxLikelihoodFreeRange_UpToRR", part, PDG, maxRR, mass, tg_ke, tg))
     return std::make_pair(-999.,-999.);
 
   std::pair<Float_t,Float_t> result = dEdxLikelihoodFreeRange(tg,tg_ke,mass);
