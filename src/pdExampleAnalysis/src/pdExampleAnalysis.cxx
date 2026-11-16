@@ -86,7 +86,6 @@ pdExampleAnalysis::pdExampleAnalysis(AnalysisAlgorithm* ana) : pdBaseAnalysis(an
 //********************************************************************
 
   // Add the package version
-  //  ND::versioning().AddPackage("pdExampleAnalysis", anaUtils::GetSoftwareVersionFromPath((std::string)getenv("STOPPINGPROTONANALYSISROOT")));
 }
 
 //********************************************************************

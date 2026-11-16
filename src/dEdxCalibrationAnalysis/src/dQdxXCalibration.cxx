@@ -87,7 +87,6 @@ bool dQdxXCalibration::Initialize(){
   }
 
   //get yz correction histogram
-  //TFile* yzfile = TFile::Open((std::string(getenv("DEDXCALIBRATIONROOT"))+"/data/yz_corrections_data_yz_60-90_sce_lifetime_v2.root").c_str());
   TFile* yzfile = TFile::Open((std::string(getenv("HIGHLANDPDPATH"))+"/yz_corrections_mc_lifetime_mypc.root").c_str());
   yz_correction     = (TH2F*)yzfile->Get("correction_yz");
   yz_correction->SetDirectory(0);
@@ -288,8 +287,6 @@ void dQdxXCalibration::Finalize(){
   
   //speed up fitting procedure
   ROOT::EnableImplicitMT();
-  // ROOT::Math::MinimizerOptions::SetDefaultStrategy(0);
-  // ROOT::Math::MinimizerOptions::SetDefaultTolerance(10);
 
   FillHistograms();
   if(_enableAllSystConfig)

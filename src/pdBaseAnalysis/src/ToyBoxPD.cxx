@@ -9,7 +9,6 @@ ToyBoxPD::ToyBoxPD():ToyBoxB(){
   Vertex=NULL;
   TrueMainTrack=NULL;
   MainTrack=NULL;
-  //  Candidates.clear();
 } 
 
 //********************************************************************
@@ -39,6 +38,5 @@ void ToyBoxPD::ResetBase(){
   Vertex=NULL;
   TrueMainTrack=NULL;
   MainTrack=NULL;
-  //  Candidates.clear();
   SoftReset();  // just reset internal stuff
 }  

@@ -263,8 +263,6 @@ void dQdxYZCalibration::Finalize(){
   
   //speed up fitting procedure
   ROOT::EnableImplicitMT();
-  // ROOT::Math::MinimizerOptions::SetDefaultStrategy(0);
-  // ROOT::Math::MinimizerOptions::SetDefaultTolerance(10);
 
   FillHistograms();
   if(_enableAllSystConfig)

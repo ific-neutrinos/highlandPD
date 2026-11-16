@@ -48,8 +48,6 @@ class GetKaonsForXSAction: public StepBase{
 
 // class KaonChi2Cut: public StepBase{
 //  public:
-//   using StepBase::Apply;
-//   bool Apply(AnaEventC& event, ToyBoxB& box) const;
 //   StepBase* MakeClone(){return new KaonChi2Cut();}
 // };
 

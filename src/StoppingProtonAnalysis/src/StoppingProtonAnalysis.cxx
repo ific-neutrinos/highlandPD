@@ -21,7 +21,6 @@ StoppingProtonAnalysis::StoppingProtonAnalysis(AnalysisAlgorithm* ana) : baseAna
 //********************************************************************
 
   // Add the package version
-  //  ND::versioning().AddPackage("StoppingProtonAnalysis", anaUtils::GetSoftwareVersionFromPath((std::string)getenv("STOPPINGPROTONANALYSISROOT")));
 }
 
 //********************************************************************
@@ -74,7 +73,6 @@ void StoppingProtonAnalysis::DefineCorrections(){
   // Some corrections are defined in baseAnalysis
   baseAnalysis::DefineCorrections();
   corr().AddCorrection(0, "sce geometric correction", new ParticlePositionSCECorrection());
-  //corr().AddCorrection(1, "dEdx MC correction"      , new dEdxMCCorrection());
   corr().AddCorrection(1, "Recombination data correction"      , new RecombinationDataCorrection());
 }
 

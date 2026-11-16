@@ -112,7 +112,6 @@ void secondaryKaonAnalysis::DefineSelections(){
 //********************************************************************
 
   if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelection(false));  
-    //if(_UseDetailedSelection)sel().AddSelection(_selection_name.c_str(), "proton selection",    new secondaryProtonSelection(false));  
   else                     sel().AddSelection(_selection_name.c_str(), "kaon selection",    new secondaryKaonSelectionNoBranches(false));  
 }
 
@@ -450,10 +449,8 @@ void secondaryKaonAnalysis::FillTruthTree(){
 bool secondaryKaonAnalysis::CheckFillTruthTree(AnaTrueParticlePD* part){
 //********************************************************************
 
-  // if(!part)return false;
   // else if(abs(part->PDG)==321){
   //   return true;
-  // }
   // else return false;
 
   if(!part)return false;
@@ -514,7 +511,6 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  //baseAnalysis::FillTruthTreeBase(vtx);
 
   // Event variables
   output().FillVar(run,    GetSpill().EventInfo->Run);
@@ -525,7 +521,6 @@ void secondaryKaonAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
 
   // Fill true kaons candidate info
-  //const kaonAnaTrueVertex& kvtx = static_cast<const kaonAnaTrueVertex&>(vtx);
   AnaTrueParticlePD* dau = NULL;
   if(part.ProcessEnd==2){
     for(int idau = 0; idau < part.Daughters.size(); idau++){
@@ -671,7 +666,6 @@ bool secondaryKaonAnalysis::FinalizeConfiguration(){
       }
       
       if(!found){ // if not truth-reco association, -1
-	//part->AccumLevel[0][0] = std::min(min_accum_level, CandidatesAccumLevel);
 	part->AccumLevel[0][0] = CandidatesAccumLevel; // if not truth-reco association, -1
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
       } 

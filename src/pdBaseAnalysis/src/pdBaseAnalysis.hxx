@@ -9,7 +9,6 @@
 
 namespace pdBaseAnalysisConstants{
 
-  //const UInt_t NMAXSAVEDCANDIDATES     = 20;
 }
 
 class pdBaseAnalysis: public baseAnalysis {

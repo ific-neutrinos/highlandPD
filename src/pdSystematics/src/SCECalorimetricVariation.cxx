@@ -48,7 +48,6 @@ void SCECalorimetricVariation::Apply(const ToyExperiment& toy, AnaEventC& event)
     for(int ihit = 0; ihit < (int)part->Hits[2].size(); ihit++){
       _sce->ApplyPositionCorrection(part->Hits[2][ihit], scale);
       _cal->ApplySCECorrection(part->Hits[2][ihit], ctx);
-      //_cal->ApplyLifetimeCorrection(part->Hits[2][ihit]);
     }
   }
 }
@@ -60,7 +59,6 @@ bool SCECalorimetricVariation::UndoSystematic(AnaEventC& event){
   // Get the SystBox for this event
   SystBoxB* box = GetSystBox(event);
 
-  //_sce->ResetToNominal();
   
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
     AnaParticlePD* part = static_cast<AnaParticlePD*>(box->RelevantRecObjects[ipart]);

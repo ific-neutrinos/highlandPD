@@ -1,5 +1,4 @@
 #include "EventBoxPD.hxx"
-//#include "CutUtils.hxx"
 #include "AnalysisUtils.hxx"
 #include "pdDataClasses.hxx"
 
@@ -43,7 +42,6 @@ void boxUtils::FillLongTracks(AnaEventB& event, SubDetId::SubDetEnum det){
     EventBox->RecObjectsInGroup[EventBoxPD::kAllTracks][EventBox->nRecObjectsInGroup[EventBoxPD::kAllTracks]++] = track;
     if (track->NHits>20){      
       EventBox->RecObjectsInGroup[EventBoxPD::kLongTracks][EventBox->nRecObjectsInGroup[EventBoxPD::kLongTracks]++] = track;
-      //      if (cutUtils::FiducialCut(*track, det))
       EventBox->RecObjectsInGroup[EventBoxPD::kLongTracksInFV][EventBox->nRecObjectsInGroup[EventBoxPD::kLongTracksInFV]++] = track;
     }
   }

@@ -31,7 +31,6 @@ Weight_h ProtonBackgroundWeight::ComputeWeight(const ToyExperiment& toy, const A
   if(box.Candidates.empty())return eventWeight;
     
   // Get the SystBox for this event, and the appropriate selection and branch
-  //SystBoxB* SystBox = GetSystBox(event,box.SelectionEnabledIndex,boxB.SuccessfulBranch); // not really needed
    
   //get bestcandidate
   AnaParticlePD* part = box.Candidates[box.BestCandidateIndex];

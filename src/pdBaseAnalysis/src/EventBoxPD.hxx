@@ -2,7 +2,6 @@
 #define EventBoxPD_hxx
 
 #include "BaseDataClasses.hxx"
-//#include "EventBoxUtils.hxx"
 #include "EventBoxId.hxx"
 
 /*

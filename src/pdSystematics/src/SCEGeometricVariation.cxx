@@ -74,7 +74,6 @@ bool SCEGeometricVariation::UndoSystematic(AnaEventC& event){
   // Get the SystBox for this event
   SystBoxB* box = GetSystBox(event);
 
-  //_sce->ResetToNominal();
   
   for(Int_t ipart = 0; ipart < box->nRelevantRecObjects; ipart++){
     AnaParticlePD* part = static_cast<AnaParticlePD*>(box->RelevantRecObjects[ipart]);

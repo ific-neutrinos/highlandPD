@@ -349,14 +349,11 @@ void kaonTree::FillKaonVariables_TrueKaonCandidates(OutputManager& output, const
   output.FillVar               (truekaon_trueparentid,       truePart->ParentID        );
   output.FillVar               (truekaon_trueproc,           truePart->ProcessStart    ); 
   output.FillVar               (truekaon_trueendproc,        truePart->ProcessEnd      );
-  //output.FillVar               (truekaon_truedecay,          kvtx.DecayMode            );
-  //output.FillVar               (truekaon_truechainmuon,      kvtx.ChainMuon            );
   output.FillVar               (truekaon_truendau,    (Int_t)truePart->Daughters.size()); 
   output.FillVectorVarFromArray(truekaon_truepos,            truePart->Position,      4);
   output.FillVectorVarFromArray(truekaon_trueendpos,         truePart->PositionEnd,   4);
   output.FillVectorVarFromArray(truekaon_truedir,            truePart->Direction,     3);
   output.FillVectorVarFromArray(truekaon_trueenddir,         truePart->DirectionEnd,  3);
-  //output.FillVar               (truekaon_branch,      (Int_t)kvtx.Branch               ); 
   
   if(trueDau){
     if(trueDau->PDG == -13){

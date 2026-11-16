@@ -202,7 +202,6 @@ double Calorimetry::GetLifetime(const AnaEventPD &event) const{
 
   int run = event.EventInfo->Run;
 
-  //if(event.GetIsMC())
   if(run>10000)
     return ND::params().GetParameterI("pdUtils.Calorimetry.ElectronLifetime.MC");
   else{
@@ -235,7 +234,6 @@ void Calorimetry::CalibratedQdx(AnaHitPD &hit) const {
   hit.dQdx = hit.dQdx_elife;
 
   //normalization correction
-  //ApplyNormalization(hit);
 
   //X correction
   ApplyXCalibration(hit);

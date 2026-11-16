@@ -22,7 +22,6 @@ void secondaryKaonXSSelection::DefineSteps(){
   AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pdBaseSelection  
   AddStep(StepBase::kCut,    "beam particle is pion-like",   new BeamPDGCut(211));
   //select events using beam instrumentation
-  //AddStep(StepBase::kCut,      "beam quality cut"    ,       new BeamQualityCut()    );
 
   AddStep(StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForXSAction(),true   );
   AddStep(StepBase::kCut,      "we have a kaon",             new EventHasKaonCut(),  true);
@@ -56,7 +55,6 @@ bool GetKaonsForXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
     pid = pdAnaUtils::Chi2PID(*part,2212);
     if(pid.first<0)continue;
     double chi_prot = pid.first/pid.second;
-    //if(chi_kaon>0 && chi_kaon<20 && chi_prot>10 && chi_prot<50)
     if(chi_prot-chi_kaon<50)
       box.Candidates.push_back(part);
   }
@@ -64,24 +62,14 @@ bool GetKaonsForXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   return true;  
 }
 
-// //**************************************************
-// bool KaonChi2Cut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
-// //**************************************************
   
-//   (void)event;
 
 //   //cast the box
-//   ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);   
 
 //   //get the current branch  
-//   std::vector<UInt_t> branchesIDs = GetBranchUniqueIDs();
 
 //   //if there is kaon, cut in its chi2
-//   AnaParticlePD* kaon = static_cast<AnaParticlePD*>(box.Candidates[branchesIDs[0]]);
-//   std::pair<double,int> result = pdAnaUtils::Chi2PID(*kaon,321);
-//   if(result.first/result.second < 40)return true;
 //   else return false;
-// }
 
 //**************************************************
 bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{

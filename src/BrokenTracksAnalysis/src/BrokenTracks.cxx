@@ -147,7 +147,6 @@ void BrokenTracks::FillToyVarsInMicroTrees(bool addBase){
 //********************************************************************
 
   // Fill the common variables  (highland/src/highland2/baseAnalysis)
-  // if (addBase) baseAnalysis::FillToyVarsInMicroTreesBase(addBase);
 
 }
 
@@ -156,7 +155,6 @@ void BrokenTracks::FillTruthTree(const AnaTrueVertex& vtx){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  // baseAnalysis::FillTruthTreeBase(vtx);
 }
 
 //********************************************************************
@@ -190,7 +188,6 @@ void BrokenTracks::AddBrokenCategory(){
   std::reverse(part_colors, part_colors + NPART);
 
   anaUtils::_categ->AddCategory("broken", NPART, part_types, part_codes, part_colors);
-  // anaUtils::_categ->AddObjectCategory("brokendaughter", standardPDTree::seltrk_ndau, "seltrk_ndau", 
   // 				      NPART, part_types, part_codes, part_colors, 
   // 				      1, -100);
 }
@@ -203,28 +200,9 @@ void BrokenTracks::FillBrokenCategory(AnaParticlePD* part){
   AnaTrueParticlePD* truePart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
   if(!truePart)return;
 
-  // bool broken = false;
-  // int ndau = part->Daughters.size();
-  // int broken_dau = -1;
-  // for(int idau = 0; idau < ndau; idau++){
-  //   AnaTrueParticlePD* dauTruePart = static_cast<AnaTrueParticlePD*>(part->Daughters[idau]->TrueObject);
-  //   if(!dauTruePart)continue;
-  //   if(truePart->ID == dauTruePart->ID){
-  //     broken = true;
-  //     broken_dau = idau;
   //     break;
-  //   }
-  // }
 
-  // //beam part category
-  // if(broken)anaUtils::_categ->SetCode("broken", 1, CATOTHER);
-  // else      anaUtils::_categ->SetCode("broken", 2, CATOTHER);
 
-  // //daughters category
-  // for(int idau = 0; idau < ndau; idau++){
-  //   if(idau == broken_dau)anaUtils::_categ->SetObjectCode("brokendaughter", 1, CATOTHER, -1);
-  //   else                  anaUtils::_categ->SetObjectCode("brokendaughter", 2, CATOTHER, -1);
-  // }
 
   if(!truePart->Matched)anaUtils::_categ->SetCode("broken", 3, CATOTHER);
   else{

@@ -388,7 +388,6 @@ void secondaryKaonXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
-  //baseAnalysis::FillTruthTreeBase(vtx);
 
   // Event variables
   output().FillVar(run,    GetSpill().EventInfo->Run);
@@ -399,7 +398,6 @@ void secondaryKaonXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
 
   // Fill true kaons candidate info
-  //const kaonAnaTrueVertex& kvtx = static_cast<const kaonAnaTrueVertex&>(vtx);
   kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part, NULL);
 }
 

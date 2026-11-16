@@ -266,7 +266,6 @@ TSpline3* SpaceCharge::MakeSpline(TH3F* spline_hist, int dim1, int dim2_bin, int
 double SpaceCharge::InterpolateSplines(TH3F* interp_hist, double xVal, double yVal, double zVal, int dim, int maptype, int driftvol) const {
 //********************************************************************
 
-  //std::cout << "Interpolating " << interp_hist->GetName() << std::endl;
   int bin_x = interp_hist->GetXaxis()->FindBin(xVal);
   int bin_y = interp_hist->GetYaxis()->FindBin(yVal);
   int bin_z = interp_hist->GetZaxis()->FindBin(zVal);

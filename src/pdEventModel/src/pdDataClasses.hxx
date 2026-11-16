@@ -57,7 +57,6 @@ public:
   UInt_t Channel;
   Int_t  View;
 
-  //std::vector<Float_t> CNN; //!
   Float_t CNN[3];
   
   /// wave form associated to this hit

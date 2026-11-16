@@ -36,7 +36,6 @@ public:
   AnaParticlePD* MainTrack;
 
   /// Vector of candidates
-  //std::vector<AnaParticlePD*> Candidates;
 };
 
 #endif

@@ -25,20 +25,7 @@ void secondaryProtonSelection::DefineSteps(){
   AddStep(StepBase::kAction, "GET VECTOR OF PROTONS", new GetProtonsAction()   , true);
   AddStep(StepBase::kCut   , "CANDIDATE EXISTS"     , new EventHasKaonCut()    , true);
   AddStep(StepBase::kCut   , "SECONDARY PROTONS CUT", new SecondaryProtonsCut(0,25), true);
-  // //next cuts have to be applied to each branch
-  // AddSplit(secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES);
-  // for(int i = 0; i < (int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES; i++)
 
-  // // This number tells the selection to stop when a given accum level (accumulated cut level) is not passed. 
-  // // For example, 2 as argument would mean that selection is stopped for the current toy experiment when the 
-  // // third cut (numbering starts at 0) is not passed. This is a way of saving time.
-  // // -1 means no preselection
-  // //Set the branch aliases to the different branches 
-  // for(int i = 0; i < (int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES; i++){
-  //   std::stringstream ssi;
-  //   ssi << i;
-  //   SetBranchAlias(i,("possible candidate "+ssi.str()+"").c_str(),i);
-  // }
   SetBranchAlias(0,"trunk");
   SetPreSelectionAccumLevel(-1);
 }
