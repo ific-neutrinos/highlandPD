@@ -174,32 +174,31 @@ Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `ph
 - `Clone()` de un spill **no clona la truth**: el clon comparte `TrueParticles` y `TrueVertices` con el original (`isClone = true`) y solo el original la borra. Hay que borrar el clon antes que el original. Antes el módulo nunca borraba el original y perdía la truth en cada evento.
 - Las clases de `pdDataClasses` no tienen `ClassDef`: ROOT las versiona por checksum, así que añadir o quitar miembros no rompe la lectura de ficheros antiguos.
 
-### Compilación en FNAL (en curso; estado al cerrar el 16-nov-2026)
+### Compilación en FNAL (compila desde el 17-nov-2026)
 
 - Push hecho de `phase2/minitrees` (highlandPD y highlandAnalysis) y del tag `pre-phase2`. Commits finales: highlandPD `25c54dc` (y la actualización de este fichero), highlandAnalysis `8388374`.
 - Área de mrb del usuario: `/exp/dune/app/users/miagarc/larsoft/dunesw_v09_56_00d00` (dentro de Apptainer SL7 en dunegpvm). `srcs/` solo tiene `protoduneana` (v09_56_00d00 más 5 commits locales del usuario); highlandAnalysis se compila desde ahí. Su CMake busca highland y highlandPD en `$MRB_INSTALL/highland/{highland,highlandPD}` (ficheros `HIGHLANDConfig.cmake` y `HIGHLAND_PDConfig.cmake`, que generan sus builds).
 - highland y highlandPD ya están compilados allí con la rama nueva, en el entorno de dunesw v09_56_00d00 (`-q e20:prof`). El `setup.sh` de highland solo carga sus productos fijos (los de dunesw v10) si `TBBROOT` y `ROOTSYS` están vacíos, así que hay que hacer el `setup dunesw ...` antes. Para compilar el módulo no hace falta cargar los `setup.sh` de highland y highlandPD.
-- **Problema abierto: `mrb i` falla configurando protoduneana** (`CetAddTransitiveDependency.cmake`, "Unknown arguments" en el `find_package` de Pythia6 de nusystematics). Causa: el mrb actual (y también mrb v5_19_12) configura el cetmodules más nuevo de cvmfs, v3_27_04, que trae cmake 3.27.4; larsoft v09_56_00 pide cetmodules v3_16_00 y protoduneana/dunesw v09_56 cetbuildtools v8_20_00. mrb v4_04_06 (el arreglo del antiguo `setup.backup`, para un área de v09_14) no vale: el área pide mrb >= v5.
-- **Siguiente paso**, en un shell nuevo:
-  ```bash
-  source /cvmfs/dune.opensciencegrid.org/products/dune/setup_dune.sh
-  unsetup mrb; setup mrb v5_19_12
-  ups list -aK+ cetmodules | grep v3_16_00; ups list -aK+ cmake | grep v3_22_2   # comprobar que existen
-  unsetup cetmodules; unsetup cmake
-  setup cmake v3_22_2
-  setup cetmodules v3_16_00
-  source localProducts*/setup
-  mrbsetenv
-  ups active | grep -iE "cetmodules|cetbuildtools|^cmake"   # deben salir v3_16_00 y v3_22_2
-  cd $MRB_BUILDDIR && mrb z && mrbsetenv && mrb i -j8
-  ```
-  Volver a mirar `ups active` tras el segundo `mrbsetenv`. Si esas versiones no existen, elegir las más cercanas de la época (mayo de 2022). Si compila: tag `dunesw_v09_56_00d00` en highlandAnalysis y apuntar la receta en un README de highlandAnalysis (el `setup.backup` que la guardaba para v09_14 se borró; sigue en `pre-phase2`).
+- **Resuelto (17-nov-2026): compila e instala.** El fallo de `mrb i` en protoduneana (`CetAddTransitiveDependency.cmake`, "Unknown arguments" en el `find_package` de Pythia6 de nusystematics) venía de que mrb configuraba cetmodules v3_27_04 / cmake 3.27.4; larsoft v09_56_00 pide cetmodules v3_16_00 (y protoduneana cetbuildtools v8_20_00). mrb v4_04_06 no vale (el área pide mrb >= v5).
+- Receta, en el `setup_larsoft.sh` del usuario (raíz del área): `setup mrb v5_19_12`, `setup cmake v3_22_2`, `setup cetmodules v3_16_00`, `setup dunesw v09_56_00d00 -q e20:prof`, `localProducts*/setup`, `mrbsetenv`. Además algún setup deja `/products/cmake/v3_27_4/bin/` (con `/` final) en el `PATH` por delante del de ups: el script define `fixcmake` (quita con `awk` los cmake que no son v3_22_2, sin tocar el `PATH` si queda vacío, y `hash -r`) y `checkenv`; repetirlos tras cada `mrbsetenv` (p. ej. `mrb z && mrbsetenv && fixcmake && checkenv && mrb i -j8`).
+- Enlazado: la librería de duneprototypes se nombra `duneprototypes::ProtoDUNEDataUtils` (como en `protoduneana/Utilities/CMakeLists.txt`), commit `1193661` de highlandAnalysis (sin push; en FNAL se aplicó a mano con `sed`). El módulo compiló sin errores a la primera.
+- Pendiente: tag `dunesw_v09_56_00d00` en highlandAnalysis y la receta en un README de highlandAnalysis (el `setup.backup` que la guardaba para v09_14 sigue en `pre-phase2`).
 - Para ejecutar: `dEdxrestemplates.root` tiene que estar en el directorio de `lar` (o poner la ruta completa en `PIDFilename`).
+- **Primeras pruebas (17-nov-2026)** con 10 eventos de MC de 6 GeV (`PDSPProd4a_protoDUNE_sp_reco_stage1_p6GeV_35ms_sce_datadriven_44121960_1087_...root`, stage1: el fcl de MC corre la etapa 2 de calibración): funciona de principio a fin. Tamaño por evento según `CosmicsMode`: 0 → 0,31 MB, 1 → 0,44, 2 → 0,57, 3 → 2,3, 4 → 9,4. Memoria ~3,5 GB.
+- Rendimiento: al principio ~98 s/evento por `truthUtil.GetCompleteness` (backtracking de todos los hits en cada llamada): pureza y completitud desde la caché de `BuildEventCaches` (commit `64be7fd`), ~9 s/evento. Después, ~8,5 s en cualquier `CosmicsMode > 0` (0,4 s con 0) por las utilidades de protoduneana, que construyen las asociaciones de todo el evento en cada llamada: el módulo las construye una vez por evento con la misma lógica (`f582013`). Validado en FNAL: salida idéntica (`compare_module_minitrees.C`) y 0,69 s/evento en `CosmicsMode` 3 (~1,1 s con la etapa 2 de reco); por paso: backtracking ~0,25 s, cósmicos ~0,25 s, árbol ~0,1 s. Validar con `test/phase2/compare_module_minitrees.C(antes, después)` (compara los spills serializados; `IDÉNTICAS` si no cambia nada).
+- Salida por pantalla: `Verbose` (por defecto true) da el flujo de cada evento con el tiempo de cada paso; `Debug` (false también en los fcl de MC y datos) solo el detalle por partícula (`e6af471`).
+- Commits de highlandAnalysis del 17-nov (todos subidos y compilados en FNAL): `1193661`, `64be7fd`, `e6af471`, `f582013`, `aecaa6c`, `5f60dcf`, `9fd7ea3`, `5a583a7`, `d644fe2`, `5204000`, `255f9cf`. El push lo hace el usuario (aquí no hay credenciales de GitHub).
+- Observado en esos 10 eventos (para mirar): sin beam slice en 4 de 10; el primario de la beam slice no coincide con la partícula true del haz en 3 de los 6 restantes.
+- Datos: usar `CreateHighlandMiniTree_data.fcl` (con el de MC la recalibración de la etapa 2 sale como MC). `5f60dcf` configura `LifetimeCalibService` como producción (`UseCondbLifetime: true`, tag `v1.1`): sin eso devolvía 0 (`channel not found!`) y el dE/dx de los showers de la etapa 2 era `exp(x/0)`; las trazas no estaban afectadas.
+- **Tamaño (decidido con el usuario, 17-nov-2026).** Desglose con `test/phase2/size_breakdown_minitree.C` (por diferencia de serialización). Por defecto ahora: cósmicos solo en eventos con beam slice (`CosmicsWithoutBeamSlice: false`: sin beam slice no hay análisis; se guardan EventInfo, Beam, DQ y truth para normalización y eficiencia); `CosmicsMode: 2` (completos los cósmicos con algún space point de su jerarquía a < 50 cm de un extremo de cualquier partícula de la beam slice: inicio y fin de trazas, inicio de showers, hasta `MaxGeneration` 10; el resto en resumen); traza forzada solo extremos, longitud y χ² (`SaveForcedTrackHits: false`; el χ² se calcula igual que antes); cósmicos completos con todo (como la beam slice); compresión LZMA (`CompressionSettings: 208`).
+- Resultado: MC 2,3 → 0,25 MB/evento; datos (run 5768, 134 eventos, 70 con bunch, 49 con beam slice) 0,86 → 0,16 MB/entrada (21 MB/fichero). Estimación: datos 13.568 ficheros → ~285 GB; MC ~135.000 ficheros de ~10 eventos → ~320 GB. Lo que más pesa ahora en datos: `HitsNoCalo` de la beam slice (22 %), resumen de cósmicos lejanos (12 %), cósmicos completos (~40 %). Recortes posibles si hace falta: sin resumen de cósmicos lejanos, `HitsNoCalo` solo plano 2; `TVector3` → floats (Fase 4).
+- Muestras de prueba en FNAL (xrootd): MC `PDSPProd4a_protoDUNE_sp_reco_stage1_p6GeV_35ms_sce_datadriven_44121960_1087_20210520T185003Z.root` (stage1, 10 eventos); datos `np04_raw_run005768_0002_dl10_reco1_40417823_0_20201221T133559Z_reco2_24902671_0_20211006T044511Z.root` (reco2, 134 eventos).
 - Propuesta pendiente de respuesta del usuario: en el `setup.sh` de highland, usar el entorno de ups si ya hay un ROOT configurado y tomar `NLOHMANN_JSON_DIR` de ups (`${NLOHMANN_JSON_DIR:-$nlohmann_json_dir}`), para que el mismo script valga para v09 y v10.
 
 ### Pendiente
 
-- Compilar el módulo en FNAL (ver arriba) y correrlo sobre unos pocos eventos de datos y MC; después, las pruebas de tamaño y tiempo de `phase2.md` (sobre todo `SaveTrueHitCounts` y `CosmicsMode` 3-4).
+- **Siguiente (acordado el 17-nov):** correr sobre una muestra de ~100 ficheros (MC y datos) para validar estabilidad, tiempo, tamaño medio y eventos por fichero.
+- Lista en orden que se seguía (17-nov), pasos 1-4 hechos: 5) decidir si se recalcula la etapa 2 en los ficheros de datos reco2 (es ~0,7 de ~1,05 s/evento; el fcl de datos cambia `CalAreaConstants`, ¿a propósito?); 6) quitar los mensajes `FBM XBPF0226xx not found in list` (de `GetActiveFibers` en eventos con trigger malo); 7) README de highlandAnalysis con la receta del entorno y tag `dunesw_v09_56_00d00`.
 - Bug de highland en `ConvertProcess` (`"kaon.Inelastic"`, ver Fase 4): hace falta para los procesos de la cadena del K-.
 - `BeamTrackTime` se guarda como `GetT0Sec() + 1e-9·GetT0Nano()`: en un double, los nanosegundos solo se resuelven a ~0,2 µs. Decidir qué tiempo se quiere.
 - `TrueID` de los hits es el `trackID` del backtracker tal cual (negativo para secundarios de showers EM).
