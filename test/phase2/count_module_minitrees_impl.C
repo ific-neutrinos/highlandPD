@@ -102,7 +102,8 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   long n = 0, nMC = 0, badDQ = 0, noBunch = 0, withBunch = 0, noSlice = 0, withSlice = 0, emptyEvent = 0;
   long beamWithMom = 0, beamWithTrack = 0;
   long badDQWithBunch = 0, flagNoSliceButParticles = 0, flagSliceButEmpty = 0;   // incoherencias
-  std::map<int, long> beamPDGs;              // datos: hipótesis de la instrumentación del haz
+  std::map<int, long> beamPDGs;              // datos: hipótesis de la instrumentación del haz (trigger bueno)
+  long nPID = 0;
   Mean beamMom, nSlice, nCosmics, nCosmicsWithHits;
   // MC
   long noBeamTruth = 0, beamEndsBeforeTPC = 0, noSliceEndsBeforeTPC = 0, noSliceWithTruth = 0;
@@ -135,7 +136,9 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
         if(beam->BeamMomentum > 0)beamMom.Add(beam->BeamMomentum);
       }
       if(beam->nTracks  > 0 && beam->nTracks  < 1000)beamWithTrack++;
-      if(!isMC){
+      // solo con trigger bueno: con trigger malo los Cherenkov están a 0 y a 6-7 GeV salen como protón
+      if(!isMC && (!spill->DataQuality || spill->DataQuality->GoodDaq)){
+        nPID++;
         if(beam->PDGs.empty())beamPDGs[0]++;
         for(int pdg : beam->PDGs)beamPDGs[pdg]++;
       }
@@ -235,8 +238,9 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   Line("con momento reconstruido", Frac(beamWithMom, n) + "   <p> = " + beamMom.Str("%.3f") + " GeV");
   Line("con traza del haz", Frac(beamWithTrack, n));
   if(!beamPDGs.empty()){
-    std::cout << "  Hipótesis de PDG de la instrumentación (0 = ninguna; un evento puede tener varias):" << std::endl;
-    PrintTop(beamPDGs, n, 10, "    ");
+    std::cout << "  Hipótesis de PDG de la instrumentación, eventos con trigger bueno (0 = ninguna; a 6-7 GeV" << std::endl
+              << "  e/mu/pi salen juntas):" << std::endl;
+    PrintTop(beamPDGs, nPID, 10, "    ");
   }
   std::cout << std::endl << "Beam slice y cósmicos (eventos con beam slice)" << std::endl;
   Line("partículas de la beam slice por evento", nSlice.Str());
