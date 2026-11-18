@@ -33,6 +33,7 @@ namespace {
 
   // El árbol es highlandana/MiniTree (salida de lar) o MiniTree
   std::string TreeName(const std::string& file){
+    if(file.empty())return "";   // patrón: el árbol por defecto (sin TFile::Open(""), que se queja)
     std::unique_ptr<TFile> f(TFile::Open(file.c_str()));
     if(!f || f->IsZombie())return "";
     if(f->Get("highlandana/MiniTree"))return "highlandana/MiniTree";
