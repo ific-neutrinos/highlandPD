@@ -2,32 +2,44 @@
 //
 // Criterios candidatos para guardar completos (con hits) los PFParticles de fuera de la beam
 // slice, medidos sobre minitrees ya escritos (MC, eventos con beam slice): todos los PFParticles
-// de fuera se guardan al menos en resumen, con inicio, fin y longitud, que es lo que usan.
-//   (a) cilindro: el segmento inicio-fin del PFParticle pasa a menos de R de la trayectoria de
-//       alguna partícula de la beam slice (aproxima el criterio del módulo con los space points)
+// de fuera se guardan al menos en resumen, con inicio, fin, longitud, slice y puntuación de
+// Pandora, que es lo que usan los criterios.
+//
+// Criterios por PFParticle (pasa la jerarquía entera si pasa alguno de sus PFParticles, como en el
+// módulo):
+//   (a) cilindro: el segmento inicio-fin pasa a menos de R de la trayectoria de alguna partícula
+//       de la beam slice (aproxima el criterio del módulo con los space points)
 //   (b) extremos: su inicio o su fin está a menos de R de esa trayectoria
 //   (c) rango: momento por rango con hipótesis de muón en una ventana alrededor de 236 MeV/c
 //       (mu+ de K+ -> mu+ nu en reposo)
+// Criterios por slice de Pandora (pasan todas las jerarquías del slice):
+//   (d) puntuación: la puntuación de haz del slice (máximo de BeamCosmicScore de sus PFParticles,
+//       el TestBeamScore de Pandora) por encima de un umbral. Los umbrales son percentiles de la
+//       puntuación de los slices sin nada de la cadena del haz: el percentil 90 deja pasar el 10 %
+//       de esos slices
+//   (e) slice cercano: algún PFParticle del slice cumple (b)
 // La trayectoria de una partícula de la beam slice son sus puntos de trayectoria (sin SCE) o, si
 // no tiene (showers), el segmento de su inicio a su fin (o a inicio + dirección x longitud).
 //
-// Para cada criterio:
-//   - eficiencia: fracción de los mu de K+ de la cadena del haz emparejados con un PFParticle de
-//     fuera que el criterio guardaría completos; y lo mismo para cualquier partícula de la cadena
-//     del haz emparejada fuera (más estadística, como referencia)
-//   - coste: jerarquías (primario de fuera y sus descendientes; el módulo decide por jerarquía) y
-//     PFParticles que hoy van en resumen y pasarían a completos, por evento
+// Objetivos (para la eficiencia): las partículas true de la cadena del haz (el haz y sus
+// descendientes) que no están emparejadas con ninguna partícula de la beam slice pero sí con un
+// PFParticle de fuera (el de más hits), y entre ellas los mu de K+ que se desintegran. Eficiencia
+// en número y ponderada por los hits del PFParticle; "nuevos" son los que hoy están en una
+// jerarquía en resumen.
+// Coste: jerarquías y PFParticles que hoy van en resumen y pasarían a completos, por evento.
+//
+// Guarda en memoria un resumen de todos los PFParticles de fuera (~40 B cada uno): para muestras
+// muy grandes, usar maxEntries.
 #include "kaon_fate_minitrees_impl.C"
 #include "pdAnalysisUtils.hxx"
 #include "Parameters.hxx"
 #include "TVector3.h"
-#include <functional>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -99,6 +111,10 @@ namespace ccrit {
     return segs;
   }
 
+  bool IsComplete(const AnaParticlePD* p){
+    return !p->TrjPoints.empty() || !p->SpacePoints.empty() || HasHits(p);
+  }
+
   // momento por rango con hipótesis de muón, en MeV/c (ComputeRangeMomentum devuelve GeV/c)
   double MuRangeP(double length){
     if(length <= 0)return -1;
@@ -106,41 +122,38 @@ namespace ccrit {
     return p > 0 ? 1000.*p : -1;
   }
 
-  bool IsComplete(const AnaParticlePD* p){
-    return !p->TrjPoints.empty() || !p->SpacePoints.empty() || HasHits(p);
+  const double kMuP = 236.;   // MeV/c, mu de K -> mu nu en reposo
+
+  // Lo que se guarda de cada PFParticle de fuera, de cada jerarquía y de cada slice
+  struct PartV {
+    double dSeg = 1e9, dEnd = 1e9, p = -1;
+    int nhits = 0;
+    bool target = false, muK = false;   // objetivo de la cadena del haz; mu de K+
+  };
+  struct Hier { std::vector<PartV> parts; bool complete = false; };
+  struct Slice { double score = -999; bool hasTarget = false; std::vector<Hier> hiers; };
+  struct Event { std::vector<Slice> slices; };
+
+  // Criterio: decide para una jerarquía dentro de su slice
+  struct Crit { std::string name; std::function<bool(const Slice&, const Hier&)> pass; };
+
+  bool AnyPart(const Hier& h, const std::function<bool(const PartV&)>& f){
+    for(const PartV& p : h.parts)if(f(p))return true;
+    return false;
   }
-
-  const double kMuP = 236.;               // MeV/c, mu de K -> mu nu en reposo
-  const std::vector<double> kR = {5, 10, 20, 30, 50};
-  const std::vector<double> kWin = {0.10, 0.20, 0.30};   // ventana relativa en el momento por rango
-
-  // Criterios: nombre y función (dSeg, dEnd, p)
-  struct Crit { std::string name; std::function<bool(double,double,double)> pass; };
-  std::vector<Crit> Criteria(){
-    std::vector<Crit> c;
-    for(double r : kR)c.push_back({Form("(a) cilindro R = %g cm", r),  [r](double ds, double, double){ return ds < r; }});
-    for(double r : kR)c.push_back({Form("(b) extremos R = %g cm", r),  [r](double, double de, double){ return de < r; }});
-    for(double w : kWin)c.push_back({Form("(c) p rango = 236 +- %.0f %%", 100*w),
-                                     [w](double, double, double p){ return std::fabs(p - kMuP) < w*kMuP; }});
-    c.push_back({"(b) R = 20 cm o (c) +- 20 %", [](double, double de, double p){ return de < 20 || std::fabs(p - kMuP) < 0.2*kMuP; }});
-    c.push_back({"(b) R = 50 cm y (c) +- 30 %", [](double, double de, double p){ return de < 50 && std::fabs(p - kMuP) < 0.3*kMuP; }});
-    return c;
+  bool AnyPart(const Slice& s, const std::function<bool(const PartV&)>& f){
+    for(const Hier& h : s.hiers)if(AnyPart(h, f))return true;
+    return false;
   }
-
-  struct Target { double dSeg, dEnd, p; bool complete; };
 
   struct CosmicCriteria {
-    std::vector<Crit> crit = Criteria();
-    long nEvents = 0;
-    std::vector<Target> muons, beamChain;          // emparejados con un PFParticle de fuera
-    std::vector<double> muP;                       // momento por rango de todos los mu de K emparejados
-    std::vector<double> muPSlice;                  // ... solo los de la beam slice
-    std::vector<long> extraHier, extraParts;       // por criterio
-    long summaryHier = 0, summaryParts = 0, completeHier = 0;
+    std::vector<Event> events;
+    std::vector<double> muP, muPSlice;   // momento por rango de los mu de K+ emparejados (todos; beam slice)
+    std::vector<double> scoreBkg, scoreTarget;
+    std::vector<int> nTargetSlices;      // por evento: slices de fuera con algún objetivo
+    std::vector<double> topSliceFrac;    // por evento: fracción de los hits de objetivos en su slice principal
 
     CosmicCriteria(){
-      extraHier.assign(crit.size(), 0);
-      extraParts.assign(crit.size(), 0);
       // ComputeRangeMomentum carga las tablas de PID (pd::services()), que leen parámetros: fuera de
       // un análisis, sin esto ND::params() no deja leerlos
       ND::params().SetReadParamOverrideFilePointPassed();
@@ -158,26 +171,41 @@ namespace ccrit {
         (p->BeamOrigin ? slice : out).push_back(p);
       }
       if(slice.empty())return;
-      nEvents++;
       const std::vector<Seg> segs = SliceSegments(slice);
 
-      // distancias y momento de cada PFParticle de fuera
-      std::map<const AnaParticlePD*, Target> val;
-      for(AnaParticlePD* p : out){
-        Target t{1e9, 1e9, -1, IsComplete(p)};
-        TVector3 a, b;
-        if(Ends(p, a, b)){
-          const Seg s{a, b};
-          for(const Seg& g : segs){
-            t.dSeg = std::min(t.dSeg, SegSeg(s, g));
-            t.dEnd = std::min(t.dEnd, std::min(PointSeg(a, g), PointSeg(b, g)));
-          }
+      // objetivos: partículas de la cadena del haz sin emparejar en la beam slice -> PFParticle de fuera con más hits
+      std::map<const AnaParticlePD*, std::pair<bool,bool>> targets;   // (objetivo, mu de K)
+      if(beamTrue){
+        std::map<int, AnaTrueParticleB*> byID;
+        for(AnaTrueParticleB* t : spill->TrueParticles)byID[t->ID] = t;
+        std::map<int, AnaParticlePD*> bestOut, bestSlice;
+        for(AnaParticlePD* p : out)if(p->TrueObject){
+          AnaParticlePD*& b = bestOut[p->TrueObject->ID];
+          if(!b || p->NHits > b->NHits)b = p;
         }
-        t.p = MuRangeP(p->Length);
-        val[p] = t;
+        for(AnaParticlePD* p : slice)if(p->TrueObject){
+          AnaParticlePD*& b = bestSlice[p->TrueObject->ID];
+          if(!b || p->NHits > b->NHits)b = p;
+        }
+        for(AnaTrueParticleB* t : spill->TrueParticles){
+          if(!DescendsFrom(t->ID, beamTrue->ID, byID))continue;
+          bool muFromK = false;
+          if(t->PDG == -13){
+            auto ip = byID.find(t->ParentID);
+            muFromK = ip != byID.end() && ip->second->PDG == 321 && ip->second->ProcessEnd == AnaTrueParticleB::Decay;
+          }
+          auto is = bestSlice.find(t->ID);
+          auto io = bestOut.find(t->ID);
+          if(muFromK){
+            if(is != bestSlice.end()){ muPSlice.push_back(MuRangeP(is->second->Length)); muP.push_back(muPSlice.back()); }
+            else if(io != bestOut.end())muP.push_back(MuRangeP(io->second->Length));
+          }
+          if(is != bestSlice.end() || io == bestOut.end())continue;
+          targets[io->second] = {true, muFromK};
+        }
       }
 
-      // coste: jerarquías de fuera (por su primario) que hoy van en resumen
+      // jerarquías de fuera (por su primario) y slices (el del primario; sin slice, uno por jerarquía)
       std::map<int, AnaParticlePD*> byUID;
       for(AnaParticlePD* p : out)byUID[p->UniqueID] = p;
       auto top = [&byUID](AnaParticlePD* p){
@@ -188,109 +216,134 @@ namespace ccrit {
         }
         return p;
       };
-      std::map<AnaParticlePD*, std::vector<AnaParticlePD*>> hier;
-      for(AnaParticlePD* p : out)hier[top(p)].push_back(p);
-      for(auto& h : hier){
-        bool complete = false;
-        for(AnaParticlePD* p : h.second)if(val[p].complete){ complete = true; break; }
-        if(complete){ completeHier++; continue; }
-        summaryHier++;
-        summaryParts += h.second.size();
-        for(size_t c = 0; c < crit.size(); c++){
-          bool pass = false;
-          for(AnaParticlePD* p : h.second){
-            const Target& t = val[p];
-            if(crit[c].pass(t.dSeg, t.dEnd, t.p)){ pass = true; break; }
+      std::map<AnaParticlePD*, std::vector<AnaParticlePD*>> hierParts;
+      for(AnaParticlePD* p : out)hierParts[top(p)].push_back(p);
+
+      std::map<long, Slice> slices;
+      std::map<long, double> targetHits;
+      for(auto& hp : hierParts){
+        const long key = hp.first->SliceID >= 0 ? (long)hp.first->SliceID : 1000000L + hp.first->UniqueID;
+        Slice& s = slices[key];
+        Hier h;
+        for(AnaParticlePD* p : hp.second){
+          PartV v;
+          TVector3 a, b;
+          if(Ends(p, a, b)){
+            const Seg sg{a, b};
+            for(const Seg& g : segs){
+              v.dSeg = std::min(v.dSeg, SegSeg(sg, g));
+              v.dEnd = std::min(v.dEnd, std::min(PointSeg(a, g), PointSeg(b, g)));
+            }
           }
-          if(pass){ extraHier[c]++; extraParts[c] += h.second.size(); }
+          v.p = MuRangeP(p->Length);
+          v.nhits = p->NHits;
+          auto it = targets.find(p);
+          if(it != targets.end()){ v.target = true; v.muK = it->second.second; s.hasTarget = true; targetHits[key] += p->NHits; }
+          if(IsComplete(p))h.complete = true;
+          if(p->BeamCosmicScore > -900)s.score = std::max(s.score, (double)p->BeamCosmicScore);
+          h.parts.push_back(v);
         }
+        s.hiers.push_back(h);
       }
 
-      // eficiencia: partículas true de la cadena del haz emparejadas fuera
-      if(!beamTrue)return;
-      std::map<int, AnaTrueParticleB*> byID;
-      for(AnaTrueParticleB* t : spill->TrueParticles)byID[t->ID] = t;
-      // por partícula true, el PFParticle emparejado con más hits (de fuera o de la beam slice)
-      std::map<int, AnaParticlePD*> bestOut, bestSlice;
-      for(AnaParticlePD* p : out){
-        const AnaTrueObjectC* to = p->TrueObject;
-        if(!to)continue;
-        AnaParticlePD*& b = bestOut[to->ID];
-        if(!b || p->NHits > b->NHits)b = p;
+      Event ev;
+      for(auto& ks : slices){
+        (ks.second.hasTarget ? scoreTarget : scoreBkg).push_back(ks.second.score);
+        ev.slices.push_back(ks.second);
       }
-      for(AnaParticlePD* p : slice){
-        const AnaTrueObjectC* to = p->TrueObject;
-        if(!to)continue;
-        AnaParticlePD*& b = bestSlice[to->ID];
-        if(!b || p->NHits > b->NHits)b = p;
-      }
-      for(AnaTrueParticleB* t : spill->TrueParticles){
-        if(t->ID == beamTrue->ID || !DescendsFrom(t->ID, beamTrue->ID, byID))continue;
-        const bool inSlice = bestSlice.count(t->ID);
-        auto ito = bestOut.find(t->ID);
-        // mu de un K+ de la cadena del haz que se desintegra
-        bool muFromK = false;
-        if(t->PDG == -13){
-          auto ip = byID.find(t->ParentID);
-          muFromK = ip != byID.end() && ip->second->PDG == 321 && ip->second->ProcessEnd == AnaTrueParticleB::Decay;
-        }
-        if(muFromK){
-          if(inSlice && bestSlice[t->ID]->Length > 0)muPSlice.push_back(MuRangeP(bestSlice[t->ID]->Length));
-          if(!inSlice && ito != bestOut.end())muP.push_back(val[ito->second].p);
-          else if(inSlice && bestSlice[t->ID]->Length > 0)muP.push_back(muPSlice.back());
-        }
-        if(inSlice || ito == bestOut.end())continue;   // solo las que están fuera
-        beamChain.push_back(val[ito->second]);
-        if(muFromK)muons.push_back(val[ito->second]);
+      events.push_back(ev);
+      if(!targetHits.empty()){
+        double sum = 0, mx = 0;
+        for(auto& th : targetHits){ sum += th.second; mx = std::max(mx, th.second); }
+        nTargetSlices.push_back(targetHits.size());
+        if(sum > 0)topSliceFrac.push_back(mx/sum);
       }
     }
 
-    static std::string Eff(const std::vector<Target>& v, const Crit& c, bool onlyNew){
-      long n = 0, pass = 0;
-      for(const Target& t : v){
-        if(onlyNew && t.complete)continue;
-        n++;
-        if(c.pass(t.dSeg, t.dEnd, t.p))pass++;
+    static double Quantile(std::vector<double> v, double f){
+      if(v.empty())return -999;
+      std::sort(v.begin(), v.end());
+      return v[std::min(v.size()-1, size_t(f*v.size()))];
+    }
+
+    std::vector<Crit> Criteria() const {
+      std::vector<Crit> c;
+      for(double r : {10., 20., 50.})
+        c.push_back({Form("(a) cilindro R = %g cm", r), [r](const Slice&, const Hier& h){ return AnyPart(h, [r](const PartV& p){ return p.dSeg < r; }); }});
+      for(double r : {10., 20., 50.})
+        c.push_back({Form("(b) extremos R = %g cm", r), [r](const Slice&, const Hier& h){ return AnyPart(h, [r](const PartV& p){ return p.dEnd < r; }); }});
+      c.push_back({"(c) p rango = 236 +- 20 %", [](const Slice&, const Hier& h){ return AnyPart(h, [](const PartV& p){ return std::fabs(p.p - kMuP) < 0.2*kMuP; }); }});
+      for(double q : {0.5, 0.8, 0.9, 0.95, 0.99}){
+        const double thr = Quantile(scoreBkg, q);
+        c.push_back({Form("(d) puntuación > p%.0f (%.3g)", 100*q, thr), [thr](const Slice& s, const Hier&){ return s.score > thr; }});
       }
-      return Frac(pass, n);
+      for(double r : {20., 50.})
+        c.push_back({Form("(e) slice cercano R = %g cm", r), [r](const Slice& s, const Hier&){ return AnyPart(s, [r](const PartV& p){ return p.dEnd < r; }); }});
+      const double thr95 = Quantile(scoreBkg, 0.95);
+      c.push_back({"(d) p95 o (e) R = 50 cm", [thr95](const Slice& s, const Hier&){
+        return s.score > thr95 || AnyPart(s, [](const PartV& p){ return p.dEnd < 50; }); }});
+      return c;
     }
 
     void Print() const {
-      std::cout << std::endl << "Eventos de MC con beam slice: " << nEvents << std::endl;
-      std::cout << "Jerarquías de fuera por evento: completas " << Form("%.1f", double(completeHier)/nEvents)
-                << ", en resumen " << Form("%.1f", double(summaryHier)/nEvents)
-                << " (" << Form("%.1f", double(summaryParts)/nEvents) << " PFParticles)" << std::endl;
-      long muNow = 0, bcNow = 0;
-      for(const Target& t : muons)if(t.complete)muNow++;
-      for(const Target& t : beamChain)if(t.complete)bcNow++;
-      std::cout << "mu de K+ emparejados fuera de la beam slice: " << muons.size() << " (hoy completos: " << muNow << ")" << std::endl;
-      std::cout << "partículas de la cadena del haz emparejadas fuera: " << beamChain.size() << " (hoy completas: " << bcNow << ")" << std::endl;
-
-      std::vector<double> all = muP, sl = muPSlice;
-      std::sort(all.begin(), all.end());
-      std::sort(sl.begin(), sl.end());
-      auto q = [](const std::vector<double>& v, double f){ return v.empty() ? -1. : v[std::min(v.size()-1, size_t(f*v.size()))]; };
-      std::cout << std::endl << "Momento por rango (muón) de los PFParticles emparejados con un mu de K+ (MeV/c):" << std::endl;
-      std::cout << Form("  todos (%zu): cuantiles 10/25/50/75/90 %% = %.0f / %.0f / %.0f / %.0f / %.0f", all.size(),
-                        q(all,.1), q(all,.25), q(all,.5), q(all,.75), q(all,.9)) << std::endl;
-      std::cout << Form("  beam slice (%zu): cuantiles 10/25/50/75/90 %% = %.0f / %.0f / %.0f / %.0f / %.0f", sl.size(),
-                        q(sl,.1), q(sl,.25), q(sl,.5), q(sl,.75), q(sl,.9)) << std::endl;
-      std::cout << "  valores (todos):";
-      for(double p : all)std::cout << " " << Form("%.0f", p);
-      std::cout << std::endl;
-
-      std::cout << std::endl << "Por criterio: eficiencia sobre los mu de K+ de fuera y sobre la cadena del haz de fuera" << std::endl
-                << "(todas / solo las que hoy van en resumen); coste: jerarquías y PFParticles de fuera que pasarían" << std::endl
-                << "de resumen a completos, por evento" << std::endl;
-      std::cout << std::left << std::setw(34) << "  criterio" << std::setw(28) << "mu de K+ (todos / nuevos)"
-                << std::setw(34) << "cadena del haz (todas / nuevas)" << "jerarquías  PFParticles" << std::right << std::endl;
-      for(size_t c = 0; c < crit.size(); c++){
-        std::cout << "  " << std::left << std::setw(32) << crit[c].name
-                  << std::setw(28) << (Eff(muons, crit[c], false) + " / " + Eff(muons, crit[c], true))
-                  << std::setw(34) << (Eff(beamChain, crit[c], false) + " / " + Eff(beamChain, crit[c], true))
-                  << std::right << Form("%10.2f %12.2f", double(extraHier[c])/nEvents, double(extraParts[c])/nEvents) << std::endl;
+      const double nEv = events.size();
+      long complete = 0, summary = 0, summaryParts = 0, nSlices = 0;
+      long nT = 0, nTNow = 0, nMu = 0, nMuNow = 0;
+      double hT = 0;
+      for(const Event& e : events)for(const Slice& s : e.slices){
+        nSlices++;
+        for(const Hier& h : s.hiers){
+          if(h.complete)complete++;
+          else{ summary++; summaryParts += h.parts.size(); }
+          for(const PartV& p : h.parts){
+            if(p.target){ nT++; hT += p.nhits; if(h.complete)nTNow++; }
+            if(p.muK){ nMu++; if(h.complete)nMuNow++; }
+          }
+        }
       }
-      std::cout << std::endl;
+      std::cout << std::endl << "Eventos de MC con beam slice: " << events.size() << std::endl;
+      std::cout << Form("Por evento: %.1f slices de fuera; jerarquías completas %.1f, en resumen %.1f (%.1f PFParticles)",
+                        nSlices/nEv, complete/nEv, summary/nEv, summaryParts/nEv) << std::endl;
+      std::cout << "Objetivos (cadena del haz emparejada fuera): " << nT << " (hoy completos: " << nTNow
+                << ", " << Form("%.0f", hT/std::max(1L, nT)) << " hits de media)" << std::endl;
+      std::cout << "  de ellos mu de K+: " << nMu << " (hoy completos: " << nMuNow << ")" << std::endl;
+      if(!nTargetSlices.empty()){
+        double m = 0, f = 0;
+        for(int n : nTargetSlices)m += n;
+        for(double x : topSliceFrac)f += x;
+        std::cout << Form("  eventos con objetivos: %zu; slices de fuera con objetivos por evento %.2f; fracción de sus hits en el slice principal %.0f %%",
+                          nTargetSlices.size(), m/nTargetSlices.size(), 100*f/std::max<size_t>(1, topSliceFrac.size())) << std::endl;
+      }
+      std::cout << std::endl << "Puntuación de haz de los slices de fuera (cuantiles 10/50/90/99 %):" << std::endl;
+      std::cout << Form("  sin objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreBkg.size(), Quantile(scoreBkg,.1), Quantile(scoreBkg,.5), Quantile(scoreBkg,.9), Quantile(scoreBkg,.99)) << std::endl;
+      std::cout << Form("  con objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreTarget.size(), Quantile(scoreTarget,.1), Quantile(scoreTarget,.5), Quantile(scoreTarget,.9), Quantile(scoreTarget,.99)) << std::endl;
+
+      std::cout << std::endl << "Momento por rango (muón) de los PFParticles emparejados con un mu de K+ (MeV/c, cuantiles 10/25/50/75/90 %):" << std::endl;
+      std::cout << Form("  todos (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muP.size(), Quantile(muP,.1), Quantile(muP,.25), Quantile(muP,.5), Quantile(muP,.75), Quantile(muP,.9)) << std::endl;
+      std::cout << Form("  beam slice (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muPSlice.size(), Quantile(muPSlice,.1), Quantile(muPSlice,.25), Quantile(muPSlice,.5), Quantile(muPSlice,.75), Quantile(muPSlice,.9)) << std::endl;
+
+      std::cout << std::endl << "Por criterio. Eficiencia sobre los objetivos que hoy van en resumen (en número y ponderada por hits)" << std::endl
+                << "y sobre los mu de K+ (todos / hoy en resumen); coste: jerarquías y PFParticles por evento que pasarían" << std::endl
+                << "de resumen a completos" << std::endl;
+      std::cout << "  " << std::left << std::setw(36) << "criterio" << std::setw(24) << "objetivos nuevos" << std::setw(12) << "por hits"
+                << std::setw(14) << "mu de K+" << std::right << "  jerarquías  PFParticles" << std::endl;
+      for(const Crit& c : Criteria()){
+        long tN = 0, tP = 0, mA = 0, mAP = 0, mN = 0, mNP = 0, xH = 0, xP = 0;
+        double hN = 0, hP = 0;
+        for(const Event& e : events)for(const Slice& s : e.slices)for(const Hier& h : s.hiers){
+          const bool pass = c.pass(s, h);
+          if(pass && !h.complete){ xH++; xP += h.parts.size(); }
+          for(const PartV& p : h.parts){
+            if(p.target && !h.complete){ tN++; hN += p.nhits; if(pass){ tP++; hP += p.nhits; } }
+            if(p.muK){ mA++; if(pass || h.complete)mAP++; if(!h.complete){ mN++; if(pass)mNP++; } }
+          }
+        }
+        std::cout << "  " << std::left << std::setw(36) << c.name << std::setw(24) << Frac(tP, tN)
+                  << std::setw(12) << Form("%.1f %%", hN > 0 ? 100*hP/hN : 0.)
+                  << std::setw(14) << Form("%ld/%ld  %ld/%ld", mAP, mA, mNP, mN) << std::right
+                  << Form("%12.2f %12.2f", xH/nEv, xP/nEv) << std::endl;
+      }
+      std::cout << "  (mu de K+: con el criterio, cuántos quedan completos de todos, y cuántos se recuperan de los que hoy van en resumen)" << std::endl << std::endl;
     }
   };
 }

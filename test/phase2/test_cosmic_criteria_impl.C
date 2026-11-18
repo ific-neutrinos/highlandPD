@@ -1,6 +1,10 @@
-// Implementación de test_cosmic_criteria.C. Un evento: traza del haz a lo largo de z (0-200 cm), mu
-// de K+ fuera de la beam slice que empieza a 2 cm de la mitad de la traza con la longitud de
-// 236 MeV/c, un cósmico vertical que pasa a 15 cm de la traza y otro lejos.
+// Implementación de test_cosmic_criteria.C. Un evento con una traza del haz a lo largo de z
+// (0-200 cm) y, fuera de la beam slice:
+//   slice 5: el mu de una K+ (empieza a 2 cm de la mitad de la traza, longitud de 236 MeV/c) y
+//            otro PFParticle lejos, en otra jerarquía del mismo slice
+//   slice 6: un cósmico vertical que pasa a 15 cm de la traza (puntuación 0,05)
+//   slice 7: un pi+ de la cadena del haz lejos de la traza, con puntuación 0,9
+//   slices 10-19: cósmicos lejos, puntuaciones 0,00-0,09
 #include "cosmic_criteria_minitrees_impl.C"
 #include <iostream>
 
@@ -17,10 +21,13 @@ namespace {
     s->TrueParticles.push_back(t);
     return t;
   }
-  AnaParticlePD* Reco(AnaSpillPD* s, int uid, bool slice, AnaTrueParticleB* match, TVector3 a, TVector3 b){
+  AnaParticlePD* Reco(AnaSpillPD* s, int uid, bool slice, AnaTrueParticleB* match, TVector3 a, TVector3 b,
+                      int sliceID = -1, float score = -999){
     AnaParticlePD* p = new AnaParticlePD();
     p->UniqueID = uid; p->ParentID = -1; p->BeamOrigin = slice; p->isPandora = slice;
     p->TrueObject = match;
+    p->SliceID = sliceID;
+    p->BeamCosmicScore = score;
     for(int i = 0; i < 3; i++){ p->PositionStart[i] = a[i]; p->PositionEnd[i] = b[i]; }
     p->Length = (b - a).Mag();
     p->NHits = 10;
@@ -31,6 +38,7 @@ namespace {
 
 int test_cosmic_criteria_impl(){
   using namespace ccrit;
+  ND::params().SetReadParamOverrideFilePointPassed();   // MuRangeP lee parámetros
 
   // geometría
   Check("punto-segmento", PointSeg(TVector3(3,4,5), {TVector3(0,0,0), TVector3(0,0,10)}), 5);
@@ -38,8 +46,6 @@ int test_cosmic_criteria_impl(){
   Check("segmentos que se cruzan a 2 cm", SegSeg({TVector3(-5,2,5), TVector3(5,2,5)}, {TVector3(0,0,0), TVector3(0,0,10)}), 2);
   Check("segmentos paralelos", SegSeg({TVector3(1,0,2), TVector3(1,0,8)}, {TVector3(0,0,0), TVector3(0,0,10)}), 1);
   Check("segmentos alejados por los extremos", SegSeg({TVector3(0,0,13), TVector3(0,0,20)}, {TVector3(0,0,0), TVector3(0,0,10)}), 3);
-
-  ND::params().SetReadParamOverrideFilePointPassed();   // ComputeRangeMomentum lee parámetros
 
   // longitud del mu de 236 MeV/c
   double L = 0;
@@ -54,28 +60,49 @@ int test_cosmic_criteria_impl(){
   AnaTrueParticlePD* pi = True(s, 1, 0, 211);
   beam->BeamParticle->TrueObject = pi;
   True(s, 2, 1, 321, AnaTrueParticleB::Decay);
-  AnaTrueParticlePD* mu = True(s, 3, 2, -13);
+  AnaTrueParticlePD* mu  = True(s, 3, 2, -13);
+  AnaTrueParticlePD* pi2 = True(s, 4, 1, 211);
   AnaTrueParticlePD* cos = True(s, 50, 0, 13);
 
-  AnaParticlePD* tr = Reco(s, 0, true, pi, TVector3(0,0,0), TVector3(0,0,200));
+  AnaParticlePD* tr = Reco(s, 0, true, pi, TVector3(0,0,0), TVector3(0,0,200), 1);
   for(int z = 0; z <= 200; z++){ AnaTrajectoryPointPD tp; tp.Position_NoSCE.SetXYZ(0,0,z); tr->TrjPoints.push_back(tp); }
-  Reco(s, 1, false, mu,  TVector3(2,0,100), TVector3(2+L,0,100));
-  Reco(s, 2, false, cos, TVector3(15,300,60), TVector3(15,-300,60));
-  Reco(s, 3, false, cos, TVector3(250,300,60), TVector3(250,-300,60));
+  Reco(s, 1, false, mu,  TVector3(2,0,100), TVector3(2+L,0,100), 5);
+  Reco(s, 2, false, cos, TVector3(300,300,60), TVector3(300,-300,60), 5);
+  Reco(s, 3, false, cos, TVector3(15,300,60), TVector3(15,-300,60), 6, 0.05);
+  Reco(s, 4, false, pi2, TVector3(250,0,300), TVector3(250,0,320), 7, 0.9);
+  for(int i = 0; i < 10; i++)Reco(s, 10+i, false, cos, TVector3(-300,300,30*i), TVector3(-300,-300,30*i), 10+i, 0.01*i);
 
   CosmicCriteria cc;
   cc.Process(s);
   cc.Print();
 
-  Check("mu de K fuera", cc.muons.size(), 1);
-  Check("mu: distancia de extremos", cc.muons[0].dEnd, 2);
-  Check("mu: momento por rango", cc.muons[0].p, kMuP, 1.);
-  Check("jerarquías en resumen", cc.summaryHier, 3);
-  auto idx = [&cc](const std::string& n){ for(size_t c = 0; c < cc.crit.size(); c++)if(cc.crit[c].name == n)return (int)c; return -1; };
-  Check("(a) R = 5: solo el mu", cc.extraHier[idx("(a) cilindro R = 5 cm")], 1);
-  Check("(a) R = 20: mu y cósmico cercano", cc.extraHier[idx("(a) cilindro R = 20 cm")], 2);
-  Check("(b) R = 50: solo el mu", cc.extraHier[idx("(b) extremos R = 50 cm")], 1);
-  Check("(c) +-10 %: solo el mu", cc.extraHier[idx("(c) p rango = 236 +- 10 %")], 1);
+  // eficiencia y coste de cada criterio
+  std::map<std::string, std::pair<int,int>> res;   // nombre -> (objetivos que pasan, jerarquías extra)
+  for(const Crit& c : cc.Criteria()){
+    int tp = 0, xh = 0;
+    for(const Event& e : cc.events)for(const Slice& sl : e.slices)for(const Hier& h : sl.hiers){
+      const bool pass = c.pass(sl, h);
+      if(pass && !h.complete)xh++;
+      for(const PartV& p : h.parts)if(p.target && pass)tp++;
+    }
+    res[c.name] = {tp, xh};
+  }
+  auto get = [&res](const std::string& prefix){
+    for(auto& r : res)if(r.first.compare(0, prefix.size(), prefix) == 0)return r.second;
+    std::cout << "FALLA no está el criterio " << prefix << std::endl; nErr++;
+    return std::make_pair(-1,-1);
+  };
+  Check("slices de fuera", cc.events[0].slices.size(), 13);
+  Check("slices con objetivos (mu y pi)", cc.scoreTarget.size(), 2);
+  Check("(a) R = 20: objetivos", get("(a) cilindro R = 20").first, 1);
+  Check("(a) R = 20: mu y cósmico cercano", get("(a) cilindro R = 20").second, 2);
+  Check("(b) R = 20: solo el mu", get("(b) extremos R = 20").second, 1);
+  Check("(c): el mu", get("(c) p rango").first, 1);
+  Check("(d) p90: solo el pi", get("(d) puntuación > p90").first, 1);
+  Check("(d) p90: el pi y un slice de fondo (el 10 % de 11)", get("(d) puntuación > p90").second, 2);
+  Check("(e) R = 20: el slice del mu entero", get("(e) slice cercano R = 20").second, 2);
+  Check("(d) p95 o (e): mu y pi", get("(d) p95 o (e)").first, 2);
+  Check("(d) p95 o (e): 3 jerarquías", get("(d) p95 o (e)").second, 3);
 
   std::cout << (nErr ? "TEST CON FALLOS" : "TEST OK") << std::endl;
   return nErr;
