@@ -107,7 +107,8 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   long noBeamTruth = 0, beamEndsBeforeTPC = 0, noSliceEndsBeforeTPC = 0, noSliceWithTruth = 0;
   long matched = 0, mismatched = 0, primNoTruth = 0, primDescendant = 0, primCosmic = 0, primOther = 0;
   long beamInSliceNotPrimary = 0;
-  std::map<int, long> truePDGs;
+  struct PerPDG{ long all = 0, noSlice = 0, matched = 0, mismatched = 0, descendant = 0; };
+  std::map<int, PerPDG> byPDG;               // por PDG de la partícula true del haz
   std::map<std::string, long> mismatchPDGs;  // "PDG del haz -> PDG emparejado con el primario"
   Mean purMatched, effMatched, purMismatched, effMismatched;
 
@@ -145,7 +146,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
     if(isMC){
       if(!beamTrue)noBeamTruth++;
       else{
-        truePDGs[beamTrue->PDG]++;
+        byPDG[beamTrue->PDG].all++;
         if(beamTrue->PositionEnd[2] < 0)beamEndsBeforeTPC++;   // la cara frontal del TPC está en z = 0
       }
     }
@@ -173,6 +174,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
       noSlice++;
       if(isMC && beamTrue){
         noSliceWithTruth++;
+        byPDG[beamTrue->PDG].noSlice++;
         if(beamTrue->PositionEnd[2] < 0)noSliceEndsBeforeTPC++;
       }
       continue;
@@ -191,15 +193,17 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
     const AnaTrueParticleB* primTrue = static_cast<AnaTrueParticleB*>(primary->TrueObject);
     if(primTrue && primTrue->ID == beamTrue->ID){
       matched++;
+      byPDG[beamTrue->PDG].matched++;
       purMatched.Add(primary->TruePur);
       effMatched.Add(primary->TrueEff);
       continue;
     }
     mismatched++;
+    byPDG[beamTrue->PDG].mismatched++;
     purMismatched.Add(primary->TruePur);
     effMismatched.Add(primary->TrueEff);
     if(!primTrue)primNoTruth++;
-    else if(DescendsFrom(primTrue->ID, beamTrue->ID, byID))primDescendant++;
+    else if(DescendsFrom(primTrue->ID, beamTrue->ID, byID)){ primDescendant++; byPDG[beamTrue->PDG].descendant++; }
     else if(static_cast<const AnaTrueParticlePD*>(primTrue)->Origin == 2)primCosmic++;
     else primOther++;
     mismatchPDGs[Form("%d -> %s", beamTrue->PDG, primTrue ? Form("%d", primTrue->PDG) : "sin truth")]++;
@@ -244,8 +248,18 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
     Line("la partícula del haz acaba antes del TPC (z < 0)", Frac(beamEndsBeforeTPC, nMC));
     Line("sin beam slice, con truth del haz", Frac(noSliceWithTruth, nMC));
     Line("  de ellos con el haz acabando antes del TPC", Frac(noSliceEndsBeforeTPC, noSliceWithTruth));
-    std::cout << "  PDG de la partícula true del haz:" << std::endl;
-    PrintTop(truePDGs, nMC - noBeamTruth, 10, "    ");
+    std::cout << "  Por PDG de la partícula true del haz (% sobre cada fila; primario sobre los eventos con beam slice):" << std::endl;
+    std::cout << "        PDG  eventos   sin beam slice   primario = haz   primario = descendiente" << std::endl;
+    std::vector<std::pair<long, int>> order;
+    for(auto& kv : byPDG)order.emplace_back(kv.second.all, kv.first);
+    std::sort(order.rbegin(), order.rend());
+    for(auto& o : order){
+      const PerPDG& c = byPDG[o.second];
+      const long withSlice = c.matched + c.mismatched;
+      std::cout << Form("    %7d  %7ld   %14s   %14s   %22s", o.second, c.all,
+                        Frac(c.noSlice, c.all).c_str(), Frac(c.matched, withSlice).c_str(),
+                        Frac(c.descendant, withSlice).c_str()) << std::endl;
+    }
 
     const long checked = matched + mismatched;
     std::cout << std::endl << "Primario de la beam slice frente a la partícula true del haz (MC con beam slice)" << std::endl;
