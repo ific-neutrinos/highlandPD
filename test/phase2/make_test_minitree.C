@@ -135,6 +135,7 @@ int make_test_minitree(const char* in, const char* out, int n = 200){
     AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
     info->Event = -info->Event;
     info->HasPandora = false;
+    info->FullDump = true;   // miembro de AnaEventInfoPD: se comprueba la ida y vuelta
     if((i/10) % 2 == 0){
       AnaBunchPD* bunch = new AnaBunchPD();
       bunch->Bunch = 1;
@@ -183,6 +184,12 @@ int check_test_minitree(const char* file){
         if(!nerr)std::cout << "Primer error: true " << tp->ID << " de la entrada " << i << " con " << tp->TrjPoints.size() << " puntos" << std::endl;
         nerr++;
       }
+    }
+    // FullDump solo en los eventos marcados
+    const AnaEventInfoPD* einfo = static_cast<AnaEventInfoPD*>(spill->EventInfo);
+    if(einfo->FullDump != (einfo->Event < 0)){
+      if(!nerr)std::cout << "Primer error: FullDump de la entrada " << i << std::endl;
+      nerr++;
     }
     // los eventos marcados llevan AnaDataQualityPD
     if(static_cast<AnaEventInfoPD*>(spill->EventInfo)->Event < 0){

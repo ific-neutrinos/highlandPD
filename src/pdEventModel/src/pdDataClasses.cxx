@@ -627,6 +627,7 @@ AnaEventInfoPD::AnaEventInfoPD():AnaEventInfo(){
   NominalBeamMom = kFloatUnassigned;
   EmptyEvent = false;
   HasPandora = false;
+  FullDump = false;
 }
 
 //********************************************************************
@@ -642,6 +643,7 @@ AnaEventInfoPD::AnaEventInfoPD(const AnaEventInfoPD& eventinfo):AnaEventInfo(eve
   NominalBeamMom = eventinfo.NominalBeamMom;
   EmptyEvent = eventinfo.EmptyEvent;
   HasPandora = eventinfo.HasPandora;
+  FullDump = eventinfo.FullDump;
 }
 
 //********************************************************************
@@ -654,4 +656,5 @@ void AnaEventInfoPD::Print() const{
   std::cout << "#NominalBeamMom:      " << NominalBeamMom << std::endl;
   std::cout << "EmptyEvent:           " << EmptyEvent << std::endl;
   std::cout << "HasPandora:           " << HasPandora << std::endl;
+  std::cout << "FullDump:             " << FullDump << std::endl;
 }

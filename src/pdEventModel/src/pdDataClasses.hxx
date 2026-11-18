@@ -571,6 +571,11 @@ public:
 
   /// Pandora found a beam slice (it should probably go in DataQuality)
   Bool_t HasPandora;
+
+  /// CreateHighlandMiniTree saved all the PFParticles of the event complete, also in events
+  /// without beam slice (FullDumpPrescale, or FullDumpTruePDGs in MC). Selection biased by the
+  /// truth when it comes from FullDumpTruePDGs
+  Bool_t FullDump;
 };
 
 #endif
