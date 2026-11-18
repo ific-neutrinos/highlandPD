@@ -79,6 +79,12 @@ int test_kaon_fate_impl(){
     AnaTrueParticlePD* k = True(s, 2, 1, 321, 20, dec); True(s, 3, 2, -13, 10);
     Reco(s, 7, -1, -1, false, false, k, 2, 20);
     kf.Process(s); }
+  // D2: evento sin beam slice con volcado completo: la K en un cósmico completo
+  { AnaSpillPD* s = Spill(211);
+    static_cast<AnaEventInfoPD*>(s->EventInfo)->FullDump = true;
+    AnaTrueParticlePD* k = True(s, 2, 1, 321, 20, AnaTrueParticleB::kaonplusInelastic);
+    Reco(s, 7, -1, -1, false, false, k, 2, 20);
+    kf.Process(s); }
   // E: K sin reconstruir (deja hits) y mu sin hits; y un cósmico completo con un K de fuera de la cadena
   { AnaSpillPD* s = Spill(211);
     True(s, 2, 1, 321, 20, dec); True(s, 3, 2, -13, 0);
@@ -95,11 +101,13 @@ int test_kaon_fate_impl(){
 
   Check("K del haz", kf.beamKaon.all, 1);
   Check("K del haz primario", kf.beamKaon.fate[kSlicePrimary], 1);
-  Check("K secundarios", kf.secKaon.all, 5);
+  Check("K secundarios", kf.secKaon.all, 6);
   Check("K secundarios que se desintegran", kf.secKaonDecay.all, 5);
   Check("K hija del primario", kf.secKaon.fate[kSliceDaughter], 2);
   Check("K dentro de otra (slice)", kf.secKaon.fate[kSliceInOther], 1);
-  Check("K evento sin slice", kf.secKaon.fate[kNoSlice], 1);
+  Check("K evento sin slice", kf.secKaon.fate[kNoSlice], 2);
+  Check("K sin slice con volcado completo", kf.secKaonNoSlice.all, 1);
+  Check("  en un cósmico completo", kf.secKaonNoSlice.fate[kOutComplete], 1);
   Check("K no reconstruida", kf.secKaon.fate[kNotReco], 1);
   Check("mu", kf.muon.all, 5);
   Check("mu generación >= 2", kf.muon.fate[kSliceDeeper], 1);

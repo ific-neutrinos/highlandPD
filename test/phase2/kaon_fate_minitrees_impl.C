@@ -196,6 +196,8 @@ namespace kfate {
     long nEventsWithKaon = 0;
     std::map<std::string, long> endProcess;   // proceso final de los K+ secundarios
     Counts beamKaon, secKaon, secKaonDecay, muon;
+    // eventos sin beam slice con todos los PFParticles guardados (EventInfo.FullDump): dónde están
+    Counts secKaonNoSlice, muonNoSlice;
     long joint[kNCoarse][kNCoarse] = {{0}};   // K+ (fila) x mu+ (columna), K+ secundarios con mu+
     long muDaughterOfKaonReco = 0, bothInSlice = 0;
     long nKaonsNoMuon = 0;
@@ -238,6 +240,8 @@ namespace kfate {
         const Result rk = Classify(k, parts, hasSlice);
         if(k->ID == beamTrue->ID){ beamKaon.Add(rk); continue; }
         secKaon.Add(rk);
+        const bool dumpNoSlice = !hasSlice && info->FullDump;
+        if(dumpNoSlice)secKaonNoSlice.Add(Classify(k, parts, true));
         endProcess[k->ConvertProcess(k->ProcessEnd)]++;
         if(k->ProcessEnd != AnaTrueParticleB::Decay)continue;
         secKaonDecay.Add(rk);
@@ -251,6 +255,7 @@ namespace kfate {
         if(!mu){ nKaonsNoMuon++; continue; }
         const Result rm = Classify(mu, parts, hasSlice);
         muon.Add(rm);
+        if(dumpNoSlice)muonNoSlice.Add(Classify(mu, parts, true));
         joint[ToCoarse(rk.fate)][ToCoarse(rm.fate)]++;
         if(rk.part && rm.part && rk.part->BeamOrigin && rm.part->BeamOrigin){
           bothInSlice++;
@@ -281,6 +286,11 @@ namespace kfate {
         std::cout << Form("  %-14s", CoarseName(r));
         for(int c = 0; c < kNCoarse; c++)std::cout << Form("%12ld", joint[r][c]);
         std::cout << std::endl;
+      }
+      if(secKaonNoSlice.all || muonNoSlice.all){
+        std::cout << std::endl << "Eventos sin beam slice con volcado completo (FullDump): dónde están" << std::endl;
+        secKaonNoSlice.Print("K secundarios");
+        muonNoSlice.Print("mu de sus desintegraciones");
       }
       std::cout << "  K y mu en la beam slice: " << bothInSlice << "; de ellos, el mu es hija de la K en Pandora: "
                 << Frac(muDaughterOfKaonReco, bothInSlice) << std::endl << std::endl;
