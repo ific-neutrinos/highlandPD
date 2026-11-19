@@ -52,6 +52,11 @@
 // grupos se imprimen por separado: los eventos con volcado están sesgados (tienen un K+), pero
 // en ellos todo está emparejado con hits.
 //
+// Minitrees con AnaParticlePD::CosmicCriteria (módulo desde el 19-nov-2026): el módulo completa
+// también las jerarquías con un candidato a mu, el criterio (i) con R = kMuCandAxisR. Entonces la
+// emulación de "hoy" es CosmicsMode 2 o (i), y se comparan bit a bit los criterios que guardó el
+// módulo con los emulados (en todos los eventos: los bits se calculan también con volcado).
+//
 // Guarda en memoria un resumen de todos los PFParticles de fuera (~40 B cada uno): para muestras
 // muy grandes, usar maxEntries o "which" (1 solo eventos normales, 2 solo con volcado completo).
 #include "kaon_fate_minitrees_impl.C"
@@ -149,6 +154,7 @@ namespace ccrit {
   const double kMuP = 236.;   // MeV/c, mu de K -> mu nu en reposo
   const double kMuCandPLow = 180., kMuCandPHigh = 300.;   // MeV/c, ventana de los candidatos a mu de (f) y (g)
   const double kMuCandR = 50.;                           // cm, cercanía a la beam slice de los candidatos de (g)
+  const double kMuCandAxisR = 150.;                      // cm, MuCandidateAxisRadius del módulo (criterio (i))
   bool InMuWindow(double p){ return p > kMuCandPLow && p < kMuCandPHigh; }
 
   // Volumen activo del TPC (cm, sin SCE) y eje nominal del haz en MC (CreateHighlandMiniTree.fcl)
@@ -181,7 +187,8 @@ namespace ccrit {
   struct Hier {
     std::vector<PartV> parts;
     bool complete = false;   // guardada completa en el minitree
-    bool emulated = false;   // lo estaría con CosmicsMode 2 (criterio del módulo, emulado)
+    bool emulated = false;   // lo estaría con el criterio del módulo, emulado (CosmicsMode 2, y (i) si hay CosmicCriteria)
+    int criteria = -999;     // AnaParticlePD::CosmicCriteria guardado por el módulo (-999 en minitrees anteriores)
   };
   struct Slice { double score = -999; bool hasTarget = false; int nTargets = 0; std::vector<Hier> hiers; };
   struct Event { std::vector<Slice> slices; bool fullDump = false; };
@@ -229,6 +236,11 @@ namespace ccrit {
     int which = 0;                       // 0 todos los eventos, 1 solo normales, 2 solo con volcado completo
     std::vector<Event> events;
     long emulAgree[2][2] = {{0}};        // eventos normales: [completa en el minitree][emulada]
+    // CosmicCriteria del módulo frente a la emulación, por jerarquía (todos los eventos):
+    // [bit del módulo][emulado], para el bit 1 (cerca de la beam slice) y el 4 (candidato a mu)
+    long bitNear[2][2] = {{0}}, bitMu[2][2] = {{0}};
+    long critMixed = 0;                  // jerarquías con valores distintos de CosmicCriteria entre sus PFParticles
+    long nCritHier = 0;                  // jerarquías con CosmicCriteria rellenado
     std::vector<double> muP, muPSlice;   // momento por rango de los mu de K+ emparejados (todos; beam slice)
     std::vector<double> scoreBkg, scoreTarget;   // solo slices con puntuación (> -900)
     long nScoreNone[2] = {0, 0};                  // slices sin puntuación: [sin objetivos, con objetivos]
@@ -354,8 +366,21 @@ namespace ccrit {
           v.clearCosmic = p->IsClearCosmic;
           if(IsComplete(p))h.complete = true;
           if(!h.emulated && NearEnds(p, ends, kCosmicsRadius))h.emulated = true;
+          if(p->CosmicCriteria > -900){
+            if(h.criteria > -900 && h.criteria != p->CosmicCriteria)critMixed++;
+            h.criteria = p->CosmicCriteria;
+          }
           if(p->BeamCosmicScore > -900)s.score = std::max(s.score, (double)p->BeamCosmicScore);
           h.parts.push_back(v);
+        }
+        if(h.criteria > -900){
+          // el módulo de ahora: también el candidato a mu, (i) con R = kMuCandAxisR
+          const bool nearEmul = h.emulated;
+          const bool muEmul = AnyPart(h, [](const PartV& p){ return p.track && InMuWindow(p.p) && p.stops && p.dAxis < kMuCandAxisR; });
+          nCritHier++;
+          bitNear[(h.criteria & AnaParticlePD::kCosmicNearBeamSlice) != 0][nearEmul]++;
+          bitMu[(h.criteria & AnaParticlePD::kCosmicMuCandidate) != 0][muEmul]++;
+          h.emulated = nearEmul || muEmul;
         }
         if(!info->FullDump)emulAgree[h.complete][h.emulated]++;
         s.hiers.push_back(h);
@@ -428,6 +453,16 @@ namespace ccrit {
         std::cout << std::endl << "Validación de la emulación de CosmicsMode 2 (eventos normales): de las " << nC
                   << " jerarquías completas en el minitree, emuladas completas " << Frac(emulAgree[1][1], nC)
                   << " (las demás: CosmicsMode 3 o puntos no guardados; en resumen no hay puntos con que comprobar)" << std::endl;
+      }
+      if(nCritHier){
+        auto mat = [](const char* what, const long m[2][2]){
+          std::cout << "  " << what << ": módulo sí y emulación sí " << m[1][1] << ", solo módulo " << m[1][0]
+                    << ", solo emulación " << m[0][1] << ", ninguno " << m[0][0] << std::endl;
+        };
+        std::cout << std::endl << "CosmicCriteria del módulo frente a la emulación (" << nCritHier << " jerarquías de "
+                  << "eventos con beam slice; " << critMixed << " con valores distintos entre sus PFParticles):" << std::endl;
+        mat("cerca de la beam slice (bit 1, CosmicsMode 2)", bitNear);
+        mat(Form("candidato a mu (bit 4, (i) a %g cm)", kMuCandAxisR), bitMu);
       }
       if(long(events.size()) > nFD)PrintGroup("EVENTOS NORMALES (completas: las del minitree)", false);
       if(nFD)PrintGroup("EVENTOS CON VOLCADO COMPLETO (completas: emuladas con CosmicsMode 2; sesgados: tienen un K+)", true);

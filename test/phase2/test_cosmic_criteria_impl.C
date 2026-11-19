@@ -144,6 +144,44 @@ int test_cosmic_criteria_impl(){
     if(fd)c.Print();
   }
 
+  // CosmicCriteria (minitrees nuevos): dos trazas con la longitud de un mu de 236 MeV/c que se paran,
+  // las dos con el bit de candidato a mu del módulo; la primera empieza a 5 cm del eje del haz (la
+  // emulación de (i) también la marca), la segunda a cientos de cm (solo el módulo: desacuerdo)
+  {
+    AnaSpillPD* s3 = new AnaSpillPD();
+    AnaEventInfoPD* i3 = new AnaEventInfoPD(); i3->IsMC = true; s3->EventInfo = i3;
+    AnaBeamPD* b3 = new AnaBeamPD(); b3->BeamParticle = new AnaParticlePD(); s3->Beam = b3;
+    s3->Bunches.push_back(new AnaBunchPD());
+    AnaTrueParticlePD* p3 = True(s3, 1, 0, 211);
+    b3->BeamParticle->TrueObject = p3;
+    Reco(s3, 0, true, p3, TVector3(0,0,0), TVector3(0,0,200), 1);
+    const TVector3 onAxis = kBeamStart + 300.*kBeamDir + TVector3(5,0,0);
+    AnaParticlePD* m1 = Reco(s3, 1, false, nullptr, onAxis, onAxis + TVector3(L,0,0), 5);
+    AnaParticlePD* m2 = Reco(s3, 2, false, nullptr, TVector3(250,100,600), TVector3(250+L/2,100,600), 6);
+    AnaParticlePD* c3 = Reco(s3, 3, false, nullptr, TVector3(-300,300,600), TVector3(-300,-300,600), 7);
+    m1->CosmicCriteria = AnaParticlePD::kCosmicMuCandidate;
+    m2->CosmicCriteria = AnaParticlePD::kCosmicMuCandidate;
+    c3->CosmicCriteria = 0;
+    m2->Length = L;   // la longitud manda en la ventana; el segmento corto solo cambia los extremos
+    // m1 y m2 completas en el minitree (con puntos de trayectoria), c3 en resumen
+    for(AnaParticlePD* m : {m1, m2}){
+      AnaTrajectoryPointPD tp; tp.Position_NoSCE.SetXYZ(m->PositionStart[0], m->PositionStart[1], m->PositionStart[2]);
+      m->TrjPoints.push_back(tp);
+    }
+    CosmicCriteria c;
+    c.Process(s3);
+    c.Print();
+    Check("CosmicCriteria: jerarquías", c.nCritHier, 3);
+    Check("bit 4: módulo y emulación", c.bitMu[1][1], 1);
+    Check("bit 4: solo módulo (lejos del eje)", c.bitMu[1][0], 1);
+    Check("bit 4: ninguno", c.bitMu[0][0], 1);
+    Check("bit 1: ninguno", c.bitNear[0][0], 3);
+    // evento normal: la completa por el candidato a mu cuenta como emulada; la lejana, no
+    Check("emulación con (i): completas y emuladas", c.emulAgree[1][1], 1);
+    Check("emulación con (i): completas sin emular", c.emulAgree[1][0], 1);
+    Check("emulación con (i): en resumen sin emular", c.emulAgree[0][0], 1);
+  }
+
   std::cout << (nErr ? "TEST CON FALLOS" : "TEST OK") << std::endl;
   return nErr;
 }

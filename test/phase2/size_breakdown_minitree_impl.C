@@ -48,6 +48,22 @@ namespace {
     return d;
   }
 
+  // Grupo de una partícula. Con CosmicCriteria (módulo desde el 19-nov-2026) los cósmicos se separan
+  // por el motivo por el que van completos; se supone CosmicsMode 2 (con 3, los del volumen del haz
+  // también irían completos y aquí salen como "en resumen")
+  std::string Group(const AnaParticlePD* p, bool hasBeam, bool fullDump){
+    if(p->BeamOrigin)return "Beam slice";
+    if(fullDump)return "Cósmicos, volcado completo";
+    if(!hasBeam)return "Cósmicos sin beam slice (candidatos a mu)";
+    const int c = p->CosmicCriteria;
+    if(c <= -900)return "Cósmicos";
+    if(c & AnaParticlePD::kCosmicNearBeamSlice)return "Cósmicos completos, cerca de la beam slice";
+    if(c & AnaParticlePD::kCosmicMuCandidate)return "Cósmicos completos, solo candidato a mu";
+    return "Cósmicos en resumen";
+  }
+  std::map<std::string, Counter> gGroup;   // total por grupo (bytes, partículas)
+  std::vector<std::string> gGroupOrder;
+
   double AddParticle(AnaParticlePD* p, const std::string& who){
     const char* cl = "AnaParticlePD";
     const double total = Bytes(p, cl);
@@ -95,10 +111,17 @@ int size_breakdown_minitree_impl(const char* file, Long64_t maxEntries){
     for(AnaBunchC* bc : spill->Bunches){
       AnaBunchPD* b = static_cast<AnaBunchPD*>(bc);
       bool hasBeam = false;
+      for(AnaParticleB* pb : b->Particles)if(static_cast<AnaParticlePD*>(pb)->BeamOrigin)hasBeam = true;
+      const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
+      const bool fd = info && info->FullDump;
       for(AnaParticleB* pb : b->Particles){
 	AnaParticlePD* p = static_cast<AnaParticlePD*>(pb);
-	if(p->BeamOrigin)hasBeam = true;
-	parts += AddParticle(p, p->BeamOrigin ? "Beam slice" : "Cósmicos");
+	const std::string g = Group(p, hasBeam, fd);
+	const double bytes = AddParticle(p, g);
+	if(!gGroup.count(g))gGroupOrder.push_back(g);
+	gGroup[g].bytes += bytes;
+	gGroup[g].n++;
+	parts += bytes;
       }
       if(hasBeam)nBeamSlice++;
       const double bu = Bytes(&b->UnassociatedHits, "vector<AnaHitPD>");
@@ -134,5 +157,10 @@ int size_breakdown_minitree_impl(const char* file, Long64_t maxEntries){
     printf("%-58s %10.2f %7.1f%% %12.0f %10.0f\n", k.c_str(), c.bytes*cf/1e6, 100*c.bytes/sumC, c.n, c.n > 0 ? c.bytes/c.n : 0);
   }
   printf("* estimado con el factor de compresión global\n");
+  printf("\n%-58s %10s %8s %12s %12s\n", "grupo de partículas", "MB disco*", "%", "partículas", "por entrada");
+  for(const std::string& g : gGroupOrder){
+    const Counter& c = gGroup[g];
+    printf("%-58s %10.2f %7.1f%% %12.0f %12.2f\n", g.c_str(), c.bytes*cf/1e6, 100*c.bytes/sumC, c.n, n > 0 ? c.n/n : 0);
+  }
   return 0;
 }

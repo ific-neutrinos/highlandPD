@@ -79,10 +79,160 @@ namespace {
     if(rest)Line(indent + "resto", Frac(rest, total));
   }
 
+  // ¿Guardado completo? (hits, puntos de trayectoria o space points)
+  bool IsComplete(const AnaParticlePD* p){
+    if(!p->TrjPoints.empty() || !p->SpacePoints.empty())return true;
+    for(int pl = 0; pl < 3; pl++)if(!p->Hits[pl].empty() || !p->HitsNoCalo[pl].empty())return true;
+    return false;
+  }
+
+  // ¿Es un mu+ de K+ -> mu+ nu?
+  bool IsMuFromK(const AnaTrueParticleB* t, const std::map<int, AnaTrueParticleB*>& byID){
+    if(!t || t->PDG != -13)return false;
+    auto ip = byID.find(t->ParentID);
+    return ip != byID.end() && ip->second->PDG == 321 && ip->second->ProcessEnd == AnaTrueParticleB::Decay;
+  }
+
+  // Jerarquías de los PFParticles de fuera de la beam slice, por su primario
+  std::map<AnaParticlePD*, std::vector<AnaParticlePD*>> Hierarchies(const std::vector<AnaParticlePD*>& out){
+    std::map<int, AnaParticlePD*> byUID;
+    for(AnaParticlePD* p : out)byUID[p->UniqueID] = p;
+    std::map<AnaParticlePD*, std::vector<AnaParticlePD*>> h;
+    for(AnaParticlePD* p : out){
+      AnaParticlePD* t = p;
+      for(int i = 0; i < 1000; i++){
+        auto it = byUID.find(t->ParentID);
+        if(it == byUID.end())break;
+        t = it->second;
+      }
+      h[t].push_back(p);
+    }
+    return h;
+  }
+
   struct Mean{
     double sum = 0; long n = 0;
     void Add(double x){ if(x < -900)return; sum += x; n++; }   // sin -999 (sin rellenar)
     std::string Str(const char* fmt = "%.2f") const { return n ? Form(fmt, sum/n) : std::string("-"); }
+  };
+
+  // Cósmicos según AnaParticlePD::CosmicCriteria (módulo desde el 19-nov-2026)
+  //  - eventos normales con beam slice: jerarquías completas por evento, y cuántas solo por el
+  //    candidato a mu (bit 4 sin bit 1)
+  //  - eventos normales sin beam slice (solo se guardan las jerarquías con candidato a mu): cuántos
+  //    tienen alguna, cuántas y de qué tamaño; incoherencias (sin bit 4 o en resumen); en MC, pureza
+  //  - MC con volcado completo sin beam slice: lo que guardaría un evento normal (bit 4) con los mu
+  //    de K+ de la cadena del haz, y si su K está en la misma jerarquía
+  // Los eventos sin beam slice y sin cósmicos guardados solo se reconocen como del módulo nuevo si
+  // tienen NBeamRegionSpacePoints rellenado (EmptyEventFinder, del mismo día)
+  struct CritCounter {
+    long events = 0;                          // eventos normales del módulo nuevo
+    Mean compH, compP, muOnlyH, muOnlyP;      // con beam slice
+    long nsNormal = 0, nsWith = 0, nsBadCrit = 0, nsIncomplete = 0;   // sin beam slice
+    Mean nsH, nsP;
+    long nsHier = 0, nsHierMuK = 0;
+    long fdNS = 0, fdMu = 0, fdMuNoReco = 0, fdMuBit4 = 0, fdMuBit4K = 0, fdBit4H = 0, fdBit4HMuK = 0;
+    Mean fdBit4P;
+
+    void Process(AnaSpillPD* spill, AnaTrueParticleB* beamTrue){
+      const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
+      if(!info || spill->Bunches.empty())return;
+      bool hasSlice = false, filled = false;
+      std::vector<AnaParticlePD*> out;
+      for(AnaParticleB* p : static_cast<AnaBunchPD*>(spill->Bunches[0])->Particles){
+        AnaParticlePD* part = static_cast<AnaParticlePD*>(p);
+        if(part->BeamOrigin){ hasSlice = true; continue; }
+        out.push_back(part);
+        if(part->CosmicCriteria > -900)filled = true;
+      }
+      if(!filled && !(!hasSlice && out.empty() && info->NBeamRegionSpacePoints >= 0))return;
+      const bool isMC = info->IsMC;
+      const auto hiers = Hierarchies(out);
+      std::map<int, AnaTrueParticleB*> byID;
+      if(isMC)for(AnaTrueParticleB* t : spill->TrueParticles)byID[t->ID] = t;
+      auto hasMuK = [&byID](const std::vector<AnaParticlePD*>& ps){
+        for(const AnaParticlePD* p : ps)if(IsMuFromK(static_cast<AnaTrueParticleB*>(p->TrueObject), byID))return true;
+        return false;
+      };
+      auto bit = [](int c, int b){ return c > -900 && (c & b); };
+
+      if(!info->FullDump){
+        events++;
+        int nH = 0, nP = 0, nMuH = 0, nMuP = 0;
+        for(const auto& h : hiers){
+          const int c = h.first->CosmicCriteria;
+          bool complete = false;
+          for(const AnaParticlePD* p : h.second)complete = complete || IsComplete(p);
+          if(hasSlice){
+            if(!complete)continue;
+            nH++; nP += h.second.size();
+            if(bit(c, AnaParticlePD::kCosmicMuCandidate) && !bit(c, AnaParticlePD::kCosmicNearBeamSlice)){ nMuH++; nMuP += h.second.size(); }
+          }
+          else{
+            nH++; nP += h.second.size();
+            if(!bit(c, AnaParticlePD::kCosmicMuCandidate))nsBadCrit++;
+            if(!complete)nsIncomplete++;
+            if(isMC){ nsHier++; if(hasMuK(h.second))nsHierMuK++; }
+          }
+        }
+        if(hasSlice){ compH.Add(nH); compP.Add(nP); muOnlyH.Add(nMuH); muOnlyP.Add(nMuP); }
+        else{ nsNormal++; if(nH)nsWith++; nsH.Add(nH); nsP.Add(nP); }
+        return;
+      }
+      if(hasSlice || !isMC || !beamTrue)return;
+
+      // volcado completo sin beam slice: todo está guardado; el bit 4 dice qué guardaría un evento normal
+      fdNS++;
+      std::map<int, const AnaParticlePD*> best;   // ID true -> PFParticle con más hits
+      std::map<const AnaParticlePD*, const AnaParticlePD*> topOf;
+      for(const auto& h : hiers){
+        if(bit(h.first->CosmicCriteria, AnaParticlePD::kCosmicMuCandidate)){
+          fdBit4H++; fdBit4P.Add(h.second.size());
+          if(hasMuK(h.second))fdBit4HMuK++;
+        }
+        for(const AnaParticlePD* p : h.second){
+          topOf[p] = h.first;
+          if(!p->TrueObject)continue;
+          const AnaParticlePD*& b = best[p->TrueObject->ID];
+          if(!b || p->NHits > b->NHits)b = p;
+        }
+      }
+      for(AnaTrueParticleB* t : spill->TrueParticles){
+        if(!IsMuFromK(t, byID) || !DescendsFrom(t->ID, beamTrue->ID, byID))continue;
+        fdMu++;
+        auto im = best.find(t->ID);
+        if(im == best.end()){ fdMuNoReco++; continue; }
+        if(!bit(topOf[im->second]->CosmicCriteria, AnaParticlePD::kCosmicMuCandidate))continue;
+        fdMuBit4++;
+        auto ik = best.find(t->ParentID);   // la K, ¿en la misma jerarquía?
+        if(ik != best.end() && topOf[ik->second] == topOf[im->second])fdMuBit4K++;
+      }
+    }
+
+    void Print() const {
+      if(!events && !fdNS)return;
+      std::cout << std::endl << "Cósmicos por criterio del módulo (CosmicCriteria; eventos sin volcado completo)" << std::endl;
+      Line("con beam slice: jerarquías completas por evento", compH.Str() + " (" + compP.Str() + " PFParticles)");
+      Line("  de ellas solo por el candidato a mu (bit 4 sin bit 1)", muOnlyH.Str() + " (" + muOnlyP.Str() + " PFParticles)");
+      Line("sin beam slice: eventos", Form("%ld", nsNormal));
+      Line("  con alguna jerarquía de candidato a mu guardada", Frac(nsWith, nsNormal));
+      Line("  jerarquías por evento", nsH.Str() + " (" + nsP.Str() + " PFParticles)");
+      if(nsBadCrit || nsIncomplete){
+        std::cout << "  INCOHERENCIAS (sin beam slice solo deberían ir jerarquías completas con el bit 4):" << std::endl;
+        Line("    sin el bit 4", Form("%ld", nsBadCrit));
+        Line("    en resumen", Form("%ld", nsIncomplete));
+      }
+      if(nsHier)Line("  MC: jerarquías con un mu de K+ (pureza)", Frac(nsHierMuK, nsHier));
+      if(fdNS){
+        std::cout << "  MC con volcado completo y sin beam slice (" << fdNS << " eventos): lo que guardaría un evento normal" << std::endl;
+        Line("    mu de K+ de la cadena del haz", Form("%ld", fdMu));
+        Line("    sin PFParticle", Frac(fdMuNoReco, fdMu));
+        Line("    en una jerarquía con el bit 4 (se guardaría)", Frac(fdMuBit4, fdMu));
+        Line("      con su K en la misma jerarquía", Frac(fdMuBit4K, fdMuBit4));
+        Line("    jerarquías con el bit 4 por evento", std::string(Form("%.2f", 1.*fdBit4H/fdNS)) + " (" + fdBit4P.Str() + " PFParticles cada una)");
+        Line("      con un mu de K+ (pureza, sesgada: hay un K+)", Frac(fdBit4HMuK, fdBit4H));
+      }
+    }
   };
 }
 
@@ -118,6 +268,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   std::map<int, PerPDG> byPDG;               // por PDG de la partícula true del haz
   std::map<std::string, long> mismatchPDGs;  // "PDG del haz -> PDG emparejado con el primario"
   Mean purMatched, effMatched, purMismatched, effMismatched;
+  CritCounter crit;                          // CosmicCriteria (módulo desde el 19-nov-2026)
 
   // sin GetEntries (abre todos los ficheros antes de empezar) y con el avance por std::cerr, como LoopMiniTree
   const auto t0 = std::chrono::steady_clock::now();
@@ -191,6 +342,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
       }
     }
     const bool hasSlice = !slice.empty();
+    crit.Process(spill, beamTrue);
     if(info && info->HasPandora && !hasSlice)flagSliceButEmpty++;
     if(info && !info->HasPandora && hasSlice)flagNoSliceButParticles++;
     if(efOK)efVsSlice[info->EmptyEvent][hasSlice]++;
@@ -290,6 +442,8 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   Line("partículas de la beam slice por evento", nSlice.Str());
   Line("cósmicos guardados por evento", nCosmics.Str());
   Line("  de ellos con hits en el plano 2 (completos)", nCosmicsWithHits.Str());
+
+  crit.Print();
 
   if(nMC > 0){
     std::cout << std::endl << "Truth (MC)" << std::endl;
