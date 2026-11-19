@@ -93,7 +93,8 @@ int test_cosmic_criteria_impl(){
     return std::make_pair(-1,-1);
   };
   Check("slices de fuera", cc.events[0].slices.size(), 13);
-  Check("slices con objetivos (mu y pi)", cc.scoreTarget.size(), 2);
+  Check("slices con objetivos y puntuación (el pi)", cc.scoreTarget.size(), 1);
+  Check("slices con objetivos sin puntuación (el mu)", cc.nScoreNone[1], 1);
   Check("(a) R = 20: objetivos", get("(a) cilindro R = 20").first, 1);
   Check("(a) R = 20: mu y cósmico cercano", get("(a) cilindro R = 20").second, 2);
   Check("(b) R = 20: solo el mu", get("(b) extremos R = 20").second, 1);

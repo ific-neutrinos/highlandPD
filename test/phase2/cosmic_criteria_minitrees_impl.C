@@ -191,7 +191,8 @@ namespace ccrit {
     std::vector<Event> events;
     long emulAgree[2][2] = {{0}};        // eventos normales: [completa en el minitree][emulada]
     std::vector<double> muP, muPSlice;   // momento por rango de los mu de K+ emparejados (todos; beam slice)
-    std::vector<double> scoreBkg, scoreTarget;
+    std::vector<double> scoreBkg, scoreTarget;   // solo slices con puntuación (> -900)
+    long nScoreNone[2] = {0, 0};                  // slices sin puntuación: [sin objetivos, con objetivos]
     std::vector<int> nTargetSlices;      // por evento: slices de fuera con algún objetivo
     std::vector<double> topSliceFrac;    // por evento: fracción de los hits de objetivos en su slice principal
 
@@ -295,7 +296,8 @@ namespace ccrit {
       Event ev;
       ev.fullDump = info->FullDump;
       for(auto& ks : slices){
-        (ks.second.hasTarget ? scoreTarget : scoreBkg).push_back(ks.second.score);
+        if(ks.second.score > -900)(ks.second.hasTarget ? scoreTarget : scoreBkg).push_back(ks.second.score);
+        else nScoreNone[ks.second.hasTarget]++;
         ev.slices.push_back(ks.second);
       }
       events.push_back(ev);
@@ -386,7 +388,8 @@ namespace ccrit {
         std::cout << Form("  eventos con objetivos: %zu; slices de fuera con objetivos por evento %.2f; fracción de sus hits en el slice principal %.0f %%",
                           nTargetSlices.size(), m/nTargetSlices.size(), 100*f/std::max<size_t>(1, topSliceFrac.size())) << std::endl;
       }
-      std::cout << std::endl << "Puntuación de haz de los slices de fuera (cuantiles 10/50/90/99 %):" << std::endl;
+      std::cout << std::endl << "Puntuación de haz de los slices de fuera con puntuación (cuantiles 10/50/90/99 %); sin puntuación (-999): "
+                << nScoreNone[0] << " sin objetivos y " << nScoreNone[1] << " con objetivos (no pasan los criterios (d)):" << std::endl;
       std::cout << Form("  sin objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreBkg.size(), Quantile(scoreBkg,.1), Quantile(scoreBkg,.5), Quantile(scoreBkg,.9), Quantile(scoreBkg,.99)) << std::endl;
       std::cout << Form("  con objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreTarget.size(), Quantile(scoreTarget,.1), Quantile(scoreTarget,.5), Quantile(scoreTarget,.9), Quantile(scoreTarget,.99)) << std::endl;
 
