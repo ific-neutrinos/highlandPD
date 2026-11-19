@@ -79,6 +79,7 @@ namespace {
           part->HitsNoCalo[pl][pl].UniqueID = part->UniqueID;
         }
         part->BeamCosmicScore = 0.25;
+        part->CosmicCriteria = AnaParticlePD::kCosmicNearBeamSlice | AnaParticlePD::kCosmicMuCandidate;
         AnaForcedTrackPD ft;
         ft.ID = part->UniqueID;
         ft.Chi2Muon = 2*part->UniqueID;
@@ -214,7 +215,7 @@ int check_test_minitree(const char* file){
         if(p->SliceID != kSlice || p->T0 != kT0 || !p->IsClearCosmic || (int)p->SpacePoints.size() != kNSP ||
            p->SpacePoints[kNSP-1].HitID != p->UniqueID*10+kNSP-1 ||
            p->HitsNoCalo[2].size() != 3 || p->HitsNoCalo[2][2].UniqueID != p->UniqueID ||
-           p->BeamCosmicScore != 0.25f || p->ForcedTrack.size() != 1 || p->ForcedTrack[0].Chi2Muon != 2*p->UniqueID ||
+           p->BeamCosmicScore != 0.25f || p->CosmicCriteria != 5 || p->ForcedTrack.size() != 1 || p->ForcedTrack[0].Chi2Muon != 2*p->UniqueID ||
            p->ForcedTrack[0].Hits[2].size() != 2 || p->ForcedTrack[0].Hits[2][1].dEdx != 2.5f){
           if(!nerr)std::cout << "Primer error: partícula " << p->UniqueID << " de la entrada " << i << std::endl;
           nerr++;

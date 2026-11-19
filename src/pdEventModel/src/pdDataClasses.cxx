@@ -265,6 +265,7 @@ AnaParticlePD::AnaParticlePD():AnaParticle(){
   T0                = kFloatUnassigned;
   SpacePoints.clear();
   BeamCosmicScore   = kFloatUnassigned;
+  CosmicCriteria    = kIntUnassigned;
   for(int i = 0; i < 3; i++){
     PandoraVertex[i] = kFloatUnassigned;
     ShowerEnergy[i]  = kFloatUnassigned;
@@ -327,6 +328,7 @@ AnaParticlePD::AnaParticlePD(const AnaParticlePD& part):AnaParticle(part){
   T0                = part.T0;
   SpacePoints       = part.SpacePoints;
   BeamCosmicScore   = part.BeamCosmicScore;
+  CosmicCriteria    = part.CosmicCriteria;
   for(int i = 0; i < 3; i++){
     PandoraVertex[i] = part.PandoraVertex[i];
     ShowerEnergy[i]  = part.ShowerEnergy[i];
@@ -367,6 +369,7 @@ void AnaParticlePD::Print() const{
   std::cout << "PandoraTrackScore:       " << PandoraTrackScore << std::endl;
   std::cout << "T0:                      " << T0 << std::endl;
   std::cout << "BeamCosmicScore:         " << BeamCosmicScore << std::endl;
+  std::cout << "CosmicCriteria:          " << CosmicCriteria << std::endl;
   std::cout << "PandoraVertex:           " << PandoraVertex[0] << " " << PandoraVertex[1] << " " << PandoraVertex[2] << std::endl;
   std::cout << "ShowerEnergy:            " << ShowerEnergy[0] << " " << ShowerEnergy[1] << " " << ShowerEnergy[2] << std::endl;
   std::cout << "Forced track:            " << ForcedTrack.size() << std::endl;

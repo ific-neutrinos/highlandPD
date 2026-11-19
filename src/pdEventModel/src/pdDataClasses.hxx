@@ -272,6 +272,13 @@ public:
   /// Pandora vertex of the PFParticle (no SCE correction)
   Float_t PandoraVertex[3];
 
+  /// PFParticles outside the beam slice: criteria of CreateHighlandMiniTree that its hierarchy
+  /// passes, as bits (kCosmicNearBeamSlice, kCosmicInBeamVolume, kCosmicMuCandidate), whatever
+  /// CosmicsMode is. 0 none; -999 beam slice or not computed (CosmicsMode < 2). Allows to know
+  /// in the full dump events what a normal event would have saved complete
+  Int_t CosmicCriteria;
+  enum CosmicCriteriaBit {kCosmicNearBeamSlice = 1, kCosmicInBeamVolume = 2, kCosmicMuCandidate = 4};
+
   // ---- Hits, trajectory and space points ----
 
   /// Hits with calorimetry (those of the tracks), for each plane. The analyses use these.
