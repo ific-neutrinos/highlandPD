@@ -1,5 +1,6 @@
 // Implementación de count_module_minitrees.C (se compila con ACLiC).
 #include "pdDataClasses.hxx"
+#include "minitree_loop.h"
 #include "TChain.h"
 #include "TFile.h"
 #include "TString.h"
@@ -92,8 +93,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   const std::string treeName = TreeName(TString(files[0]).Contains("*") ? std::string("") : files[0]);
   TChain chain(treeName.empty() ? "highlandana/MiniTree" : treeName.c_str());
   for(const std::string& f : files)chain.Add(f.c_str());
-  const Long64_t nEntries = chain.GetEntries();
-  if(nEntries <= 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
+  if(chain.LoadTree(0) < 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
 
   AnaSpillPD* spill = nullptr;
   chain.SetBranchAddress("Spill", &spill);
@@ -119,12 +119,17 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   std::map<std::string, long> mismatchPDGs;  // "PDG del haz -> PDG emparejado con el primario"
   Mean purMatched, effMatched, purMismatched, effMismatched;
 
-  const Long64_t nMax = (maxEntries > 0 && maxEntries < nEntries) ? maxEntries : nEntries;
-  for(Long64_t i = 0; i < nMax; i++){
+  // sin GetEntries (abre todos los ficheros antes de empezar) y con el avance por std::cerr, como LoopMiniTree
+  const auto t0 = std::chrono::steady_clock::now();
+  for(Long64_t i = 0; maxEntries <= 0 || i < maxEntries; i++){
+    if(chain.LoadTree(i) < 0)break;
     if(chain.GetEntry(i) <= 0 || !spill)continue;
     spill->CopyVectorsIntoArrays();
     spill->RedoLinks();
     n++;
+    if(n % 1000 == 0)
+      std::cerr << Form("[avance] %ld entradas, fichero %d de %zu, %.0f s", n, chain.GetTreeNumber()+1, files.size(),
+                        std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()) << std::endl;
 
     const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
     const bool isMC = info && info->IsMC;
@@ -234,7 +239,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   }
 
   // resumen
-  std::cout << std::endl << "Ficheros: " << files.size() << ", entradas leídas: " << n << " de " << nEntries
+  std::cout << std::endl << "Ficheros: " << files.size() << ", entradas leídas: " << n
             << " (" << nMC << " de MC)" << std::endl << std::endl;
 
   std::cout << "Eventos" << std::endl;

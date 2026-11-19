@@ -430,20 +430,13 @@ int cosmic_criteria_minitrees_impl(const char* input, Long64_t maxEntries, int w
   const std::string treeName = TreeName(TString(files[0]).Contains("*") ? std::string("") : files[0]);
   TChain chain(treeName.empty() ? "highlandana/MiniTree" : treeName.c_str());
   for(const std::string& f : files)chain.Add(f.c_str());
-  const Long64_t nEntries = chain.GetEntries();
-  if(nEntries <= 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
+  if(chain.LoadTree(0) < 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
 
   AnaSpillPD* spill = nullptr;
   chain.SetBranchAddress("Spill", &spill);
   CosmicCriteria cc;
   cc.which = which;
-  const Long64_t nMax = (maxEntries > 0 && maxEntries < nEntries) ? maxEntries : nEntries;
-  for(Long64_t i = 0; i < nMax; i++){
-    if(chain.GetEntry(i) <= 0 || !spill)continue;
-    spill->CopyVectorsIntoArrays();
-    spill->RedoLinks();
-    cc.Process(spill);
-  }
+  LoopMiniTree(chain, spill, maxEntries, files.size(), [&cc](AnaSpillPD* s){ cc.Process(s); });
   cc.Print();
   return 0;
 }

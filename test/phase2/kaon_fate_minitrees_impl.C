@@ -18,6 +18,7 @@
 //   4. "sin hits en el TPC" si no deja hits (NHitsTrue = 0 en los tres planos); si no,
 //      "no reconstruida": deja hits pero no está en ninguna partícula guardada.
 #include "pdDataClasses.hxx"
+#include "minitree_loop.h"
 #include "TChain.h"
 #include "TFile.h"
 #include "TString.h"
@@ -305,20 +306,13 @@ int kaon_fate_minitrees_impl(const char* input, int kaonPDG, Long64_t maxEntries
   const std::string treeName = TreeName(TString(files[0]).Contains("*") ? std::string("") : files[0]);
   TChain chain(treeName.empty() ? "highlandana/MiniTree" : treeName.c_str());
   for(const std::string& f : files)chain.Add(f.c_str());
-  const Long64_t nEntries = chain.GetEntries();
-  if(nEntries <= 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
+  if(chain.LoadTree(0) < 0){ std::cerr << "No hay entradas (¿árbol " << chain.GetName() << "?)" << std::endl; return -1; }
 
   AnaSpillPD* spill = nullptr;
   chain.SetBranchAddress("Spill", &spill);
   KaonFate kf;
   kf.kaonPDG = kaonPDG;
-  const Long64_t nMax = (maxEntries > 0 && maxEntries < nEntries) ? maxEntries : nEntries;
-  for(Long64_t i = 0; i < nMax; i++){
-    if(chain.GetEntry(i) <= 0 || !spill)continue;
-    spill->CopyVectorsIntoArrays();
-    spill->RedoLinks();
-    kf.Process(spill);
-  }
+  LoopMiniTree(chain, spill, maxEntries, files.size(), [&kf](AnaSpillPD* s){ kf.Process(s); });
   std::cout << std::endl << "Ficheros: " << files.size() << std::endl;
   kf.Print();
   return 0;
