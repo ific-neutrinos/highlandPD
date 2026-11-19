@@ -31,6 +31,7 @@ namespace {
     for(int i = 0; i < 3; i++){ p->PositionStart[i] = a[i]; p->PositionEnd[i] = b[i]; }
     p->Length = (b - a).Mag();
     p->NHits = 10;
+    p->Type = AnaParticlePD::kTrack;
     static_cast<AnaBunchPD*>(s->Bunches[0])->Particles.push_back(p);
     return p;
   }
@@ -71,6 +72,8 @@ int test_cosmic_criteria_impl(){
   Reco(s, 3, false, cos, TVector3(15,300,60), TVector3(15,-300,60), 6, 0.05);
   Reco(s, 4, false, pi2, TVector3(250,0,300), TVector3(250,0,320), 7, 0.9);
   for(int i = 0; i < 10; i++)Reco(s, 10+i, false, cos, TVector3(-300,300,30*i), TVector3(-300,-300,30*i), 10+i, 0.01*i);
+  // (g): un trozo corto en otro slice que acaba a 5 cm del extremo lejano del mu (x = 2+L)
+  Reco(s, 30, false, cos, TVector3(2+L,8,100), TVector3(2+L,5,100), 30);
 
   CosmicCriteria cc;
   cc.Process(s);
@@ -92,7 +95,7 @@ int test_cosmic_criteria_impl(){
     std::cout << "FALLA no está el criterio " << prefix << std::endl; nErr++;
     return std::make_pair(-1,-1);
   };
-  Check("slices de fuera", cc.events[0].slices.size(), 13);
+  Check("slices de fuera", cc.events[0].slices.size(), 14);
   Check("slices con objetivos y puntuación (el pi)", cc.scoreTarget.size(), 1);
   Check("slices con objetivos sin puntuación (el mu)", cc.nScoreNone[1], 1);
   Check("(a) R = 20: objetivos", get("(a) cilindro R = 20").first, 1);
@@ -104,6 +107,9 @@ int test_cosmic_criteria_impl(){
   Check("(e) R = 20: el slice del mu entero", get("(e) slice cercano R = 20").second, 2);
   Check("(d) p95 o (e): mu y pi", get("(d) p95 o (e)").first, 2);
   Check("(d) p95 o (e): 3 jerarquías", get("(d) p95 o (e)").second, 3);
+  Check("(f) R = 20: el mu", get("(f) candidato a mu R = 20").second, 1);
+  Check("(f) R = 20: objetivo (el mu)", get("(f) candidato a mu R = 20").first, 1);
+  Check("(g) R = 10: el mu y el trozo a 5 cm", get("(g) entorno del mu R = 10").second, 2);
 
   // Emulación de CosmicsMode 2 (puntos a < 50 cm de un extremo de la beam slice, z = 0 o 200):
   // un cósmico con un space point a 40 cm del final y otro con trayectoria a 60 cm, los dos

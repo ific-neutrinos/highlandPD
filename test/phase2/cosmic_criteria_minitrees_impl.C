@@ -18,6 +18,12 @@
 //       puntuación de los slices sin nada de la cadena del haz: el percentil 90 deja pasar el 10 %
 //       de esos slices
 //   (e) slice cercano: algún PFParticle del slice cumple (b)
+// Criterios para los análisis nuevos de K (producción con el mu; reacción con la K que se para):
+//   (f) candidato a mu: traza con momento por rango (muón) en [180, 300] MeV/c y un extremo a menos
+//       de R de la trayectoria de la beam slice
+//   (g) entorno del mu: (f) con R = 50 cm, más todo PFParticle que pase a menos de R de un extremo
+//       de un candidato a mu (de fuera, o de la beam slice con el momento en la ventana): ahí
+//       estaría la K que se desintegra
 // La trayectoria de una partícula de la beam slice son sus puntos de trayectoria (sin SCE) o, si
 // no tiene (showers), el segmento de su inicio a su fin (o a inicio + dirección x longitud).
 //
@@ -132,12 +138,18 @@ namespace ccrit {
   }
 
   const double kMuP = 236.;   // MeV/c, mu de K -> mu nu en reposo
+  const double kMuCandPLow = 180., kMuCandPHigh = 300.;   // MeV/c, ventana de los candidatos a mu de (f) y (g)
+  const double kMuCandR = 50.;                           // cm, cercanía a la beam slice de los candidatos de (g)
+  bool InMuWindow(double p){ return p > kMuCandPLow && p < kMuCandPHigh; }
 
   // Lo que se guarda de cada PFParticle de fuera, de cada jerarquía y de cada slice
   struct PartV {
     double dSeg = 1e9, dEnd = 1e9, p = -1;
     int nhits = 0;
     bool target = false, muK = false;   // objetivo de la cadena del haz; mu de K+
+    bool track = false;                 // Type traza
+    bool muCand = false;                // candidato a mu de (g): traza, ventana, extremo a < kMuCandR de la slice
+    double dMuCand = 1e9;               // distancia a un extremo del candidato a mu más cercano (otro)
   };
   struct Hier {
     std::vector<PartV> parts;
@@ -264,6 +276,21 @@ namespace ccrit {
       std::map<AnaParticlePD*, std::vector<AnaParticlePD*>> hierParts;
       for(AnaParticlePD* p : out)hierParts[top(p)].push_back(p);
 
+      // candidatos a mu, (g): extremos de las trazas con el momento en la ventana, de la beam slice o
+      // de fuera con un extremo cerca de ella
+      std::vector<std::pair<const AnaParticlePD*, Seg>> muCands;
+      for(const AnaParticlePD* p : slice){
+        TVector3 a, b;
+        if(p->Type == AnaParticlePD::kTrack && InMuWindow(MuRangeP(p->Length)) && Ends(p, a, b))muCands.push_back({p, {a, b}});
+      }
+      for(const AnaParticlePD* p : out){
+        TVector3 a, b;
+        if(p->Type != AnaParticlePD::kTrack || !InMuWindow(MuRangeP(p->Length)) || !Ends(p, a, b))continue;
+        double d = 1e9;
+        for(const Seg& g : segs)d = std::min(d, std::min(PointSeg(a, g), PointSeg(b, g)));
+        if(d < kMuCandR)muCands.push_back({p, {a, b}});
+      }
+
       std::map<long, Slice> slices;
       std::map<long, double> targetHits;
       for(auto& hp : hierParts){
@@ -282,6 +309,15 @@ namespace ccrit {
           }
           v.p = MuRangeP(p->Length);
           v.nhits = p->NHits;
+          v.track = p->Type == AnaParticlePD::kTrack;
+          TVector3 pa, pb;
+          const bool hasEnds = Ends(p, pa, pb);
+          for(const auto& mc : muCands){
+            if(mc.first == p){ v.muCand = true; continue; }
+            if(!hasEnds)continue;
+            const Seg ps{pa, pb};
+            v.dMuCand = std::min(v.dMuCand, std::min(PointSeg(mc.second.a, ps), PointSeg(mc.second.b, ps)));
+          }
           auto it = targets.find(p);
           if(it != targets.end()){ v.target = true; v.muK = it->second.second; s.hasTarget = true; targetHits[key] += p->NHits; }
           if(IsComplete(p))h.complete = true;
@@ -331,6 +367,12 @@ namespace ccrit {
       const double thr95 = Quantile(scoreBkg, 0.95);
       c.push_back({"(d) p95 o (e) R = 50 cm", [thr95](const Slice& s, const Hier&){
         return s.score > thr95 || AnyPart(s, [](const PartV& p){ return p.dEnd < 50; }); }});
+      for(double r : {20., 50.})
+        c.push_back({Form("(f) candidato a mu R = %g cm", r), [r](const Slice&, const Hier& h){
+          return AnyPart(h, [r](const PartV& p){ return p.track && InMuWindow(p.p) && p.dEnd < r; }); }});
+      for(double r : {10., 20., 30.})
+        c.push_back({Form("(g) entorno del mu R = %g cm", r), [r](const Slice&, const Hier& h){
+          return AnyPart(h, [r](const PartV& p){ return p.muCand || p.dMuCand < r; }); }});
       return c;
     }
 
