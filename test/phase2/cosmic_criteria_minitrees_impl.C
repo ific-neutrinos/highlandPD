@@ -28,8 +28,17 @@
 // jerarquía en resumen.
 // Coste: jerarquías y PFParticles que hoy van en resumen y pasarían a completos, por evento.
 //
+// Eventos con volcado completo (EventInfo.FullDump, en MC los que tienen un K+ secundario): ahí
+// todas las jerarquías están completas, así que "hoy en resumen" se emula con el criterio del
+// módulo en CosmicsMode 2 (algún punto de la jerarquía a menos de CosmicsRadius de un extremo de
+// la beam slice). Los puntos son los space points y, en las trazas (sin space points guardados),
+// los puntos de trayectoria sin SCE: es lo que más se parece a los space points del módulo. En los
+// eventos normales se compara la emulación con lo que hizo el módulo, para validarla. Los dos
+// grupos se imprimen por separado: los eventos con volcado están sesgados (tienen un K+), pero
+// en ellos todo está emparejado con hits.
+//
 // Guarda en memoria un resumen de todos los PFParticles de fuera (~40 B cada uno): para muestras
-// muy grandes, usar maxEntries.
+// muy grandes, usar maxEntries o "which" (1 solo eventos normales, 2 solo con volcado completo).
 #include "kaon_fate_minitrees_impl.C"
 #include "pdAnalysisUtils.hxx"
 #include "Parameters.hxx"
@@ -130,9 +139,40 @@ namespace ccrit {
     int nhits = 0;
     bool target = false, muK = false;   // objetivo de la cadena del haz; mu de K+
   };
-  struct Hier { std::vector<PartV> parts; bool complete = false; };
+  struct Hier {
+    std::vector<PartV> parts;
+    bool complete = false;   // guardada completa en el minitree
+    bool emulated = false;   // lo estaría con CosmicsMode 2 (criterio del módulo, emulado)
+  };
   struct Slice { double score = -999; bool hasTarget = false; std::vector<Hier> hiers; };
-  struct Event { std::vector<Slice> slices; };
+  struct Event { std::vector<Slice> slices; bool fullDump = false; };
+
+  // Extremos de la beam slice, como GetBeamSliceEnds del módulo
+  std::vector<TVector3> SliceEnds(const std::vector<AnaParticlePD*>& slice){
+    std::vector<TVector3> ends;
+    for(const AnaParticlePD* p : slice){
+      if(p->PositionStart[0] > -900)ends.emplace_back(p->PositionStart[0], p->PositionStart[1], p->PositionStart[2]);
+      if(p->PositionEnd[0]   > -900)ends.emplace_back(p->PositionEnd[0],   p->PositionEnd[1],   p->PositionEnd[2]);
+    }
+    return ends;
+  }
+
+  // Criterio de CosmicsMode 2 del módulo (IsNearBeamSlice) con los puntos guardados de un PFParticle
+  bool NearEnds(const AnaParticlePD* p, const std::vector<TVector3>& ends, double r){
+    const double r2 = r*r;
+    auto near = [&](double x, double y, double z){
+      if(x < -900 || y < -900 || z < -900)return false;
+      for(const TVector3& e : ends){
+        const double dx = x-e.X(), dy = y-e.Y(), dz = z-e.Z();
+        if(dx*dx + dy*dy + dz*dz < r2)return true;
+      }
+      return false;
+    };
+    for(const AnaSpacePointPD& sp : p->SpacePoints)if(near(sp.Position[0], sp.Position[1], sp.Position[2]))return true;
+    for(const AnaTrajectoryPointPD& tp : p->TrjPoints)if(near(tp.Position_NoSCE.X(), tp.Position_NoSCE.Y(), tp.Position_NoSCE.Z()))return true;
+    return false;
+  }
+  const double kCosmicsRadius = 50.;   // cm, CosmicsRadius del fcl
 
   // Criterio: decide para una jerarquía dentro de su slice
   struct Crit { std::string name; std::function<bool(const Slice&, const Hier&)> pass; };
@@ -147,7 +187,9 @@ namespace ccrit {
   }
 
   struct CosmicCriteria {
+    int which = 0;                       // 0 todos los eventos, 1 solo normales, 2 solo con volcado completo
     std::vector<Event> events;
+    long emulAgree[2][2] = {{0}};        // eventos normales: [completa en el minitree][emulada]
     std::vector<double> muP, muPSlice;   // momento por rango de los mu de K+ emparejados (todos; beam slice)
     std::vector<double> scoreBkg, scoreTarget;
     std::vector<int> nTargetSlices;      // por evento: slices de fuera con algún objetivo
@@ -171,7 +213,9 @@ namespace ccrit {
         (p->BeamOrigin ? slice : out).push_back(p);
       }
       if(slice.empty())return;
+      if((which == 1 && info->FullDump) || (which == 2 && !info->FullDump))return;
       const std::vector<Seg> segs = SliceSegments(slice);
+      const std::vector<TVector3> ends = SliceEnds(slice);
 
       // objetivos: partículas de la cadena del haz sin emparejar en la beam slice -> PFParticle de fuera con más hits
       std::map<const AnaParticlePD*, std::pair<bool,bool>> targets;   // (objetivo, mu de K)
@@ -240,13 +284,16 @@ namespace ccrit {
           auto it = targets.find(p);
           if(it != targets.end()){ v.target = true; v.muK = it->second.second; s.hasTarget = true; targetHits[key] += p->NHits; }
           if(IsComplete(p))h.complete = true;
+          if(!h.emulated && NearEnds(p, ends, kCosmicsRadius))h.emulated = true;
           if(p->BeamCosmicScore > -900)s.score = std::max(s.score, (double)p->BeamCosmicScore);
           h.parts.push_back(v);
         }
+        if(!info->FullDump)emulAgree[h.complete][h.emulated]++;
         s.hiers.push_back(h);
       }
 
       Event ev;
+      ev.fullDump = info->FullDump;
       for(auto& ks : slices){
         (ks.second.hasTarget ? scoreTarget : scoreBkg).push_back(ks.second.score);
         ev.slices.push_back(ks.second);
@@ -286,6 +333,31 @@ namespace ccrit {
     }
 
     void Print() const {
+      long nFD = 0;
+      for(const Event& e : events)if(e.fullDump)nFD++;
+      // en resumen no hay puntos guardados: la emulación solo puede comprobarse en las completas
+      const long nC = emulAgree[1][0] + emulAgree[1][1];
+      if(nC){
+        std::cout << std::endl << "Validación de la emulación de CosmicsMode 2 (eventos normales): de las " << nC
+                  << " jerarquías completas en el minitree, emuladas completas " << Frac(emulAgree[1][1], nC)
+                  << " (las demás: CosmicsMode 3 o puntos no guardados; en resumen no hay puntos con que comprobar)" << std::endl;
+      }
+      if(long(events.size()) > nFD)PrintGroup("EVENTOS NORMALES (completas: las del minitree)", false);
+      if(nFD)PrintGroup("EVENTOS CON VOLCADO COMPLETO (completas: emuladas con CosmicsMode 2; sesgados: tienen un K+)", true);
+    }
+
+    void PrintGroup(const std::string& title, bool fullDump) const {
+      std::vector<Event> sel;
+      for(const Event& e : events)if(e.fullDump == fullDump){
+        Event c = e;
+        if(fullDump)for(Slice& s : c.slices)for(Hier& h : s.hiers)h.complete = h.emulated;
+        sel.push_back(c);
+      }
+      std::cout << std::endl << "===== " << title << " =====" << std::endl;
+      PrintEvents(sel);
+    }
+
+    void PrintEvents(const std::vector<Event>& events) const {
       const double nEv = events.size();
       long complete = 0, summary = 0, summaryParts = 0, nSlices = 0;
       long nT = 0, nTNow = 0, nMu = 0, nMuNow = 0;
@@ -348,7 +420,7 @@ namespace ccrit {
   };
 }
 
-int cosmic_criteria_minitrees_impl(const char* input, Long64_t maxEntries){
+int cosmic_criteria_minitrees_impl(const char* input, Long64_t maxEntries, int which = 0){
   using namespace ccrit;
   const std::vector<std::string> files = InputFiles(input);
   if(files.empty()){ std::cerr << "No hay ficheros en " << input << std::endl; return -1; }
@@ -361,6 +433,7 @@ int cosmic_criteria_minitrees_impl(const char* input, Long64_t maxEntries){
   AnaSpillPD* spill = nullptr;
   chain.SetBranchAddress("Spill", &spill);
   CosmicCriteria cc;
+  cc.which = which;
   const Long64_t nMax = (maxEntries > 0 && maxEntries < nEntries) ? maxEntries : nEntries;
   for(Long64_t i = 0; i < nMax; i++){
     if(chain.GetEntry(i) <= 0 || !spill)continue;

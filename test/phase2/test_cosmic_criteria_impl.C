@@ -104,6 +104,36 @@ int test_cosmic_criteria_impl(){
   Check("(d) p95 o (e): mu y pi", get("(d) p95 o (e)").first, 2);
   Check("(d) p95 o (e): 3 jerarquías", get("(d) p95 o (e)").second, 3);
 
+  // Emulación de CosmicsMode 2 (puntos a < 50 cm de un extremo de la beam slice, z = 0 o 200):
+  // un cósmico con un space point a 40 cm del final y otro con trayectoria a 60 cm, los dos
+  // completos en el minitree. En un evento normal el segundo sale como desacuerdo (completo pero
+  // emulado en resumen); con FullDump la emulación deja completo solo el primero.
+  for(bool fd : {false, true}){
+    AnaSpillPD* s2 = new AnaSpillPD();
+    AnaEventInfoPD* i2 = new AnaEventInfoPD(); i2->IsMC = true; i2->FullDump = fd; s2->EventInfo = i2;
+    AnaBeamPD* b2 = new AnaBeamPD(); b2->BeamParticle = new AnaParticlePD(); s2->Beam = b2;
+    s2->Bunches.push_back(new AnaBunchPD());
+    AnaTrueParticlePD* p2 = True(s2, 1, 0, 211);
+    b2->BeamParticle->TrueObject = p2;
+    Reco(s2, 0, true, p2, TVector3(0,0,0), TVector3(0,0,200), 1);
+    AnaParticlePD* c1 = Reco(s2, 1, false, nullptr, TVector3(40,300,200), TVector3(40,-300,200), 5);
+    AnaParticlePD* c2 = Reco(s2, 2, false, nullptr, TVector3(60,300,200), TVector3(60,-300,200), 6);
+    AnaSpacePointPD sp; sp.Position[0] = 40; sp.Position[1] = 0; sp.Position[2] = 200;
+    c1->SpacePoints.push_back(sp);
+    AnaTrajectoryPointPD tp; tp.Position_NoSCE.SetXYZ(60,0,200);
+    c2->TrjPoints.push_back(tp);
+    CosmicCriteria c;
+    c.Process(s2);
+    int nEmul = 0, nComplete = 0;
+    for(const Slice& sl : c.events[0].slices)for(const Hier& h : sl.hiers){ nEmul += h.emulated; nComplete += h.complete; }
+    Check("emulación: completas en el minitree", nComplete, 2);
+    Check("emulación: completas emuladas", nEmul, 1);
+    Check("emulación: marca de volcado", c.events[0].fullDump, fd);
+    Check("validación: completas y emuladas", c.emulAgree[1][1], fd ? 0 : 1);
+    Check("validación: completas emuladas en resumen", c.emulAgree[1][0], fd ? 0 : 1);
+    if(fd)c.Print();
+  }
+
   std::cout << (nErr ? "TEST CON FALLOS" : "TEST OK") << std::endl;
   return nErr;
 }

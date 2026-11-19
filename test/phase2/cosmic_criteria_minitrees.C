@@ -8,12 +8,15 @@
 // La entrada es un .txt con un fichero por línea o un fichero o patrón de ROOT.
 // Uso, con el entorno de highland y highlandPD cargado ($HIGHLANDPDPATH, $HIGHLANDPATH):
 //   root -l -b -q 'test/phase2/cosmic_criteria_minitrees.C("dir/minitree_*.root")'
+// Los eventos con volcado completo (FullDump) se imprimen aparte, con "hoy en resumen" emulado con
+// CosmicsMode 2. which: 0 todos, 1 solo eventos normales, 2 solo con volcado (para ahorrar memoria
+// en muestras grandes).
 
-int cosmic_criteria_minitrees(const char* input, Long64_t maxEntries = -1){
+int cosmic_criteria_minitrees(const char* input, Long64_t maxEntries = -1, int which = 0){
   gSystem->AddIncludePath(Form("-I%s/include", gSystem->Getenv("HIGHLANDPDPATH")));
   gSystem->AddIncludePath(Form("-I%s/include", gSystem->Getenv("HIGHLANDPATH")));
   if(gSystem->Load("libhighlandPD") < 0){ std::cerr << "No se puede cargar libhighlandPD" << std::endl; return -1; }
   TString dir = gSystem->DirName(gInterpreter->GetCurrentMacroName());
   gROOT->ProcessLine(Form(".L %s/cosmic_criteria_minitrees_impl.C+", dir.Data()));
-  return gROOT->ProcessLine(Form("cosmic_criteria_minitrees_impl(\"%s\",%lld)", input, maxEntries));
+  return gROOT->ProcessLine(Form("cosmic_criteria_minitrees_impl(\"%s\",%lld,%d)", input, maxEntries, which));
 }
