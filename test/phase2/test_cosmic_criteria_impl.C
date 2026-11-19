@@ -110,6 +110,9 @@ int test_cosmic_criteria_impl(){
   Check("(f) R = 20: el mu", get("(f) candidato a mu R = 20").second, 1);
   Check("(f) R = 20: objetivo (el mu)", get("(f) candidato a mu R = 20").first, 1);
   Check("(g) R = 10: el mu y el trozo a 5 cm", get("(g) entorno del mu R = 10").second, 2);
+  // el mu (z = 100, x 2..2+L, y = 0) está en la cara inferior del TPC (y = 0): (h) sí, (h') no
+  Check("(h): el mu", get("(h) traza con p de mu").second, 1);
+  Check("(h'): el mu no se para (y = 0)", get("(h') (h) y se para").second, 0);
 
   // Emulación de CosmicsMode 2 (puntos a < 50 cm de un extremo de la beam slice, z = 0 o 200):
   // un cósmico con un space point a 40 cm del final y otro con trayectoria a 60 cm, los dos

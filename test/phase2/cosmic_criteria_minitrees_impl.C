@@ -24,6 +24,15 @@
 //   (g) entorno del mu: (f) con R = 50 cm, más todo PFParticle que pase a menos de R de un extremo
 //       de un candidato a mu (de fuera, o de la beam slice con el momento en la ventana): ahí
 //       estaría la K que se desintegra
+// Anclas que no dependen de la beam slice (los mu de K+ de fuera suelen estar lejos de ella):
+//   (h) traza con p de rango en [180, 300] MeV/c en cualquier sitio; (h') además se para: algún
+//       extremo a más de 10 cm de las caras del TPC
+//   (i) (h') con algún extremo a menos de R del eje nominal del haz (el volumen de CosmicsMode 3)
+//   (k) (h') en un slice "del haz": algún PFParticle del slice a < 50 cm de la beam slice o
+//       puntuación de Pandora > p99
+// Además, para los mu de K+ que hoy irían en resumen, dónde están: distancia a la beam slice y al
+// eje del haz, si son traza, si su p está en la ventana, si se paran, si su slice tiene más trozos
+// de la cadena del haz.
 // La trayectoria de una partícula de la beam slice son sus puntos de trayectoria (sin SCE) o, si
 // no tiene (showers), el segmento de su inicio a su fin (o a inicio + dirección x longitud).
 //
@@ -142,6 +151,21 @@ namespace ccrit {
   const double kMuCandR = 50.;                           // cm, cercanía a la beam slice de los candidatos de (g)
   bool InMuWindow(double p){ return p > kMuCandPLow && p < kMuCandPHigh; }
 
+  // Volumen activo del TPC (cm, sin SCE) y eje nominal del haz en MC (CreateHighlandMiniTree.fcl)
+  const double kTPCMin[3] = {-360., 0., 0.}, kTPCMax[3] = {360., 607.5, 695.};
+  const double kStopMargin = 10.;
+  bool Inside(const TVector3& x){
+    for(int i = 0; i < 3; i++)if(x[i] < kTPCMin[i] + kStopMargin || x[i] > kTPCMax[i] - kStopMargin)return false;
+    return true;
+  }
+  const TVector3 kBeamStart(-30.1, 423.0, 0.0);
+  const TVector3 kBeamDir = TVector3(-0.18, -0.20, 0.96).Unit();
+  const double kBeamLength = 700.;
+  double DistToBeamAxis(const TVector3& x){
+    const Seg axis{kBeamStart, kBeamStart + kBeamLength*kBeamDir};
+    return PointSeg(x, axis);
+  }
+
   // Lo que se guarda de cada PFParticle de fuera, de cada jerarquía y de cada slice
   struct PartV {
     double dSeg = 1e9, dEnd = 1e9, p = -1;
@@ -150,13 +174,16 @@ namespace ccrit {
     bool track = false;                 // Type traza
     bool muCand = false;                // candidato a mu de (g): traza, ventana, extremo a < kMuCandR de la slice
     double dMuCand = 1e9;               // distancia a un extremo del candidato a mu más cercano (otro)
+    double dAxis = 1e9;                 // extremo más cercano al eje nominal del haz
+    bool stops = false;                 // algún extremo dentro del TPC (a > kStopMargin de las caras)
+    bool clearCosmic = false;
   };
   struct Hier {
     std::vector<PartV> parts;
     bool complete = false;   // guardada completa en el minitree
     bool emulated = false;   // lo estaría con CosmicsMode 2 (criterio del módulo, emulado)
   };
-  struct Slice { double score = -999; bool hasTarget = false; std::vector<Hier> hiers; };
+  struct Slice { double score = -999; bool hasTarget = false; int nTargets = 0; std::vector<Hier> hiers; };
   struct Event { std::vector<Slice> slices; bool fullDump = false; };
 
   // Extremos de la beam slice, como GetBeamSliceEnds del módulo
@@ -319,7 +346,12 @@ namespace ccrit {
             v.dMuCand = std::min(v.dMuCand, std::min(PointSeg(mc.second.a, ps), PointSeg(mc.second.b, ps)));
           }
           auto it = targets.find(p);
-          if(it != targets.end()){ v.target = true; v.muK = it->second.second; s.hasTarget = true; targetHits[key] += p->NHits; }
+          if(it != targets.end()){ v.target = true; v.muK = it->second.second; s.hasTarget = true; s.nTargets++; targetHits[key] += p->NHits; }
+          if(hasEnds){
+            v.dAxis = std::min(DistToBeamAxis(pa), DistToBeamAxis(pb));
+            v.stops = Inside(pa) || Inside(pb);
+          }
+          v.clearCosmic = p->IsClearCosmic;
           if(IsComplete(p))h.complete = true;
           if(!h.emulated && NearEnds(p, ends, kCosmicsRadius))h.emulated = true;
           if(p->BeamCosmicScore > -900)s.score = std::max(s.score, (double)p->BeamCosmicScore);
@@ -373,6 +405,17 @@ namespace ccrit {
       for(double r : {10., 20., 30.})
         c.push_back({Form("(g) entorno del mu R = %g cm", r), [r](const Slice&, const Hier& h){
           return AnyPart(h, [r](const PartV& p){ return p.muCand || p.dMuCand < r; }); }});
+      auto muLike = [](const PartV& p){ return p.track && InMuWindow(p.p); };
+      c.push_back({"(h) traza con p de mu, donde sea", [muLike](const Slice&, const Hier& h){ return AnyPart(h, muLike); }});
+      c.push_back({"(h') (h) y se para", [muLike](const Slice&, const Hier& h){
+        return AnyPart(h, [muLike](const PartV& p){ return muLike(p) && p.stops; }); }});
+      for(double r : {50., 100., 150.})
+        c.push_back({Form("(i) (h') a < %g cm del eje", r), [muLike, r](const Slice&, const Hier& h){
+          return AnyPart(h, [muLike, r](const PartV& p){ return muLike(p) && p.stops && p.dAxis < r; }); }});
+      const double thr99 = Quantile(scoreBkg, 0.99);
+      c.push_back({"(k) (h') en un slice del haz", [muLike, thr99](const Slice& s, const Hier& h){
+        const bool beamSlice = s.score > thr99 || AnyPart(s, [](const PartV& p){ return p.dEnd < 50; });
+        return beamSlice && AnyPart(h, [muLike](const PartV& p){ return muLike(p) && p.stops; }); }});
       return c;
     }
 
@@ -399,6 +442,41 @@ namespace ccrit {
       }
       std::cout << std::endl << "===== " << title << " =====" << std::endl;
       PrintEvents(sel);
+    }
+
+    // Dónde están los mu de K+ que hoy irían en resumen
+    void PrintMuSummary(const std::vector<Event>& events) const {
+      std::vector<double> dEnd, dAxis, pRange, nOther;
+      long n = 0, track = 0, window = 0, stops = 0, clear = 0, otherTargets = 0, scored = 0, all3 = 0;
+      for(const Event& e : events)for(const Slice& s : e.slices)for(const Hier& h : s.hiers){
+        if(h.complete)continue;
+        for(const PartV& p : h.parts){
+          if(!p.muK)continue;
+          n++;
+          dEnd.push_back(p.dEnd); dAxis.push_back(p.dAxis); pRange.push_back(p.p);
+          nOther.push_back(s.nTargets - 1);
+          if(p.track)track++;
+          if(InMuWindow(p.p))window++;
+          if(p.stops)stops++;
+          if(p.track && InMuWindow(p.p) && p.stops)all3++;
+          if(p.clearCosmic)clear++;
+          if(s.nTargets > 1)otherTargets++;
+          if(s.score > -900)scored++;
+        }
+      }
+      if(!n)return;
+      auto q = [](const std::vector<double>& v){
+        return Form("%.0f / %.0f / %.0f / %.0f / %.0f", Quantile(v,.1), Quantile(v,.25), Quantile(v,.5), Quantile(v,.75), Quantile(v,.9)); };
+      std::cout << "Mu de K+ fuera de la beam slice que hoy irían en resumen: " << n << std::endl;
+      std::cout << "  cuantiles 10/25/50/75/90 %:" << std::endl;
+      std::cout << "    distancia de su extremo más cercano a la beam slice (cm): " << q(dEnd) << std::endl;
+      std::cout << "    distancia de su extremo más cercano al eje del haz (cm):  " << q(dAxis) << std::endl;
+      std::cout << "    p de rango (muón, MeV/c):                                 " << q(pRange) << std::endl;
+      std::cout << "    otros objetivos (cadena del haz) en su slice:             " << q(nOther) << std::endl;
+      std::cout << "  traza: " << Frac(track, n) << "; p en [" << kMuCandPLow << ", " << kMuCandPHigh << "]: " << Frac(window, n)
+                << "; se para: " << Frac(stops, n) << "; las tres: " << Frac(all3, n) << std::endl;
+      std::cout << "  IsClearCosmic: " << Frac(clear, n) << "; su slice tiene más trozos de la cadena del haz: " << Frac(otherTargets, n)
+                << "; su slice tiene puntuación de Pandora: " << Frac(scored, n) << std::endl << std::endl;
     }
 
     void PrintEvents(const std::vector<Event>& events) const {
@@ -461,6 +539,7 @@ namespace ccrit {
                   << Form("%12.2f %12.2f", xH/nEv, xP/nEv) << std::endl;
       }
       std::cout << "  (mu de K+: con el criterio, cuántos quedan completos de todos, y cuántos se recuperan de los que hoy van en resumen)" << std::endl << std::endl;
+      PrintMuSummary(events);
     }
   };
 }
