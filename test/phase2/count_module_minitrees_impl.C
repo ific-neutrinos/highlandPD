@@ -99,7 +99,12 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   chain.SetBranchAddress("Spill", &spill);
 
   // contadores
-  long n = 0, nMC = 0, badDQ = 0, noBunch = 0, withBunch = 0, noSlice = 0, withSlice = 0, emptyEvent = 0;
+  long n = 0, nMC = 0, badDQ = 0, noBunch = 0, withBunch = 0, noSlice = 0, withSlice = 0, missingReco = 0;
+  // empty event finder (EventInfo.NBeamRegionSpacePoints, -999 en minitrees anteriores)
+  long efFilled = 0, efNoReco3d = 0, efEmpty = 0;
+  long efBins[4] = {0};                      // space points en la caja: 0, 1-9, 10-49, >= 50
+  long efVsSlice[2][2] = {{0}};              // eventos con bunch: [EmptyEvent][con beam slice]
+  long efVsBeamEnd[2][2] = {{0}};            // MC con partícula true del haz: [EmptyEvent][acaba antes del TPC]
   long beamWithMom = 0, beamWithTrack = 0;
   long badDQWithBunch = 0, flagNoSliceButParticles = 0, flagSliceButEmpty = 0;   // incoherencias
   std::map<int, long> beamPDGs;              // datos: hipótesis de la instrumentación del haz (trigger bueno)
@@ -124,7 +129,15 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
     const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
     const bool isMC = info && info->IsMC;
     if(isMC)nMC++;
-    if(info && info->EmptyEvent)emptyEvent++;
+    if(info && info->MissingReco)missingReco++;
+    const bool efOK = info && info->NBeamRegionSpacePoints >= 0;
+    if(info && info->NBeamRegionSpacePoints == -1)efNoReco3d++;
+    if(efOK){
+      efFilled++;
+      if(info->EmptyEvent)efEmpty++;
+      const int nsp = info->NBeamRegionSpacePoints;
+      efBins[nsp == 0 ? 0 : nsp < 10 ? 1 : nsp < 50 ? 2 : 3]++;
+    }
     if(spill->DataQuality && !spill->DataQuality->GoodDaq)badDQ++;
 
     // instrumentación del haz (todas las entradas tienen Beam)
@@ -152,6 +165,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
       else{
         byPDG[beamTrue->PDG].all++;
         if(beamTrue->PositionEnd[2] < 0)beamEndsBeforeTPC++;   // la cara frontal del TPC está en z = 0
+        if(efOK)efVsBeamEnd[info->EmptyEvent][beamTrue->PositionEnd[2] < 0]++;
       }
     }
 
@@ -174,6 +188,7 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
     const bool hasSlice = !slice.empty();
     if(info && info->HasPandora && !hasSlice)flagSliceButEmpty++;
     if(info && !info->HasPandora && hasSlice)flagNoSliceButParticles++;
+    if(efOK)efVsSlice[info->EmptyEvent][hasSlice]++;
     if(!hasSlice){
       noSlice++;
       if(isMC && beamTrue){
@@ -227,13 +242,37 @@ int count_module_minitrees_impl(const char* input, Long64_t maxEntries){
   Line("sin bunch", Frac(noBunch, n));
   Line("con bunch, sin beam slice", Frac(noSlice, n));
   Line("con bunch y beam slice", Frac(withSlice, n));
-  Line("sin PFParticles (EmptyEvent)", Frac(emptyEvent, n));
+  Line("sin PFParticles o productos de Pandora (MissingReco)", Frac(missingReco, n));
   if(badDQWithBunch || flagSliceButEmpty || flagNoSliceButParticles){
     std::cout << "  INCOHERENCIAS (no debería haber ninguna con minitrees del módulo):" << std::endl;
     Line("    DQ malo con bunch", Frac(badDQWithBunch, n));
     Line("    HasPandora = true sin partículas de la beam slice", Frac(flagSliceButEmpty, n));
     Line("    HasPandora = false con partículas de la beam slice", Frac(flagNoSliceButParticles, n));
   }
+  std::cout << std::endl << "Empty event finder (space points de reco3d en la entrada del haz; EmptyEvent: < 10)" << std::endl;
+  if(!efFilled)Line("sin rellenar (minitrees anteriores al 19-nov-2026 o sin reco3d)", Frac(n - efFilled, n));
+  else{
+    Line("rellenado", Frac(efFilled, n) + (efNoReco3d ? "   sin reco3d: " + Frac(efNoReco3d, n) : std::string("")));
+    Line("vacíos (EmptyEvent)", Frac(efEmpty, efFilled));
+    Line("space points en la caja: 0 / 1-9 / 10-49 / >= 50", Form("%ld / %ld / %ld / %ld", efBins[0], efBins[1], efBins[2], efBins[3]));
+    const long withB = efVsSlice[0][0] + efVsSlice[0][1] + efVsSlice[1][0] + efVsSlice[1][1];
+    if(withB){
+      std::cout << "  Eventos con bunch (" << withB << "): EmptyEvent frente a beam slice" << std::endl;
+      Line("    vacío, sin beam slice", Frac(efVsSlice[1][0], withB));
+      Line("    vacío, con beam slice", Frac(efVsSlice[1][1], withB));
+      Line("    no vacío, sin beam slice (¿fallo de Pandora?)", Frac(efVsSlice[0][0], withB));
+      Line("    no vacío, con beam slice", Frac(efVsSlice[0][1], withB));
+    }
+    const long withT = efVsBeamEnd[0][0] + efVsBeamEnd[0][1] + efVsBeamEnd[1][0] + efVsBeamEnd[1][1];
+    if(withT){
+      std::cout << "  MC (" << withT << "): EmptyEvent frente a la partícula true del haz" << std::endl;
+      Line("    vacío, acaba antes del TPC", Frac(efVsBeamEnd[1][1], withT));
+      Line("    vacío, entra en el TPC", Frac(efVsBeamEnd[1][0], withT));
+      Line("    no vacío, acaba antes del TPC", Frac(efVsBeamEnd[0][1], withT));
+      Line("    no vacío, entra en el TPC", Frac(efVsBeamEnd[0][0], withT));
+    }
+  }
+
   std::cout << std::endl << "Instrumentación del haz" << std::endl;
   Line("con momento reconstruido", Frac(beamWithMom, n) + "   <p> = " + beamMom.Str("%.3f") + " GeV");
   Line("con traza del haz", Frac(beamWithTrack, n));

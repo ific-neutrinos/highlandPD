@@ -566,8 +566,18 @@ public:
   /// Nominal beam momentum of the run (GeV)
   Float_t NominalBeamMom;
 
-  /// The event has no PFParticles (it should probably go in DataQuality)
+  /// No beam activity at the TPC entrance, as protoana::ProtoDUNEEmptyEventFinder (the
+  /// reco_reconstructable_beam_event of PDSPAnalyzer, negated): fewer than NHitsThreshold space
+  /// points of SpacePointSolver (reco3d, independent of Pandora) in a box at the beam entrance.
+  /// False when there are no reco3d space points (NBeamRegionSpacePoints = -1)
   Bool_t EmptyEvent;
+
+  /// Number of reco3d space points in the box of the empty event finder (-1 without reco3d,
+  /// -999 not filled: minitrees from before 2026-11-19 or from the PDSPAnalyzer converter)
+  Int_t NBeamRegionSpacePoints;
+
+  /// The Pandora products are missing or there are no PFParticles (CreateHighlandMiniTree)
+  Bool_t MissingReco;
 
   /// Pandora found a beam slice (it should probably go in DataQuality)
   Bool_t HasPandora;

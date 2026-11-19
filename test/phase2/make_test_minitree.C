@@ -135,7 +135,10 @@ int make_test_minitree(const char* in, const char* out, int n = 200){
     AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(spill->EventInfo);
     info->Event = -info->Event;
     info->HasPandora = false;
-    info->FullDump = true;   // miembro de AnaEventInfoPD: se comprueba la ida y vuelta
+    info->FullDump = true;   // miembros de AnaEventInfoPD: se comprueba la ida y vuelta
+    info->EmptyEvent = true;
+    info->NBeamRegionSpacePoints = 7;
+    info->MissingReco = true;
     if((i/10) % 2 == 0){
       AnaBunchPD* bunch = new AnaBunchPD();
       bunch->Bunch = 1;
@@ -187,8 +190,9 @@ int check_test_minitree(const char* file){
     }
     // FullDump solo en los eventos marcados
     const AnaEventInfoPD* einfo = static_cast<AnaEventInfoPD*>(spill->EventInfo);
-    if(einfo->FullDump != (einfo->Event < 0)){
-      if(!nerr)std::cout << "Primer error: FullDump de la entrada " << i << std::endl;
+    if(einfo->FullDump != (einfo->Event < 0) || einfo->EmptyEvent != (einfo->Event < 0) || einfo->MissingReco != (einfo->Event < 0) ||
+       (einfo->Event < 0 && einfo->NBeamRegionSpacePoints != 7)){
+      if(!nerr)std::cout << "Primer error: FullDump, EmptyEvent, NBeamRegionSpacePoints o MissingReco de la entrada " << i << std::endl;
       nerr++;
     }
     // los eventos marcados llevan AnaDataQualityPD
