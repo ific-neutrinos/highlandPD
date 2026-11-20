@@ -96,9 +96,15 @@ namespace beamaxis {
   };
 
   // Medidas para un momento nominal y datos o MC
+  // Distancia al eje del fcl del final de los primarios = haz (MC) o con el corte, por tramos de z
+  // del final: si la reco (sin corregir el SCE) se separa del eje a lo largo de la traza
+  const double kZBins[] = {0, 50, 100, 200, 300, 450, 700};
+  const int kNZ = 6;
+
   struct Group {
     long nEvents = 0;
     Axis instr, primBeam, primCut, truth;
+    std::vector<double> endDist[kNZ];
   };
 
   struct BeamAxis {
@@ -135,8 +141,15 @@ namespace beamaxis {
         if(ds.Mag() > 0){
           const AnaTrueParticleB* bt = (isMC && bp) ? static_cast<AnaTrueParticleB*>(bp->TrueObject) : nullptr;
           const AnaTrueParticleB* pt = static_cast<AnaTrueParticleB*>(primary->TrueObject);
-          if(bt && pt && pt->ID == bt->ID)g.primBeam.Add(ps, ds, isMC, true);
-          if(hasInstr && ps.Z() < kMaxStartZ && ds.Unit().Dot(instrDir.Unit()) > kMinCos)g.primCut.Add(ps, ds, isMC, true);
+          const bool isBeam = bt && pt && pt->ID == bt->ID;
+          const bool passCut = hasInstr && ps.Z() < kMaxStartZ && ds.Unit().Dot(instrDir.Unit()) > kMinCos;
+          if(isBeam)g.primBeam.Add(ps, ds, isMC, true);
+          if(passCut)g.primCut.Add(ps, ds, isMC, true);
+          if((isMC ? isBeam : passCut) && Valid(primary->PositionEnd)){
+            const TVector3 pe(primary->PositionEnd[0], primary->PositionEnd[1], primary->PositionEnd[2]);
+            for(int iz = 0; iz < kNZ; iz++)if(pe.Z() >= kZBins[iz] && pe.Z() < kZBins[iz+1])
+              g.endDist[iz].push_back(DistToAxis(pe, kFclStart[isMC], kFclDir[isMC]));
+          }
         }
       }
 
@@ -173,6 +186,13 @@ namespace beamaxis {
         if(isMC)g.primBeam.Print("primario de la beam slice = partícula true del haz (inicio)");
         g.primCut.Print(Form("primario de la beam slice con z inicial < %.0f cm y cos con la instrumentación > %.1f (inicio)", kMaxStartZ, kMinCos));
         if(isMC)g.truth.Print("trayectoria true del haz en z = 0");
+        std::cout << "  final del primario (" << (isMC ? "= partícula true del haz" : "con el corte")
+                  << "): distancia al eje del fcl (cm), cuantiles 16/50/84/95 %, por z del final" << std::endl;
+        for(int iz = 0; iz < kNZ; iz++){
+          const std::vector<double>& v = g.endDist[iz];
+          std::cout << Form("    z en [%3.0f, %3.0f) cm: %6zu   %5.1f / %5.1f / %5.1f / %5.1f", kZBins[iz], kZBins[iz+1], v.size(),
+                            Quantile(v,.16), Quantile(v,.5), Quantile(v,.84), Quantile(v,.95)) << std::endl;
+        }
       }
     }
   };
