@@ -20,7 +20,8 @@ namespace mucut {
   // Lo que se lee del árbol (mismos tipos que mu_candidates_minitrees_impl.C)
   struct In {
     Int_t fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
-    Int_t tPDG, tParentPDG, tOrigin, tSignal;
+    Int_t tPDG, tParentPDG, tOrigin, tSignal, tProcStart, tFromBeam;
+    Float_t tLength, tPur, tEff;
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd, actMichelA, actMichelB;
   };
@@ -29,6 +30,7 @@ namespace mucut {
   struct C {
     int group;          // 0 señal, 1 mu cósmico, 2 p, 3 pi, 4 EM, 5 resto, -1 señal en vuelo
     bool inSlice, hasSlice, complete, clearCosmic;
+    int tProcStart, tFromBeam; double tLength, tPur, tEff;   // truth: proceso de creación, longitud true inicio-fin, pureza, completitud
     int tPDG, tParentPDG, tOrigin, actStart, actStop, nHits2, nDaughters;
     double pRange, length, axisMin, vtxMin, facesMax, dEdxStop, dEdxStart, chi2muStop, chi2pStop, michelStop;
     double cnnTrk, cnnEM, cnnMichel, intPeak, dirYStop;
@@ -62,7 +64,7 @@ namespace mucut {
     t->SetBranchStatus("*", 0);
 #define MC_BR(v) t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, &x.v);
     MC_BR(fullDump) MC_BR(hasSlice) MC_BR(inSlice) MC_BR(complete) MC_BR(stopAtB) MC_BR(clearCosmic) MC_BR(actPartsA) MC_BR(actPartsB) MC_BR(nHits2) MC_BR(nDaughters)
-    MC_BR(tPDG) MC_BR(tParentPDG) MC_BR(tOrigin) MC_BR(tSignal)
+    MC_BR(tPDG) MC_BR(tParentPDG) MC_BR(tOrigin) MC_BR(tSignal) MC_BR(tProcStart) MC_BR(tFromBeam) MC_BR(tLength) MC_BR(tPur) MC_BR(tEff)
     MC_BR(pRange) MC_BR(length) MC_BR(cnnTrk) MC_BR(cnnEM) MC_BR(cnnMichel) MC_BR(facesA) MC_BR(facesB) MC_BR(axisA) MC_BR(axisB) MC_BR(vtxA) MC_BR(vtxB)
     MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
 #undef MC_BR
@@ -75,6 +77,7 @@ namespace mucut {
       if(c.group == -2)continue;
       const bool b = x.stopAtB;
       c.inSlice = x.inSlice; c.hasSlice = x.hasSlice; c.complete = x.complete; c.clearCosmic = x.clearCosmic;
+      c.tProcStart = x.tProcStart; c.tFromBeam = x.tFromBeam; c.tLength = x.tLength; c.tPur = x.tPur; c.tEff = x.tEff;
       c.tPDG = x.tPDG; c.tParentPDG = x.tParentPDG; c.tOrigin = x.tOrigin; c.nHits2 = x.nHits2;
       c.actStart = b ? x.actPartsA : x.actPartsB; c.actStop = b ? x.actPartsB : x.actPartsA; c.nDaughters = x.nDaughters;
       c.facesStop = b ? x.facesB : x.facesA; c.facesStart = b ? x.facesA : x.facesB; c.actMichelStop = b ? x.actMichelB : x.actMichelA;
@@ -142,6 +145,8 @@ namespace mucut {
                                    52, -4, 300, "distancia mínima al vértice del haz (cm; < 0: sin vértice)", {15}, false};
     if(key == "chi2mu<5")  return {"chi2 mu < 5", [](const C& c){ return c.chi2muStop >= 0 && c.chi2muStop < 5; }, [](const C& c){ return c.chi2muStop; },
                                    60, 0, 60, "#chi^{2}_{#mu}/ndf (parada en el extremo de mayor dE/dx)", {5}, false};
+    if(key == "chi2mu<6")  return {"chi2 mu < 6", [](const C& c){ return c.chi2muStop >= 0 && c.chi2muStop < 6; }, [](const C& c){ return c.chi2muStop; },
+                                   60, 0, 60, "#chi^{2}_{#mu}/ndf (parada en el extremo de mayor dE/dx)", {6}, false};
     if(key == "dedxStop>3")return {"dE/dx parada > 3", [](const C& c){ return c.dEdxStop > 3; }, [](const C& c){ return c.dEdxStop; },
                                    60, 0, 20, "dE/dx medio en los 5 cm del extremo de parada (MeV/cm)", {3}, false};
     if(key == "dedxStart>1.8")return {"dE/dx inicio > 1.8", [](const C& c){ return c.dEdxStart > 1.8; }, [](const C& c){ return c.dEdxStart; },
@@ -152,6 +157,8 @@ namespace mucut {
                                    50, 0, 1, "puntuación CNN EM de la partícula", {0.5}, false};
     if(key == "ventana")   return {"p rango en [200, 245]", [](const C& c){ return c.pRange >= 200 && c.pRange <= 245; }, [](const C& c){ return c.pRange; },
                                    60, 100, 400, "p por rango (hipótesis #mu, MeV/c)", {200, 245}, false};
+    if(key == "ventana205")return {"p rango en [205, 240]", [](const C& c){ return c.pRange >= 205 && c.pRange <= 240; }, [](const C& c){ return c.pRange; },
+                                   60, 100, 400, "p por rango (hipótesis #mu, MeV/c)", {205, 240}, false};
     if(key == "michel")    return {"cnnMichel > 0.02", [](const C& c){ return c.cnnMichel > 0.02; }, [](const C& c){ return c.cnnMichel; },
                                    50, 0, 0.5, "puntuación CNN Michel de la partícula", {0.02}, true};
     std::cerr << "MakeStep: corte desconocido " << key << std::endl;
@@ -164,10 +171,13 @@ namespace mucut {
     return s;
   }
   std::vector<Step> InSliceSteps(){
-    return Steps({"caras35", "eje>10", "vtx>15", "chi2mu<5", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "cnnEM", "ventana", "michel"});
+    // 21-nov: tras el N-1 de la cadena larga (fuera eje > 10, chi2 p, dE/dx inicio y cnnEM) y el escaneo de
+    // mu_cand_scan.C (chi2 mu, Michel y ventana; superficie plana alrededor de estos valores)
+    return Steps({"caras35", "vtx>15", "chi2mu<6", "dedxStop>3", "ventana205", "michel"});
   }
   std::vector<Step> OutSliceSteps(){
-    return Steps({"noclear", "eje<60", "caras20", "chi2mu<5", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "cnnEM", "ventana", "michel"});
+    // 21-nov: fuera caras > 20 y cnnEM (N-1); chi2 mu, Michel y ventana de mu_cand_scan.C
+    return Steps({"noclear", "eje<60", "chi2mu<6", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "ventana205", "michel"});
   }
 
   // Pasa los pasos [0, upto] salvo skip
