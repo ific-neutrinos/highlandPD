@@ -10,10 +10,11 @@
 //   1-3. p de rango con los cortes del módulo salvo la ventana: todos, en la beam slice y fuera.
 //        Fuera de la beam slice, fuera de la ventana del módulo (180-300) solo hay resumen: el escalón es
 //        del módulo, no de la física.
-//   4-16. variables candidatas con los cortes del módulo: apiladas y formas normalizadas por categoría.
-//   17... un corte por página: a la izquierda con los cortes anteriores (cadena), a la derecha con todos
+//   4... un corte por página: a la izquierda con los cortes anteriores (cadena), a la derecha con todos
 //        los demás (N-1). Línea vertical donde se corta. Base: cortes del módulo, ventana incluida
 //        (salvo en la página de la ventana estrecha, donde se quita).
+// En otro PDF (mu_cand_vars.pdf), una página por variable candidata con los cortes del módulo: arriba en la
+// beam slice y abajo fuera (las reconstruyen pasadas distintas de Pandora), apiladas y formas normalizadas.
 #include "mu_cand_common.h"
 #include "TCanvas.h"
 #include "TH1D.h"
@@ -176,14 +177,26 @@ int mu_cand_plots(const char* in, const char* outdir, long nEvents = 73070, long
       {"act_michel",  "CNN Michel media de esas part#acute{i}culas (-1: ninguna)", [](const C& c){ return c.actMichelStop; }, 51, -1.04, 1, true},
       {"cnnmichel",   "CNN Michel de la part#acute{i}cula entera", [](const C& c){ return c.cnnMichel; }, 50, 0, 0.5, true},
     };
-    auto sel = [](const C& c){ return InWindow(c); };
+    // En otro PDF (mu_cand_vars.pdf): arriba en la beam slice, abajo fuera (pasadas distintas de Pandora)
+    auto selIn = [](const C& c){ return InWindow(c) && c.inSlice; };
+    auto selOut = [](const C& c){ return InWindow(c) && !c.inSlice; };
+    const std::string pdfv = std::string(outdir) + "/mu_cand_vars.pdf";
+    TCanvas cv2("cv2", "", 1400, 1250);
+    cv2.Print((pdfv + "[").c_str());
+    int pv = 0;
     for(const V& v : vars){
-      cv.Clear(); cv.Divide(2, 1);
+      cv2.Clear(); cv2.Divide(2, 2);
       Drawn d;
-      cv.cd(1); Draw(cands, sel, v.var, v.nb, v.x0, v.x1, "Cortes del m#acute{o}dulo", v.name, {}, v.logy, scaleB, d);
-      cv.cd(2); DrawShapes(cands, sel, v.var, v.nb, v.x0, v.x1, "Formas (#acute{a}rea 1)", v.name, v.logy, d);
-      Save(std::string("var_") + v.tag);
+      cv2.cd(1); Draw(cands, selIn, v.var, v.nb, v.x0, v.x1, "En la beam slice", v.name, {}, v.logy, scaleB, d);
+      cv2.cd(2); DrawShapes(cands, selIn, v.var, v.nb, v.x0, v.x1, "En la beam slice: formas (#acute{a}rea 1)", v.name, v.logy, d);
+      cv2.cd(3); Draw(cands, selOut, v.var, v.nb, v.x0, v.x1, "Fuera de la beam slice", v.name, {}, v.logy, scaleB, d);
+      cv2.cd(4); DrawShapes(cands, selOut, v.var, v.nb, v.x0, v.x1, "Fuera: formas (#acute{a}rea 1)", v.name, v.logy, d);
+      pv++;
+      cv2.Print(pdfv.c_str());
+      cv2.Print(Form("%s/var%02d_%s.png", outdir, pv, v.tag));
     }
+    cv2.Print((pdfv + "]").c_str());
+    std::cout << pv << " páginas en " << pdfv << std::endl;
   }
 
   // Un corte por página
