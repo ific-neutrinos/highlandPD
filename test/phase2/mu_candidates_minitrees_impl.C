@@ -14,6 +14,27 @@
 // creación, Origin (2 cósmico, 4 haz), si desciende de la partícula del haz y si es señal: mu+ cuya
 // madre es un K+ que acaba en Decay y desciende del haz. kMomEnd: momento final de esa K (MeV/c;
 // ~0 = en reposo).
+//
+// Añadido el 21-nov (las ramas anteriores no cambian para las trazas):
+//   - Candidatos tipo shower (isShower): PFParticles sin traza con traza forzada (pandora2Track); longitud,
+//     extremos y chi2 de la traza forzada; sin hits de calorimetría (dE/dx, chi2 por orientación y
+//     actividad en hits a -1).
+//   - Posiciones de los extremos de inicio y de parada (start*, stop*; extremo de parada como stopAtB), coseno
+//     con el eje del haz (cosBeam, dirección inicio -> parada) y media truncada del dE/dx (trMean; trMeanBody
+//     sin los 5 cm de cada extremo).
+//   - Hits del plano 2 alrededor del extremo de parada a < 5, 10 y 20 cm (distancia 2D hilo-tiempo en la
+//     misma TPC, todos los PFParticles salvo los hits de calorimetría del candidato, más los no asociados):
+//     número, CNN de Michel media, número con CNN de Michel > 0,5 y carga (ar*). Alrededor del inicio: número
+//     y carga a < 5 y 10 cm (as*).
+//   - Lo que acaba en el inicio (la K): otros PFParticles con un extremo a < 10 cm; el de mayor dE/dx en ese
+//     extremo, su longitud y su p de rango con hipótesis de K (k*).
+//   - Hijas de Pandora: trazas, showers, hits, Michel máxima y cuántas empiezan o acaban a < 10 cm de la
+//     parada (dau*).
+//   - Truth: tKOrigin (origen de la K del mu+, ver KOrigin y kaon_origin_minitrees.C), z true de inicio y fin
+//     y momento true.
+//   - Árbol sig: además de los mu+ de antes (isSignalOld), todos los mu+ de desintegración no cósmicos con
+//     p true en [230, 241] MeV/c (K en reposo), con tKOrigin; tipo del PFParticle emparejado y p de rango de
+//     la traza forzada si es un shower.
 #include "kaon_fate_minitrees_impl.C"
 #include "pdAnalysisUtils.hxx"
 #include "Parameters.hxx"
@@ -133,6 +154,130 @@ namespace mucand {
     return a;
   }
 
+  // ---- Variables añadidas el 21-nov ----
+  const double kWirePitch = 0.479;   // cm, plano de colección
+  const double kTickCm = 0.0785;     // cm por tick (0,5 us x ~1,57 mm/us)
+  const double kRadii[3] = {5., 10., 20.};
+
+  // Hit de calorimetría del plano 2 más cercano a un extremo (por residual range): atB = PositionEnd
+  const AnaHitPD* EndHit(const AnaParticlePD* p, bool atB){
+    const AnaHitPD* best = nullptr;
+    for(const AnaHitPD& h : p->Hits[2]){
+      if(h.ResidualRange < 0)continue;
+      if(!best || (atB ? h.ResidualRange < best->ResidualRange : h.ResidualRange > best->ResidualRange))best = &h;
+    }
+    return best;
+  }
+
+  // Hits del plano 2 alrededor de un hit (distancia 2D hilo-tiempo en la misma TPC), para kRadii: todos los
+  // PFParticles (salvo los hits de calorimetría del propio candidato) y los hits no asociados
+  struct Around { int n[3] = {0, 0, 0}, nMichel[3] = {0, 0, 0}; double michel[3] = {-1, -1, -1}, charge[3] = {0, 0, 0}; };
+  Around HitsAround(const AnaHitPD* h0, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts, const std::vector<AnaHitPD>& unassoc){
+    Around a;
+    if(!h0)return a;
+    double sm[3] = {0, 0, 0}; int nm[3] = {0, 0, 0};
+    auto add = [&](const AnaHitPD& h){
+      if(h.WireID.Plane != 2 || h.WireID.TPC != h0->WireID.TPC)return;
+      const double dw = (h.WireID.Wire - h0->WireID.Wire)*kWirePitch, dt = (h.PeakTime - h0->PeakTime)*kTickCm;
+      if(std::abs(dw) >= kRadii[2] || std::abs(dt) >= kRadii[2])return;
+      const double d = std::hypot(dw, dt);
+      for(int r = 0; r < 3; r++){
+        if(d >= kRadii[r])continue;
+        a.n[r]++; a.charge[r] += h.Integral;
+        if(h.CNN[2] >= 0){ sm[r] += h.CNN[2]; nm[r]++; if(h.CNN[2] > 0.5)a.nMichel[r]++; }
+      }
+    };
+    for(const AnaParticlePD* q : parts){
+      if(q != self)for(const AnaHitPD& h : q->Hits[2])add(h);
+      for(const AnaHitPD& h : q->HitsNoCalo[2])add(h);
+    }
+    for(const AnaHitPD& h : unassoc)add(h);
+    for(int r = 0; r < 3; r++)if(nm[r])a.michel[r] = sm[r]/nm[r];
+    return a;
+  }
+
+  // Media truncada del dE/dx (plano 2): se ordenan y se quitan el 10 % más bajo y el 40 % más alto.
+  // body: sin los kBragg cm de cada extremo. -1 con menos de 5 hits
+  double TruncMean(const AnaParticlePD* p, bool body){
+    std::vector<double> v;
+    for(const AnaHitPD& h : p->Hits[2]){
+      if(h.dEdx <= 0 || h.dEdx > 100 || h.ResidualRange < 0)continue;
+      if(body && (h.ResidualRange < kBragg || h.ResidualRange > p->Length - kBragg))continue;
+      v.push_back(h.dEdx);
+    }
+    if(v.size() < 5)return -1;
+    std::sort(v.begin(), v.end());
+    const size_t i0 = size_t(0.1*v.size()), i1 = size_t(0.6*v.size());
+    double sum = 0; for(size_t i = i0; i < i1; i++)sum += v[i];
+    return i1 > i0 ? sum/(i1 - i0) : -1;
+  }
+
+  // Lo que acaba en el inicio del mu (la K): otros PFParticles con un extremo a < kNear cm de x; el de mayor
+  // dE/dx (kBragg cm) en ese extremo
+  struct KAtStart { int n = 0, isTrack = -1; double dEdx = -1, length = -1, pRangeK = -1; };
+  KAtStart KAt(const TVector3& x, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts){
+    KAtStart k;
+    for(const AnaParticlePD* q : parts){
+      if(q == self)continue;
+      const bool nearA = Valid(q->PositionStart) && (V(q->PositionStart) - x).Mag() < kNear;
+      const bool nearB = Valid(q->PositionEnd) && (V(q->PositionEnd) - x).Mag() < kNear;
+      if(!nearA && !nearB)continue;
+      k.n++;
+      double dA, dB; int nA, nB; EndsdEdx(q, dA, dB, nA, nB);
+      const double d = std::max(nearA ? dA : -1., nearB ? dB : -1.);
+      if(d > k.dEdx){
+        k.dEdx = d; k.length = q->Length; k.isTrack = q->Type == AnaParticlePD::kTrack;
+        // ComputeRangeMomentum solo tiene mu y p: escalado con la masa (mismo beta*gamma), R_K(p) = (mK/mmu) R_mu(p mmu/mK)
+        const double r = pdAnaUtils::kKaonMass/pdAnaUtils::kMuonMass;
+        k.pRangeK = q->Length > 0 ? 1000.*r*pdAnaUtils::ComputeRangeMomentum(q->Length/r, 13) : -1;
+      }
+    }
+    return k;
+  }
+
+  // Hijas de Pandora del candidato
+  struct Dau { int nTrk = 0, nShw = 0, hits = 0, nearStop = 0; double maxMichel = -1; };
+  Dau Daughters(const AnaParticlePD* p, const TVector3& stop, const std::map<UInt_t, const AnaParticlePD*>& byUID){
+    Dau d;
+    for(UInt_t id : p->DaughtersIDs){
+      auto it = byUID.find(id);
+      if(it == byUID.end())continue;
+      const AnaParticlePD* q = it->second;
+      (q->Type == AnaParticlePD::kTrack ? d.nTrk : d.nShw)++;
+      d.hits += q->Hits[2].size() + q->HitsNoCalo[2].size();
+      d.maxMichel = std::max(d.maxMichel, double(q->CNNscore[2]));
+      double dist = 1e9;
+      if(Valid(q->PositionStart))dist = std::min(dist, (V(q->PositionStart) - stop).Mag());
+      if(Valid(q->PositionEnd))dist = std::min(dist, (V(q->PositionEnd) - stop).Mag());
+      if(dist < kNear)d.nearStop++;
+    }
+    return d;
+  }
+
+  // Origen de la K de un mu+ (como kaon_origin_minitrees.C): 0 primera interacción del haz que dispara,
+  // 1 primera interacción con K+ -> K+ intermedias, 2 interacción secundaria, 3 la K+ del haz tras K+ -> K+,
+  // 4 cadena cortada (falta un antecesor de la K), 5 madre del mu no guardada, 6 otra raíz (no el haz que
+  // dispara), -1 no es un mu+ de desintegración no cósmico con madre K+ (o madre no guardada)
+  int KOrigin(const AnaTrueParticleB* mu, const AnaTrueParticleB* beamTrue, const std::map<int, AnaTrueParticleB*>& byID){
+    if(!mu || mu->PDG != -13 || mu->ProcessStart != AnaTrueParticleB::Decay || static_cast<const AnaTrueParticlePD*>(mu)->Origin == 2)return -1;
+    auto itK = byID.find(mu->ParentID);
+    if(itK == byID.end())return 5;
+    if(itK->second->PDG != 321)return -1;
+    std::vector<const AnaTrueParticleB*> chain{itK->second};
+    const AnaTrueParticleB* cur = itK->second;
+    for(int depth = 0; depth < 1000 && cur->ParentID != 0; depth++){
+      auto it = byID.find(cur->ParentID);
+      if(it == byID.end())return 4;
+      cur = it->second; chain.push_back(cur);
+    }
+    if(!beamTrue || cur->ID != beamTrue->ID)return 6;
+    size_t i0 = 0;
+    while(i0 + 1 < chain.size() && chain[i0 + 1]->PDG == 321)i0++;
+    if(i0 + 1 == chain.size())return 3;
+    if(i0 + 2 == chain.size())return i0 == 0 ? 0 : 1;
+    return 2;
+  }
+
   // Variables del árbol de candidatos (una entrada por candidato)
   struct Cand {
     Int_t entry, fullDump, hasSlice, inSlice, complete, isPrimary, nDaughters;
@@ -144,11 +289,21 @@ namespace mucand {
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, intPeakRR, dirYStop; Int_t stopAtB;
     // truth
     Int_t tPDG, tParentPDG, tProcStart, tOrigin, tFromBeam, tSignal, tGen, tFromBeamK; Float_t tKMomEnd, tPur, tEff, tLength;
+    // añadidas el 21-nov
+    Int_t isShower;
+    Float_t startX, startY, startZ, stopX, stopY, stopZ, cosBeam, trMean, trMeanBody;
+    Int_t arN[3], arNMichel[3]; Float_t arMichel[3], arCharge[3];
+    Int_t asN5, asN10; Float_t asCharge5, asCharge10;
+    Int_t kN, kIsTrack; Float_t kDEdx, kLength, kPRange;
+    Int_t nDauTrk, nDauShw, dauHits, dauNearStop; Float_t dauMaxMichel;
+    Int_t tKOrigin; Float_t tStartZ, tEndZ, tMom;
   };
 
   // mu+ true de K+ de la cadena del haz: qué le pasa en la reco
   struct Sig {
     Int_t entry, fullDump, hasSlice, matched, isTrack, inSlice, complete, inWindow, contained; Float_t kMomEnd, pRange, trueLength, axisMin, nearestToEnd;
+    // añadidas el 21-nov
+    Int_t isSignalOld, tKOrigin, matchedType; Float_t muMom, tStartZ, tEndZ, pRangeShower;
   };
 
   struct MuCandidates {
@@ -177,10 +332,23 @@ namespace mucand {
       tc->Branch("tPDG", &c.tPDG); tc->Branch("tParentPDG", &c.tParentPDG); tc->Branch("tProcStart", &c.tProcStart); tc->Branch("tOrigin", &c.tOrigin);
       tc->Branch("tFromBeam", &c.tFromBeam); tc->Branch("tSignal", &c.tSignal); tc->Branch("tGen", &c.tGen); tc->Branch("tFromBeamK", &c.tFromBeamK); tc->Branch("tKMomEnd", &c.tKMomEnd);
       tc->Branch("tPur", &c.tPur); tc->Branch("tEff", &c.tEff); tc->Branch("tLength", &c.tLength);
+      tc->Branch("isShower", &c.isShower);
+      tc->Branch("startX", &c.startX); tc->Branch("startY", &c.startY); tc->Branch("startZ", &c.startZ);
+      tc->Branch("stopX", &c.stopX); tc->Branch("stopY", &c.stopY); tc->Branch("stopZ", &c.stopZ);
+      tc->Branch("cosBeam", &c.cosBeam); tc->Branch("trMean", &c.trMean); tc->Branch("trMeanBody", &c.trMeanBody);
+      tc->Branch("arN", c.arN, "arN[3]/I"); tc->Branch("arNMichel", c.arNMichel, "arNMichel[3]/I");
+      tc->Branch("arMichel", c.arMichel, "arMichel[3]/F"); tc->Branch("arCharge", c.arCharge, "arCharge[3]/F");
+      tc->Branch("asN5", &c.asN5); tc->Branch("asN10", &c.asN10); tc->Branch("asCharge5", &c.asCharge5); tc->Branch("asCharge10", &c.asCharge10);
+      tc->Branch("kN", &c.kN); tc->Branch("kIsTrack", &c.kIsTrack); tc->Branch("kDEdx", &c.kDEdx); tc->Branch("kLength", &c.kLength); tc->Branch("kPRange", &c.kPRange);
+      tc->Branch("nDauTrk", &c.nDauTrk); tc->Branch("nDauShw", &c.nDauShw); tc->Branch("dauHits", &c.dauHits); tc->Branch("dauNearStop", &c.dauNearStop);
+      tc->Branch("dauMaxMichel", &c.dauMaxMichel);
+      tc->Branch("tKOrigin", &c.tKOrigin); tc->Branch("tStartZ", &c.tStartZ); tc->Branch("tEndZ", &c.tEndZ); tc->Branch("tMom", &c.tMom);
       ts = new TTree("sig", "mu+ true de K+ de la cadena del haz");
       ts->Branch("entry", &s.entry); ts->Branch("fullDump", &s.fullDump); ts->Branch("hasSlice", &s.hasSlice); ts->Branch("matched", &s.matched);
       ts->Branch("isTrack", &s.isTrack); ts->Branch("inSlice", &s.inSlice); ts->Branch("complete", &s.complete); ts->Branch("inWindow", &s.inWindow);
       ts->Branch("contained", &s.contained); ts->Branch("kMomEnd", &s.kMomEnd); ts->Branch("pRange", &s.pRange); ts->Branch("trueLength", &s.trueLength); ts->Branch("axisMin", &s.axisMin); ts->Branch("nearestToEnd", &s.nearestToEnd);
+      ts->Branch("isSignalOld", &s.isSignalOld); ts->Branch("tKOrigin", &s.tKOrigin); ts->Branch("matchedType", &s.matchedType);
+      ts->Branch("muMom", &s.muMom); ts->Branch("tStartZ", &s.tStartZ); ts->Branch("tEndZ", &s.tEndZ); ts->Branch("pRangeShower", &s.pRangeShower);
     }
 
     void Process(AnaSpillPD* spill){
@@ -198,6 +366,9 @@ namespace mucand {
         if(p->BeamOrigin)slice.push_back(p);
       }
       const bool hasSlice = !slice.empty();
+      std::map<UInt_t, const AnaParticlePD*> byUID;
+      for(const AnaParticlePD* p : parts)byUID[p->UniqueID] = p;
+      const std::vector<AnaHitPD>& unassoc = static_cast<AnaBunchPD*>(spill->Bunches[0])->UnassociatedHits;
       nEvents[fd]++; if(hasSlice)nEventsSlice[fd]++;
       TVector3 vtx; bool hasVtx = false;
       if(hasSlice && Valid(slice[0]->PositionEnd)){ vtx = V(slice[0]->PositionEnd); hasVtx = true; }
@@ -224,14 +395,23 @@ namespace mucand {
 
       // candidatos
       for(const AnaParticlePD* p : parts){
-        if(p->Type != AnaParticlePD::kTrack || p->Length <= 0 || !Valid(p->PositionStart) || !Valid(p->PositionEnd))continue;
-        const double pr = MuRangeP(p->Length);
+        // trazas, o PFParticles sin traza con traza forzada (candidatos tipo shower)
+        const bool isTrk = p->Type == AnaParticlePD::kTrack;
+        const AnaForcedTrackPD* ft = (!isTrk && !p->ForcedTrack.empty()) ? &p->ForcedTrack[0] : nullptr;
+        if(!isTrk && !ft)continue;
+        const double L = isTrk ? p->Length : ft->Length;
+        const Float_t* pa = isTrk ? p->PositionStart : ft->PositionStart;
+        const Float_t* pb = isTrk ? p->PositionEnd : ft->PositionEnd;
+        if(L <= 0 || !Valid(pa) || !Valid(pb))continue;
+        const double pr = MuRangeP(L);
         if(pr < kPMin || pr > kPMax)continue;
-        const TVector3 a = V(p->PositionStart), b = V(p->PositionEnd);
+        const TVector3 a = V(pa), b = V(pb);
         c = Cand();
+        c.isShower = !isTrk;
         c.entry = entry-1; c.fullDump = fd; c.hasSlice = hasSlice; c.inSlice = p->BeamOrigin; c.complete = HasHits(p);
         c.isPrimary = p->isPandora; c.nDaughters = p->DaughtersIDs.size();
-        c.length = p->Length; c.pRange = pr; c.chi2p = p->Chi2Proton; c.chi2mu = p->Chi2Muon; c.ndf = p->Chi2ndf;
+        c.length = L; c.pRange = pr;
+        c.chi2p = isTrk ? p->Chi2Proton : ft->Chi2Proton; c.chi2mu = isTrk ? p->Chi2Muon : ft->Chi2Muon; c.ndf = isTrk ? p->Chi2ndf : ft->Chi2ndf;
         c.cnnTrk = p->CNNscore[0]; c.cnnEM = p->CNNscore[1]; c.cnnMichel = p->CNNscore[2];
         c.facesA = DistToFaces(a); c.facesB = DistToFaces(b);
         c.axisA = DistToAxis(a, isMC); c.axisB = DistToAxis(b, isMC);
@@ -259,14 +439,36 @@ namespace mucand {
         c.tFromBeam = (t && beamTrue) ? DescendsFrom(t->ID, beamTrue->ID, byID) : 0;
         double km; c.tSignal = isSignal(t, km); c.tKMomEnd = km;
         c.tPur = p->TruePur; c.tEff = p->TrueEff; c.tLength = t ? (V(t->PositionEnd) - V(t->Position)).Mag() : -1;   // distancia inicio-fin
+        // añadidas el 21-nov
+        const TVector3 stop = c.stopAtB ? b : a, start = c.stopAtB ? a : b;
+        c.startX = start.X(); c.startY = start.Y(); c.startZ = start.Z(); c.stopX = stop.X(); c.stopY = stop.Y(); c.stopZ = stop.Z();
+        c.cosBeam = (stop - start).Unit().Dot(kAxisDir);
+        c.trMean = TruncMean(p, false); c.trMeanBody = TruncMean(p, true);
+        { const Around ar = HitsAround(EndHit(p, c.stopAtB), p, parts, unassoc);
+          for(int r = 0; r < 3; r++){ c.arN[r] = ar.n[r]; c.arNMichel[r] = ar.nMichel[r]; c.arMichel[r] = ar.michel[r]; c.arCharge[r] = ar.charge[r]; }
+          if(!EndHit(p, c.stopAtB))for(int r = 0; r < 3; r++){ c.arN[r] = c.arNMichel[r] = -1; c.arCharge[r] = -1; }
+          const AnaHitPD* hs = EndHit(p, !c.stopAtB);
+          const Around as = HitsAround(hs, p, parts, unassoc);
+          c.asN5 = hs ? as.n[0] : -1; c.asN10 = hs ? as.n[1] : -1; c.asCharge5 = hs ? as.charge[0] : -1; c.asCharge10 = hs ? as.charge[1] : -1; }
+        { const KAtStart k = KAt(start, p, parts); c.kN = k.n; c.kIsTrack = k.isTrack; c.kDEdx = k.dEdx; c.kLength = k.length; c.kPRange = k.pRangeK; }
+        { const Dau d = Daughters(p, stop, byUID); c.nDauTrk = d.nTrk; c.nDauShw = d.nShw; c.dauHits = d.hits; c.dauNearStop = d.nearStop; c.dauMaxMichel = d.maxMichel; }
+        c.tKOrigin = KOrigin(t, beamTrue, byID);
+        c.tStartZ = t ? t->Position[2] : -999; c.tEndZ = t ? t->PositionEnd[2] : -999; c.tMom = t ? 1000.*t->Momentum : -1;
         tc->Fill();
       }
 
       // señal true: para cada mu+ de K+ de la cadena del haz, el PFParticle emparejado con más hits
       for(AnaTrueParticleB* t : spill->TrueParticles){
         double km;
-        if(!isSignal(t, km))continue;
+        const bool old = isSignal(t, km);
+        // añadido el 21-nov: todos los mu+ de desintegración no cósmicos con p true de K en reposo
+        const bool atRest = t->PDG == -13 && t->ProcessStart == AnaTrueParticleB::Decay && static_cast<const AnaTrueParticlePD*>(t)->Origin != 2 &&
+                            t->Momentum > 0.230 && t->Momentum < 0.241;   // GeV/c
+        if(!old && !atRest)continue;
+        if(!old){ auto ip = byID.find(t->ParentID); if(ip != byID.end() && ip->second->PDG == 321)km = 1000.*ip->second->MomentumEnd; }
         s = Sig();
+        s.isSignalOld = old; s.tKOrigin = KOrigin(t, beamTrue, byID); s.muMom = 1000.*t->Momentum;
+        s.tStartZ = t->Position[2]; s.tEndZ = t->PositionEnd[2];
         s.entry = entry-1; s.fullDump = fd; s.hasSlice = hasSlice; s.kMomEnd = km; s.trueLength = (V(t->PositionEnd) - V(t->Position)).Mag();   // distancia inicio-fin
         s.axisMin = std::min(DistToAxis(V(t->Position), isMC), DistToAxis(V(t->PositionEnd), isMC));
         s.contained = DistToFaces(V(t->Position)) > 0 && DistToFaces(V(t->PositionEnd)) > 0;
@@ -282,6 +484,8 @@ namespace mucand {
           }
           if(d < 1e8)s.nearestToEnd = d; }
         s.matched = best != nullptr;
+        s.matchedType = best ? int(best->Type) : -1;
+        s.pRangeShower = (best && best->Type != AnaParticlePD::kTrack && !best->ForcedTrack.empty()) ? MuRangeP(best->ForcedTrack[0].Length) : -1;
         if(best){
           s.isTrack = best->Type == AnaParticlePD::kTrack; s.inSlice = best->BeamOrigin; s.complete = HasHits(best);
           s.pRange = MuRangeP(best->Length);
@@ -341,6 +545,7 @@ namespace mucand {
         MUCAND_BR(chi2muF) MUCAND_BR(chi2muR) MUCAND_BR(chi2pF) MUCAND_BR(chi2pR) MUCAND_BR(michelOwnA) MUCAND_BR(michelOwnB)
         MUCAND_BR(intPeak) MUCAND_BR(intPeakRR) MUCAND_BR(dirYStop) MUCAND_BR(stopAtB)
         MUCAND_BR(tFromBeam) MUCAND_BR(tSignal) MUCAND_BR(tGen) MUCAND_BR(tFromBeamK) MUCAND_BR(tKMomEnd) MUCAND_BR(tPur) MUCAND_BR(tEff) MUCAND_BR(tLength)
+        MUCAND_BR(isShower)
 #undef MUCAND_BR
         if(a)t->SetBranchAddress(n.c_str(), a);
       }
@@ -370,7 +575,7 @@ namespace mucand {
       long nGroup[kNGroups] = {0};
       for(Long64_t i = 0; i < tc->GetEntries(); i++){
         tc->GetEntry(i);
-        if(!ModuleCuts(x))continue;
+        if(x.isShower || !ModuleCuts(x))continue;   // el resumen, solo con trazas (como antes del 21-nov)
         const int g = Group(x);
         const bool isSig = g == 0 || g == 6;
         if(!x.fullDump){ cat[x.inSlice][Category(x)]++; total++; }
@@ -432,11 +637,12 @@ namespace mucand {
       u->SetBranchAddress("fullDump", &y.fullDump); u->SetBranchAddress("hasSlice", &y.hasSlice); u->SetBranchAddress("matched", &y.matched);
       u->SetBranchAddress("isTrack", &y.isTrack); u->SetBranchAddress("inSlice", &y.inSlice); u->SetBranchAddress("complete", &y.complete);
       u->SetBranchAddress("inWindow", &y.inWindow); u->SetBranchAddress("contained", &y.contained); u->SetBranchAddress("kMomEnd", &y.kMomEnd);
-      u->SetBranchAddress("nearestToEnd", &y.nearestToEnd);
+      u->SetBranchAddress("nearestToEnd", &y.nearestToEnd); u->SetBranchAddress("isSignalOld", &y.isSignalOld);
       long n = 0, rest = 0, contained = 0, matched = 0, track = 0, window = 0, windowRest = 0;
       std::vector<double> nearest;
       for(Long64_t i = 0; i < u->GetEntries(); i++){
         u->GetEntry(i);
+        if(!y.isSignalOld)continue;   // el resumen, con la señal de antes del 21-nov
         n++; if(y.kMomEnd < 50)rest++;
         if(y.contained)contained++;
         if(y.matched)matched++;

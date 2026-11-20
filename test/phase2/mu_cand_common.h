@@ -22,6 +22,7 @@ namespace mucut {
     Int_t entry, fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
     Int_t tPDG, tParentPDG, tOrigin, tSignal, tProcStart, tFromBeam;
     Float_t tLength, tPur, tEff;
+    Int_t isShower = 0;   // desde el 21-nov (candidatos tipo shower); 0 en los ficheros anteriores
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd, actMichelA, actMichelB;
   };
@@ -67,8 +68,9 @@ namespace mucut {
   bool ModuleNoWindow(const C& c){ return c.facesMax >= 10 && c.axisMin <= 150; }
 
   // Lee los candidatos con p de rango en [100, 600] que pasan los cortes del módulo salvo la ventana.
-  // orientByChi2: extremo de parada = el de la orientación con mejor chi2 mu (por defecto, el de mayor dE/dx)
-  std::vector<C> Load(const char* in, bool orientByChi2 = false){
+  // orientByChi2: extremo de parada = el de la orientación con mejor chi2 mu (por defecto, el de mayor dE/dx).
+  // withShowers: también los candidatos tipo shower (ficheros desde el 21-nov; por defecto, solo trazas)
+  std::vector<C> Load(const char* in, bool orientByChi2 = false, bool withShowers = false){
     std::vector<C> cands;
     TFile f(in);
     TTree* t = (TTree*)f.Get("cand");
@@ -81,10 +83,12 @@ namespace mucut {
     MC_BR(pRange) MC_BR(length) MC_BR(cnnTrk) MC_BR(cnnEM) MC_BR(cnnMichel) MC_BR(facesA) MC_BR(facesB) MC_BR(axisA) MC_BR(axisB) MC_BR(vtxA) MC_BR(vtxB)
     MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
 #undef MC_BR
+    if(t->GetBranch("isShower")){ t->SetBranchStatus("isShower", 1); t->SetBranchAddress("isShower", &x.isShower); }
     const Long64_t nEntries = t->GetEntries();
     for(Long64_t i = 0; i < nEntries; i++){
       t->GetEntry(i);
       if(x.pRange < 100 || x.pRange > 600)continue;
+      if(x.isShower && !withShowers)continue;
       C c;
       c.entry = x.entry;
       c.group = Group(x);

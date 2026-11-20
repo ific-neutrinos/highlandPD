@@ -28,6 +28,9 @@ int mu_cand_eff(const char* in){
   ts->SetBranchAddress("entry", &entry); ts->SetBranchAddress("hasSlice", &hasSlice); ts->SetBranchAddress("matched", &matched);
   ts->SetBranchAddress("isTrack", &isTrack); ts->SetBranchAddress("inSlice", &inSlice); ts->SetBranchAddress("complete", &complete);
   ts->SetBranchAddress("contained", &contained); ts->SetBranchAddress("kMomEnd", &kMomEnd); ts->SetBranchAddress("pRange", &pRange);
+  // desde el 21-nov el árbol sig tiene también los mu+ de K en reposo que no son la señal de antes (isSignalOld)
+  Int_t isSignalOld = 1;
+  if(ts->GetBranch("isSignalOld"))ts->SetBranchAddress("isSignalOld", &isSignalOld);
 
   const std::vector<Step> stIn = InSliceSteps(), stOut = OutSliceSteps();
   // filas: nombre; columnas: 0 todos, 1 evento con BS y mu en BS, 2 evento con BS y mu fuera, 3 evento sin BS
@@ -40,7 +43,7 @@ int mu_cand_eff(const char* in){
   long notFound = 0;
   for(Long64_t i = 0; i < ts->GetEntries(); i++){
     ts->GetEntry(i);
-    if(kMomEnd >= 50)continue;
+    if(!isSignalOld || kMomEnd >= 50)continue;
     // columna: hasta tener PFParticle se usa solo hasSlice (col 1 = con BS mientras no se sepa dónde está el mu)
     int col = hasSlice ? 1 : 3;
     Count("mu+ de K+ en reposo", col);
