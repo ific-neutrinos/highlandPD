@@ -3,79 +3,79 @@
 -----------------------
 
 --- Cut levels --------
- < dEdxCalibration.YZ.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
+ < dEdxCalibrationAnalysis.YZ.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
 
- < dEdxCalibration.YZ.MichelRemovingTree = 0 >   
+ < dEdxCalibrationAnalysis.YZ.MichelRemovingTree = 0 >   
 
- < dEdxCalibration.YZ.MaxTracks = 8000000 >   
+ < dEdxCalibrationAnalysis.YZ.MaxTracks = 8000000 >   
 
 --- Output Tree --------
- < dEdxCalibration.YZ.SaveAna = 0 >   // Save standard analysis tree
- < dEdxCalibration.YZ.SaveToy = 0 >   // Save toy variables
+ < dEdxCalibrationAnalysis.YZ.SaveAna = 0 >   // Save standard analysis tree
+ < dEdxCalibrationAnalysis.YZ.SaveToy = 0 >   // Save toy variables
 
 --- Corrections --------
- < dEdxCalibration.YZ.ApplySCEPositionCorrection = 1 >
- < dEdxCalibration.YZ.ApplySCEPitchCorrection = 1 >
- < dEdxCalibration.YZ.ApplyLifetimeCorrection = 0 >
+ < dEdxCalibrationAnalysis.YZ.ApplySCEPositionCorrection = 1 >
+ < dEdxCalibrationAnalysis.YZ.ApplySCEPitchCorrection = 1 >
+ < dEdxCalibrationAnalysis.YZ.ApplyLifetimeCorrection = 0 >
 
 --- Systematics --------
- < dEdxCalibration.YZ.ApplySCESystematic = 0 >
- < dEdxCalibration.YZ.ApplyLifetimeSystematic = 1 >
+ < dEdxCalibrationAnalysis.YZ.ApplySCESystematic = 0 >
+ < dEdxCalibrationAnalysis.YZ.ApplyLifetimeSystematic = 1 >
 
 -----------------------
 --- X calibration -----
 -----------------------
 
 --- Cut levels --------
- < dEdxCalibration.X.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
+ < dEdxCalibrationAnalysis.X.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
 
- < dEdxCalibration.X.MichelRemovingTree = 0 >
+ < dEdxCalibrationAnalysis.X.MichelRemovingTree = 0 >
 
- < dEdxCalibration.X.MaxTracks = 8000000 >      
+ < dEdxCalibrationAnalysis.X.MaxTracks = 8000000 >      
 
 --- Output Tree --------
- < dEdxCalibration.X.SaveAna = 0 >   // Save standard analysis tree
- < dEdxCalibration.X.SaveToy = 0 >   // Save toy variables
+ < dEdxCalibrationAnalysis.X.SaveAna = 0 >   // Save standard analysis tree
+ < dEdxCalibrationAnalysis.X.SaveToy = 0 >   // Save toy variables
 
 --- Corrections --------
- < dEdxCalibration.X.ApplySCEPositionCorrection = 1 >
- < dEdxCalibration.X.ApplySCEPitchCorrection = 1 >
- < dEdxCalibration.X.ApplyLifetimeCorrection = 0 >
+ < dEdxCalibrationAnalysis.X.ApplySCEPositionCorrection = 1 >
+ < dEdxCalibrationAnalysis.X.ApplySCEPitchCorrection = 1 >
+ < dEdxCalibrationAnalysis.X.ApplyLifetimeCorrection = 0 >
 
 --- Systematics --------
- < dEdxCalibration.X.ApplySCESystematic = 0 >
- < dEdxCalibration.X.ApplyLifetimeSystematic = 1 >
+ < dEdxCalibrationAnalysis.X.ApplySCESystematic = 0 >
+ < dEdxCalibrationAnalysis.X.ApplyLifetimeSystematic = 1 >
 
 -----------------------
 --- dEdx calibration --
 -----------------------
 
 --- Cut levels --------
- < dEdxCalibration.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
+ < dEdxCalibrationAnalysis.MinAccumLevelToSave = 1 >   // minimum accum level to save the event
 
- < dEdxCalibration.MichelRemovingTree = 0 >   
+ < dEdxCalibrationAnalysis.MichelRemovingTree = 0 >   
 
 --- Output Tree ------
- < dEdxCalibration.SaveAna = 1 >   // Save standard analysis tree
- < dEdxCalibration.SaveToy = 0 >   // Save toy variables
+ < dEdxCalibrationAnalysis.SaveAna = 1 >   // Save standard analysis tree
+ < dEdxCalibrationAnalysis.SaveToy = 0 >   // Save toy variables
 
 --- Corrections ------
- < dEdxCalibration.ApplySCEPositionCorrection = 1 >
- < dEdxCalibration.ApplySCEPitchCorrection = 1 >
- < dEdxCalibration.ApplyLifetimeCorrection = 0 >
+ < dEdxCalibrationAnalysis.ApplySCEPositionCorrection = 1 >
+ < dEdxCalibrationAnalysis.ApplySCEPitchCorrection = 1 >
+ < dEdxCalibrationAnalysis.ApplyLifetimeCorrection = 0 >
 
 --- Systematics ------
- < dEdxCalibration.ApplySCESystematic = 0 >
- < dEdxCalibration.ApplyLifetimeSystematic = 0 >
+ < dEdxCalibrationAnalysis.ApplySCESystematic = 0 >
+ < dEdxCalibrationAnalysis.ApplyLifetimeSystematic = 0 >
 
 -----------------------
 --- MichelMiniTree ----
 -----------------------
 
- < dEdxCalibration.MichelRemovingMiniTree.ThetaXZ_min = 0 >
- < dEdxCalibration.MichelRemovingMiniTree.ThetaXZ_max = 60 >
- < dEdxCalibration.MichelRemovingMiniTree.ThetaYZ_min = 0 >
- < dEdxCalibration.MichelRemovingMiniTree.ThetaYZ_max = 80 >
+ < dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaXZ_min = 0 >
+ < dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaXZ_max = 60 >
+ < dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaYZ_min = 0 >
+ < dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaYZ_max = 80 >
 
  < pdIO.MichelRemoving.ThetaXZ_min = 0 >
  < pdIO.MichelRemoving.ThetaXZ_max = 60 >

@@ -23,10 +23,10 @@ bool CreateMichelRemovingMiniTree::Initialize(){
   // call the base class
   CreateMiniTreePD::Initialize();
   
-  _ThetaXZ_min = ND::params().GetParameterI("dEdxCalibration.MichelRemovingMiniTree.ThetaXZ_min");
-  _ThetaXZ_max = ND::params().GetParameterI("dEdxCalibration.MichelRemovingMiniTree.ThetaXZ_max");
-  _ThetaYZ_min = ND::params().GetParameterI("dEdxCalibration.MichelRemovingMiniTree.ThetaYZ_min");
-  _ThetaYZ_max = ND::params().GetParameterI("dEdxCalibration.MichelRemovingMiniTree.ThetaYZ_max");
+  _ThetaXZ_min = ND::params().GetParameterI("dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaXZ_min");
+  _ThetaXZ_max = ND::params().GetParameterI("dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaXZ_max");
+  _ThetaYZ_min = ND::params().GetParameterI("dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaYZ_min");
+  _ThetaYZ_max = ND::params().GetParameterI("dEdxCalibrationAnalysis.MichelRemovingMiniTree.ThetaYZ_max");
   
   std::cout << "ANGLE BINNING" << std::endl;
   std::cout << _ThetaXZ_min << " < thetaXZ <" << _ThetaXZ_max << std::endl;

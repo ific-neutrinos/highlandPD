@@ -61,19 +61,19 @@ bool dQdxYZCalibration::Initialize(){
   if(!baseAnalysis::Initialize()) return false;
 
   // Minimum accum cut level (how many cuts should be passed) to save event into the output tree
-  SetMinAccumCutLevelToSave(ND::params().GetParameterI("dEdxCalibration.YZ.MinAccumLevelToSave"));
+  SetMinAccumCutLevelToSave(ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.MinAccumLevelToSave"));
 
-  _MaxTracks = ND::params().GetParameterI("dEdxCalibration.YZ.MaxTracks");
+  _MaxTracks = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.MaxTracks");
 
-  _SaveAna = ND::params().GetParameterI("dEdxCalibration.YZ.SaveAna");
-  _SaveToy = ND::params().GetParameterI("dEdxCalibration.YZ.SaveToy");
+  _SaveAna = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.SaveAna");
+  _SaveToy = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.SaveToy");
 
-  _ApplySCEPositionCorrection = ND::params().GetParameterI("dEdxCalibration.YZ.ApplySCEPositionCorrection");
-  _ApplySCEPitchCorrection = ND::params().GetParameterI("dEdxCalibration.YZ.ApplySCEPitchCorrection");
-  _ApplyLifetimeCorrection = ND::params().GetParameterI("dEdxCalibration.YZ.ApplyLifetimeCorrection");
+  _ApplySCEPositionCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.ApplySCEPositionCorrection");
+  _ApplySCEPitchCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.ApplySCEPitchCorrection");
+  _ApplyLifetimeCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.ApplyLifetimeCorrection");
 
-  _ApplySCESystematic = ND::params().GetParameterI("dEdxCalibration.YZ.ApplySCESystematic");
-  _ApplyLifetimeSystematic = ND::params().GetParameterI("dEdxCalibration.YZ.ApplyLifetimeSystematic");
+  _ApplySCESystematic = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.ApplySCESystematic");
+  _ApplyLifetimeSystematic = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.ApplyLifetimeSystematic");
 
   //initialize histograms
   h_global_yz     = new TH1F("yz_global"    ,"yz_global"    ,              100,0,100);
@@ -102,7 +102,7 @@ void dQdxYZCalibration::DefineInputConverters(){
 //********************************************************************
 
   // add a single converter (a copy of the one in highland/baseAnalysis)
-  _MichelRemovingTree = ND::params().GetParameterI("dEdxCalibration.YZ.MichelRemovingTree");
+  _MichelRemovingTree = ND::params().GetParameterI("dEdxCalibrationAnalysis.YZ.MichelRemovingTree");
   std::stringstream treenumber;
   if(_MichelRemovingTree==0)treenumber.str("");
   else                      treenumber << _MichelRemovingTree;

@@ -41,17 +41,17 @@ bool dEdxCalibration::Initialize(){
   if(!baseAnalysis::Initialize()) return false;
 
   // Minimum accum cut level (how many cuts should be passed) to save event into the output tree
-  SetMinAccumCutLevelToSave(ND::params().GetParameterI("dEdxCalibration.MinAccumLevelToSave"));
+  SetMinAccumCutLevelToSave(ND::params().GetParameterI("dEdxCalibrationAnalysis.MinAccumLevelToSave"));
 
-  _SaveAna = ND::params().GetParameterI("dEdxCalibration.SaveAna");
-  _SaveToy = ND::params().GetParameterI("dEdxCalibration.SaveToy");
+  _SaveAna = ND::params().GetParameterI("dEdxCalibrationAnalysis.SaveAna");
+  _SaveToy = ND::params().GetParameterI("dEdxCalibrationAnalysis.SaveToy");
 
-  _ApplySCEPositionCorrection = ND::params().GetParameterI("dEdxCalibration.ApplySCEPositionCorrection");
-  _ApplySCEPitchCorrection = ND::params().GetParameterI("dEdxCalibration.ApplySCEPitchCorrection");
-  _ApplyLifetimeCorrection = ND::params().GetParameterI("dEdxCalibration.ApplyLifetimeCorrection");
+  _ApplySCEPositionCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.ApplySCEPositionCorrection");
+  _ApplySCEPitchCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.ApplySCEPitchCorrection");
+  _ApplyLifetimeCorrection = ND::params().GetParameterI("dEdxCalibrationAnalysis.ApplyLifetimeCorrection");
 
-  _ApplySCESystematic = ND::params().GetParameterI("dEdxCalibration.ApplySCESystematic");
-  _ApplyLifetimeSystematic = ND::params().GetParameterI("dEdxCalibration.ApplyLifetimeSystematic");
+  _ApplySCESystematic = ND::params().GetParameterI("dEdxCalibrationAnalysis.ApplySCESystematic");
+  _ApplyLifetimeSystematic = ND::params().GetParameterI("dEdxCalibrationAnalysis.ApplyLifetimeSystematic");
 
   TTree::SetMaxTreeSize(200000000000);
 
@@ -63,7 +63,7 @@ void dEdxCalibration::DefineInputConverters(){
 //********************************************************************
 
   // add a single converter (a copy of the one in highland/baseAnalysis)
-  _MichelRemovingTree = ND::params().GetParameterI("dEdxCalibration.MichelRemovingTree");
+  _MichelRemovingTree = ND::params().GetParameterI("dEdxCalibrationAnalysis.MichelRemovingTree");
   std::stringstream treenumber;
   if(_MichelRemovingTree==0)treenumber.str("");
   else                      treenumber << _MichelRemovingTree;
