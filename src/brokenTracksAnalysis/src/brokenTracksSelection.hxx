@@ -1,5 +1,5 @@
-#ifndef BeamWeightsSelection_h
-#define BeamWeightsSelection_h
+#ifndef brokenTracksSelection_h
+#define brokenTracksSelection_h
 
 #include "SelectionBase.hxx"
 #include "Parameters.hxx"
@@ -9,10 +9,10 @@
 #include "SystId.hxx"
 #include "SubDetId.hxx"
 
-class BeamWeightsSelection: public SelectionBase{
+class brokenTracksSelection: public SelectionBase{
  public:
-  BeamWeightsSelection(bool forceBreak=true);
-  virtual ~BeamWeightsSelection(){}
+  brokenTracksSelection(bool forceBreak=true);
+  virtual ~brokenTracksSelection(){}
 
   //---- These are mandatory functions
   void DefineSteps();
@@ -33,32 +33,39 @@ protected:
 };
 
 //---- Steps and actions for the analysis
-class BeamPionCut: public StepBase{
+class BeamMuonCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BeamPionCut();}
+  StepBase* MakeClone(){return new BeamMuonCut();}
 };
 
-class NonEmptyEventCut: public StepBase{
+class BeamTrackQualityCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new NonEmptyEventCut();}
+  StepBase* MakeClone(){return new BeamTrackQualityCut();}
 };
 
-class EventHasPandoraCut: public StepBase{
+class TrackReachesAPABorderCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new EventHasPandoraCut();}
+  StepBase* MakeClone(){return new TrackReachesAPABorderCut();}
 };
 
-class DummyCut: public StepBase{
+class TrackEndsInAPABorderCut: public StepBase{
 public:
   using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const {return true;}
-  StepBase* MakeClone(){return new DummyCut();}
+  bool Apply(AnaEventC& event, ToyBoxB& box) const;
+  StepBase* MakeClone(){return new TrackEndsInAPABorderCut();}
+};
+
+class TrackIsBrokenCut: public StepBase{
+public:
+  using StepBase::Apply;
+  bool Apply(AnaEventC& event, ToyBoxB& box) const;
+  StepBase* MakeClone(){return new TrackIsBrokenCut();}
 };
 
 #endif

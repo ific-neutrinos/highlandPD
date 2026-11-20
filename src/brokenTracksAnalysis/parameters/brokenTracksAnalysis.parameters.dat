@@ -1,5 +1,5 @@
 --- Cut levels --------
- < BrokenTracks.MinAccumLevelToSave = 0 >   // minimum accum level to save the event
+ < brokenTracksAnalysis.MinAccumLevelToSave = 0 >   // minimum accum level to save the event
 
 --- Corrections -----
  < pdCorrections.BeamMomSmearing.NominalBeamMom = 2 >	

@@ -1,5 +1,5 @@
-#ifndef BrokenTracksSelection_h
-#define BrokenTracksSelection_h
+#ifndef beamWeightsSelection_h
+#define beamWeightsSelection_h
 
 #include "SelectionBase.hxx"
 #include "Parameters.hxx"
@@ -9,10 +9,10 @@
 #include "SystId.hxx"
 #include "SubDetId.hxx"
 
-class BrokenTracksSelection: public SelectionBase{
+class beamWeightsSelection: public SelectionBase{
  public:
-  BrokenTracksSelection(bool forceBreak=true);
-  virtual ~BrokenTracksSelection(){}
+  beamWeightsSelection(bool forceBreak=true);
+  virtual ~beamWeightsSelection(){}
 
   //---- These are mandatory functions
   void DefineSteps();
@@ -33,39 +33,32 @@ protected:
 };
 
 //---- Steps and actions for the analysis
-class BeamMuonCut: public StepBase{
+class BeamPionCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BeamMuonCut();}
+  StepBase* MakeClone(){return new BeamPionCut();}
 };
 
-class BeamTrackQualityCut: public StepBase{
+class NonEmptyEventCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new BeamTrackQualityCut();}
+  StepBase* MakeClone(){return new NonEmptyEventCut();}
 };
 
-class TrackReachesAPABorderCut: public StepBase{
+class EventHasPandoraCut: public StepBase{
 public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new TrackReachesAPABorderCut();}
+  StepBase* MakeClone(){return new EventHasPandoraCut();}
 };
 
-class TrackEndsInAPABorderCut: public StepBase{
+class DummyCut: public StepBase{
 public:
   using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new TrackEndsInAPABorderCut();}
-};
-
-class TrackIsBrokenCut: public StepBase{
-public:
-  using StepBase::Apply;
-  bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new TrackIsBrokenCut();}
+  bool Apply(AnaEventC& event, ToyBoxB& box) const {return true;}
+  StepBase* MakeClone(){return new DummyCut();}
 };
 
 #endif

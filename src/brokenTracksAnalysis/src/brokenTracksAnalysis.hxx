@@ -1,15 +1,15 @@
-#ifndef BeamWeights_h
-#define BeamWeights_h
+#ifndef brokenTracksAnalysis_h
+#define brokenTracksAnalysis_h
 
 #include "baseAnalysis.hxx"
 #include "standardPDTree.hxx"
 #include "pdDataClasses.hxx"
 #include "ToyBoxdEdx.hxx"
 
-class BeamWeights: public baseAnalysis {
+class brokenTracksAnalysis: public baseAnalysis {
  public:
-  BeamWeights(AnalysisAlgorithm* ana=NULL);
-  virtual ~BeamWeights(){}
+  brokenTracksAnalysis(AnalysisAlgorithm* ana=NULL);
+  virtual ~brokenTracksAnalysis(){}
 
   //---- These are mandatory functions
   void DefineSelections();
@@ -31,6 +31,9 @@ class BeamWeights: public baseAnalysis {
   bool Initialize();
   void FillCategories();
   void DefineInputConverters();
+
+  void AddBrokenCategory();
+  void FillBrokenCategory(AnaParticlePD* part);
 
   /// Get a casted AnaSpillC to AnaSpillPD from the InputManager
   AnaSpillPD& GetSpill(){return *static_cast<AnaSpillPD*>(&input().GetSpill());}
@@ -59,18 +62,23 @@ private:
 
 public:
 
-  enum enumSyst_BeamWeights{
+  enum enumSyst_brokenTracksAnalysis{
     kSCE_syst=0,
     kLifetime_syst,
-    enumSystLast_BeamWeights
+    enumSystLast_brokenTracksAnalysis
   };
 
-  enum enumCorr_BeamWeights{
+  enum enumCorr_brokenTracksAnalysis{
     kSCE_corr=0,
     kSCEPosition_corr,
     kSCEPitch_corr,
     kLifetime_corr,
-    enumCorrLast_BeamWeights
+    enumCorrLast_brokenTracksAnalysis
+  };
+
+  enum enumStandardMicroTrees_brokenTracksAnalysis{
+    seltrk_ndau_APAs = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
+    enumStandardMicroTreesLast_brokenTracksAnalysis
   };
 
 };

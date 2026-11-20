@@ -1,23 +1,19 @@
 --- Cut levels --------
- < StoppingProtonAnalysis.MinAccumLevelToSave = 5 >   // minimum accum level to save the event
+ < beamWeightsAnalysis.MinAccumLevelToSave = 0 >   // minimum accum level to save the event
 
---- Systematics ------------
+--- pdBaseConverter ------
+ < pdIO.pdBaseConverter.FillEventInfo = 1 >
+ < pdIO.pdBaseConverter.FillDQInfo    = 1 >
+ < pdIO.pdBaseConverter.FillBeamInfo  = 1 >	
+ < pdIO.pdBaseConverter.FillBunchInfo = 0 >	
+ < pdIO.pdBaseConverter.FillTrueInfo  = 0 >
 
-The single systematics configuration (when EnableSingle...SystConfigurations = 0)
-or the all systematics configuration (when EnableAllSystematics = 0)
-need to be enabled in baseAnalysis parameter file
-
---- Corrections -----------
-
---- Other Parameters -----------
-
---- Other Parameters -----------
 
 ###############################################################################
   baseAnalysis parameters
 ###############################################################################
 
-This ia a copy of the baseAnalysis parameters file in highland, such that we can overwrite them
+This is a copy of the baseAnalysis parameters file in highland, such that we can overwrite them
 
 
 Whether to initialize trees or not at the beginning of each configuration
@@ -47,7 +43,7 @@ No weights yet !!!
 --- Systematics ------------
 
 Number of toy experiments
- < baseAnalysis.Systematics.NumberOfToys = 1 >
+ < baseAnalysis.Systematics.NumberOfToys = 100 >
 
 The Random Seed. When throwing toys we want the same random numbers for all jobs. Thus, the random seed should be the same in all cases (and different from 0 !!!!)
 
@@ -65,9 +61,10 @@ Use a different random generator for each systematic
 
 Create configurations with a single systematic ( a configuration for each systematic selected above)
 
- < baseAnalysis.Configurations.EnableSingleVariationSystConfigurations = 0 >
+ < baseAnalysis.Configurations.EnableSingleVariationSystConfigurations = 1 >
  < baseAnalysis.Configurations.EnableSingleWeightSystConfigurations    = 0 >
 
 Enable/disable the configuration with all systematics (or the ones selected above)
 
  < baseAnalysis.Configurations.EnableAllSystematics = 0 >
+ 

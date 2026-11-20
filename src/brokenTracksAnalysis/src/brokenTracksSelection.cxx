@@ -1,16 +1,16 @@
-#include "BrokenTracksSelection.hxx"
+#include "brokenTracksSelection.hxx"
 #include "EventBoxKaon.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "pdBaseSelection.hxx"
 
 //********************************************************************
-BrokenTracksSelection::BrokenTracksSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxdEdx) {
+brokenTracksSelection::brokenTracksSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxdEdx) {
 //********************************************************************
 
 }
 
 //********************************************************************
-void BrokenTracksSelection::DefineSteps(){
+void brokenTracksSelection::DefineSteps(){
 //********************************************************************
 
   AddStep(StepBase::kAction,   "find Pandora track",         new FindBeamTrackAction(),      false);// in pdBaseAnalysis/src/pdBaseSelection  
@@ -89,7 +89,7 @@ bool TrackIsBrokenCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 }
 
 //**************************************************
-void BrokenTracksSelection::InitializeEvent(AnaEventC& eventC){
+void brokenTracksSelection::InitializeEvent(AnaEventC& eventC){
 //**************************************************
 
   AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 

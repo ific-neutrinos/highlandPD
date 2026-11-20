@@ -1,5 +1,5 @@
-#ifndef StoppingProtonSelection_h
-#define StoppingProtonSelection_h
+#ifndef stoppingProtonSelection_h
+#define stoppingProtonSelection_h
 
 #include "SelectionBase.hxx"
 #include "Parameters.hxx"
@@ -9,10 +9,10 @@
 #include "SystId.hxx"
 #include "SubDetId.hxx"
 
-class StoppingProtonSelection: public SelectionBase{
+class stoppingProtonSelection: public SelectionBase{
  public:
-  StoppingProtonSelection(bool forceBreak=true);
-  virtual ~StoppingProtonSelection(){}
+  stoppingProtonSelection(bool forceBreak=true);
+  virtual ~stoppingProtonSelection(){}
 
   //---- These are mandatory functions
   void DefineSteps();

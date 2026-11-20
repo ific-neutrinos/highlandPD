@@ -148,9 +148,9 @@ highlandpd_add_executable(dEdxCalibration.exe               src/dEdxCalibrationA
 highlandpd_add_executable(dQdxYZCalibration.exe             src/dEdxCalibrationAnalysis/app/RundQdxYZCalibration.cxx)
 highlandpd_add_executable(dQdxXCalibration.exe              src/dEdxCalibrationAnalysis/app/RundQdxXCalibration.cxx)
 highlandpd_add_executable(CreateMichelRemovingMiniTree.exe  src/dEdxCalibrationAnalysis/app/RunCreateMichelRemovingMiniTree.cxx)
-highlandpd_add_executable(BrokenTracks.exe                  src/BrokenTracksAnalysis/app/RunBrokenTracks.cxx)
-highlandpd_add_executable(BeamWeights.exe                   src/BeamWeightsAnalysis/app/RunBeamWeights.cxx)
-highlandpd_add_executable(StoppingProton.exe                src/StoppingProtonAnalysis/app/RunStoppingProtonAnalysis.cxx)
+highlandpd_add_executable(brokenTracks.exe                  src/brokenTracksAnalysis/app/RunBrokenTracksAnalysis.cxx)
+highlandpd_add_executable(beamWeights.exe                   src/beamWeightsAnalysis/app/RunBeamWeightsAnalysis.cxx)
+highlandpd_add_executable(stoppingProton.exe                src/stoppingProtonAnalysis/app/RunStoppingProtonAnalysis.cxx)
 
 # Desactivados:
 #highlandpd_add_executable(CreateMiniTreePD.exe src/pdIO/app/RunCreateMiniTreePD.cxx)

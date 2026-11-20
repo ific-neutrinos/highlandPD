@@ -1,14 +1,14 @@
-#ifndef StoppingProtonAnalysis_h
-#define StoppingProtonAnalysis_h
+#ifndef stoppingProtonAnalysis_h
+#define stoppingProtonAnalysis_h
 
 #include "baseAnalysis.hxx"
 #include "ToyBoxPD.hxx"
 #include "standardPDTree.hxx"
 
-class StoppingProtonAnalysis: public baseAnalysis {
+class stoppingProtonAnalysis: public baseAnalysis {
  public:
-  StoppingProtonAnalysis(AnalysisAlgorithm* ana=NULL);
-  virtual ~StoppingProtonAnalysis(){}
+  stoppingProtonAnalysis(AnalysisAlgorithm* ana=NULL);
+  virtual ~stoppingProtonAnalysis(){}
 
   //---- These are mandatory functions
   void DefineSelections();
@@ -45,16 +45,16 @@ private:
 
 public:
 
-  enum enumStandardMicroTrees_StoppingProtonAnalysis{
+  enum enumStandardMicroTrees_stoppingProtonAnalysis{
     seltrk_csdarange_prot = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
     seltrk_ndau,
-    enumStandardMicroTreesLast_StoppingProtonAnalysis
+    enumStandardMicroTreesLast_stoppingProtonAnalysis
   };
 
-  enum enumConf_StoppingProtonAnalysis{
+  enum enumConf_stoppingProtonAnalysis{
     detmass_syst=baseAnalysis::enumConfLast_baseAnalysis+1,    
     dedx_syst,
-    enumConfLast_StoppingProtonAnalysis
+    enumConfLast_stoppingProtonAnalysis
   };
 
 

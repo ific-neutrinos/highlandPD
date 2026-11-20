@@ -1,8 +1,8 @@
-#include "StoppingProtonAnalysis.hxx"
+#include "brokenTracksAnalysis.hxx"
 #include "AnalysisLoop.hxx"
 
 int main(int argc, char *argv[]){
-  StoppingProtonAnalysis* ana = new StoppingProtonAnalysis();
+  brokenTracksAnalysis* ana = new brokenTracksAnalysis();
   AnalysisLoop loop(ana, argc, argv); 
   loop.Execute();
 }

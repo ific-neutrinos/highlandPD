@@ -249,7 +249,7 @@ public:
   bool BeamOrigin;
 
   /// Pandora beam particle that passes the beam quality cuts (only from the pduneana trees;
-  /// used by BrokenTracksAnalysis)
+  /// used by brokenTracksAnalysis)
   bool isBeamPart;
 
   // ---- Pandora information ----

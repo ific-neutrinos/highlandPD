@@ -1,16 +1,16 @@
-#include "StoppingProtonSelection.hxx"
+#include "stoppingProtonSelection.hxx"
 #include "EventBoxPD.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "pdBaseSelection.hxx"
 
 //********************************************************************
-StoppingProtonSelection::StoppingProtonSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxPD) {
+stoppingProtonSelection::stoppingProtonSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxPD) {
 //********************************************************************
 
 }
 
 //********************************************************************
-void StoppingProtonSelection::DefineSteps(){
+void stoppingProtonSelection::DefineSteps(){
 //********************************************************************
 
   //basic cuts → see pdBaseAnalysis/src/pdBaseSelection
@@ -67,7 +67,7 @@ bool CSDARangeCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 
 
 //**************************************************
-void StoppingProtonSelection::InitializeEvent(AnaEventC& eventBB){
+void stoppingProtonSelection::InitializeEvent(AnaEventC& eventBB){
 //**************************************************
 
   AnaEventB& event = *static_cast<AnaEventB*>(&eventBB); 
@@ -80,7 +80,7 @@ void StoppingProtonSelection::InitializeEvent(AnaEventC& eventBB){
 }
 
 //********************************************************************
-void StoppingProtonSelection::DefineDetectorFV(){
+void stoppingProtonSelection::DefineDetectorFV(){
 //********************************************************************
 
     // The detector in which the selection is applied

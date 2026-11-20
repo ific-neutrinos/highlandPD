@@ -1,5 +1,5 @@
 //header
-#include "BrokenTracks.hxx"
+#include "beamWeightsAnalysis.hxx"
 
 //highland
 #include "Parameters.hxx"
@@ -16,39 +16,35 @@
 #include "PDSPAnalyzerTreeConverter.hxx"
 
 //selections
-#include "BrokenTracksSelection.hxx"
+#include "beamWeightsSelection.hxx"
 
 //corrections
 #include "ParticlePositionSCECorrection.hxx"
-#include "BeamMomSmearingCorrection.hxx"
 
 //********************************************************************
-BrokenTracks::BrokenTracks(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
+beamWeightsAnalysis::beamWeightsAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
 //********************************************************************
   
 }
 
 //********************************************************************
-bool BrokenTracks::Initialize(){
+bool beamWeightsAnalysis::Initialize(){
 //********************************************************************
 
   // Initialize the baseAnalysis (highland/src/highland2/baseAnalysis)
   if(!baseAnalysis::Initialize()) return false;
 
   // Minimum accum cut level (how many cuts should be passed) to save event into the output tree
-  SetMinAccumCutLevelToSave(ND::params().GetParameterI("BrokenTracks.MinAccumLevelToSave"));
+  SetMinAccumCutLevelToSave(ND::params().GetParameterI("beamWeightsAnalysis.MinAccumLevelToSave"));
                                                        
   // Define standard categories for color drawing
-  anaUtils::AddStandardCategories();        // This is for the candidate particle
   anaUtils::AddStandardCategories("beam");  // This is for the Beam Instrumentation particle
-
-  AddBrokenCategory();
 
   return true;
 }
 
 //********************************************************************
-void BrokenTracks::DefineInputConverters(){
+void beamWeightsAnalysis::DefineInputConverters(){
 //********************************************************************
 
   // add a single converter (a copy of the one in highland/baseAnalysis)
@@ -56,23 +52,21 @@ void BrokenTracks::DefineInputConverters(){
 }
 
 //********************************************************************
-void BrokenTracks::DefineSelections(){
+void beamWeightsAnalysis::DefineSelections(){
 //********************************************************************
 
-  sel().AddSelection("Broken tracks Selection", "Broken tracks on APAs", new BrokenTracksSelection(false));  
+  sel().AddSelection("Beam Event Selection", "Beam Event Selection", new beamWeightsSelection(false));  
 }
 
 //********************************************************************
-void BrokenTracks::DefineCorrections(){
+void beamWeightsAnalysis::DefineCorrections(){
 //********************************************************************
 
   baseAnalysis::DefineCorrections();
-  corr().AddCorrection(0, "SCE correction"  , new ParticlePositionSCECorrection());
-  corr().AddCorrection(1, "Beam smearing correction"  , new BeamMomSmearingCorrection());
 }
 
 //********************************************************************
-void BrokenTracks::DefineSystematics(){
+void beamWeightsAnalysis::DefineSystematics(){
 //********************************************************************
 
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -80,7 +74,7 @@ void BrokenTracks::DefineSystematics(){
 }
 
 //********************************************************************
-void BrokenTracks::DefineConfigurations(){
+void beamWeightsAnalysis::DefineConfigurations(){
 //********************************************************************
 
   // Some configurations are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -88,7 +82,7 @@ void BrokenTracks::DefineConfigurations(){
 }
 
 //********************************************************************
-void BrokenTracks::DefineMicroTrees(bool addBase){
+void beamWeightsAnalysis::DefineMicroTrees(bool addBase){
 //********************************************************************
 
   // -------- Add variables to the analysis tree ----------------------
@@ -99,16 +93,10 @@ void BrokenTracks::DefineMicroTrees(bool addBase){
   standardPDTree::AddStandardVariables_EventInfo(output());
   standardPDTree::AddStandardVariables_BeamInstrumentationReco(output());
   standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
-  standardPDTree::AddStandardVariables_BeamParticleReco(output());
-  standardPDTree::AddStandardVariables_BeamParticleTrue(output());
-  standardPDTree::AddStandardVariables_BeamParticleDaughtersReco(output(),5);
-  standardPDTree::AddStandardVariables_BeamParticleDaughtersTrue(output(),5);
-
-  AddVarI(output(), seltrk_ndau_APAs, "seltrk ndaughters in APA region");
 }
 
 //********************************************************************
-void BrokenTracks::DefineTruthTree(){
+void beamWeightsAnalysis::DefineTruthTree(){
 //********************************************************************
 
   // Variables from baseAnalysis (run, event, ...)   (highland/src/highland2/baseAnalysis)
@@ -116,34 +104,19 @@ void BrokenTracks::DefineTruthTree(){
 }
 
 //********************************************************************
-void BrokenTracks::FillMicroTrees(bool addBase){
+void beamWeightsAnalysis::FillMicroTrees(bool addBase){
 //********************************************************************
   
   // Variables from baseAnalysis (run, event, ...)  (highland/src/highland2/baseAnalysis)
   if(addBase) baseAnalysis::FillMicroTreesBase(addBase); 
 
-  standardPDTree::FillStandardVariables_EventInfo(output(), &GetEvent());
+  standardPDTree::FillStandardVariables_EventInfo(        output(), &GetEvent());
   standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
-  standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack);
-  standardPDTree::FillStandardVariables_BeamParticleTrue(    output(), box().MainTrack);    
-  
-  int ndau_APAs = 0;
-  int ntracks = std::min((int)box().MainTrack->DaughtersIDs.size(),5);
-  for(int idau = 0; idau < ntracks; idau++){
-    AnaParticlePD* dau = static_cast<AnaParticlePD*>(box().MainTrack->Daughters[idau]);
-    standardPDTree::FillStandardVariables_BeamParticleDaughtersReco(output(), dau);
-    standardPDTree::FillStandardVariables_BeamParticleDaughtersTrue(output(), dau);
-    output().IncrementCounter(standardPDTree::seltrk_ndau);
-    double Z = dau->PositionEnd[2];
-    if(Z>205 && Z < 249)ndau_APAs++;
-  }
-
-  output().FillVar(seltrk_ndau_APAs, ndau_APAs);
 }
 
 //********************************************************************
-void BrokenTracks::FillToyVarsInMicroTrees(bool addBase){
+void beamWeightsAnalysis::FillToyVarsInMicroTrees(bool addBase){
 //********************************************************************
 
   // Fill the common variables  (highland/src/highland2/baseAnalysis)
@@ -151,20 +124,15 @@ void BrokenTracks::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void BrokenTracks::FillTruthTree(const AnaTrueVertex& vtx){
+void beamWeightsAnalysis::FillTruthTree(const AnaTrueVertex& vtx){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
 }
 
 //********************************************************************
-void BrokenTracks::FillCategories(){
+void beamWeightsAnalysis::FillCategories(){
 //********************************************************************
-
-  if(box().MainTrack){
-    anaUtils::FillCategories(&GetEvent(), box().MainTrack,""); // method in highland/src/highland2/highlandUtils
-    FillBrokenCategory(box().MainTrack);
-  }
 
   // For the beam 
   AnaParticleB* beamPart = static_cast<AnaBeam*>(GetSpill().Beam)->BeamParticle;
@@ -172,43 +140,4 @@ void BrokenTracks::FillCategories(){
     anaUtils::FillCategories(&GetEvent(), beamPart, "beam"); // method in highland/src/highland2/highlandUtils
   }
 
-}
-
-//********************************************************************
-void BrokenTracks::AddBrokenCategory(){
-//********************************************************************
-
-  std::string part_types[] = {"Broken", "Not broken", "No Truth", NAMEOTHER};
-  int part_codes[]         = {1       , 2           , 3, CATOTHER};
-  int part_colors[]        = {4       , 2           , COLNOTRUTH, COLOTHER};
-  const int NPART = sizeof(part_types)/sizeof(part_types[0]);
-  
-  std::reverse(part_types,  part_types  + NPART);
-  std::reverse(part_codes,  part_codes  + NPART);
-  std::reverse(part_colors, part_colors + NPART);
-
-  anaUtils::_categ->AddCategory("broken", NPART, part_types, part_codes, part_colors);
-  // 				      NPART, part_types, part_codes, part_colors, 
-  // 				      1, -100);
-}
-
-//********************************************************************
-void BrokenTracks::FillBrokenCategory(AnaParticlePD* part){
-//********************************************************************
-
-  if(!part)return;
-  AnaTrueParticlePD* truePart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
-  if(!truePart)return;
-
-  //     break;
-
-
-
-  if(!truePart->Matched)anaUtils::_categ->SetCode("broken", 3, CATOTHER);
-  else{
-    double Z = truePart->PositionEnd[2];
-    if(Z>215.0 && Z<234.0)anaUtils::_categ->SetCode("broken", 2, CATOTHER);
-    else if (Z>234)       anaUtils::_categ->SetCode("broken", 1, CATOTHER);
-    else                  anaUtils::_categ->SetCode("broken", 4, CATOTHER);
-  }
 }

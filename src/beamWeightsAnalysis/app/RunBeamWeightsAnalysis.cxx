@@ -1,8 +1,8 @@
-#include "BrokenTracks.hxx"
+#include "beamWeightsAnalysis.hxx"
 #include "AnalysisLoop.hxx"
 
 int main(int argc, char *argv[]){
-  BrokenTracks* ana = new BrokenTracks();
+  beamWeightsAnalysis* ana = new beamWeightsAnalysis();
   AnalysisLoop loop(ana, argc, argv); 
   loop.Execute();
 }

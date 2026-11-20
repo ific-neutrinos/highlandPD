@@ -1,16 +1,16 @@
-#include "BeamWeightsSelection.hxx"
+#include "beamWeightsSelection.hxx"
 #include "EventBoxKaon.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "pdBaseSelection.hxx"
 
 //********************************************************************
-BeamWeightsSelection::BeamWeightsSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxdEdx) {
+beamWeightsSelection::beamWeightsSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxdEdx) {
 //********************************************************************
 
 }
 
 //********************************************************************
-void BeamWeightsSelection::DefineSteps(){
+void beamWeightsSelection::DefineSteps(){
 //********************************************************************
 
   AddStep(StepBase::kCut,    "dummy cut",           new DummyCut(), true);
@@ -71,7 +71,7 @@ bool EventHasPandoraCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 }
 
 //**************************************************
-void BeamWeightsSelection::InitializeEvent(AnaEventC& eventC){
+void beamWeightsSelection::InitializeEvent(AnaEventC& eventC){
 //**************************************************
 
   AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 

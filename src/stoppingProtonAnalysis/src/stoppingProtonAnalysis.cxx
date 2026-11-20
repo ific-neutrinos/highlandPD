@@ -1,6 +1,6 @@
-#include "StoppingProtonAnalysis.hxx"
+#include "stoppingProtonAnalysis.hxx"
 #include "Parameters.hxx"
-#include "StoppingProtonSelection.hxx"
+#include "stoppingProtonSelection.hxx"
 #include "CategoriesUtils.hxx"
 #include "BasicUtils.hxx"
 
@@ -17,14 +17,14 @@
 #include "baseToyMaker.hxx"
 
 //********************************************************************
-StoppingProtonAnalysis::StoppingProtonAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
+stoppingProtonAnalysis::stoppingProtonAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
 //********************************************************************
 
   // Add the package version
 }
 
 //********************************************************************
-bool StoppingProtonAnalysis::Initialize(){
+bool stoppingProtonAnalysis::Initialize(){
 //********************************************************************
 
   /* In this method we Initialize everything that requires access to parameters in the parameters file. 
@@ -36,7 +36,7 @@ bool StoppingProtonAnalysis::Initialize(){
   if(!baseAnalysis::Initialize()) return false;
 
   // Minimum accum cut level (how many cuts should be passed) to save event into the output tree
-  SetMinAccumCutLevelToSave(ND::params().GetParameterI("StoppingProtonAnalysis.MinAccumLevelToSave"));
+  SetMinAccumCutLevelToSave(ND::params().GetParameterI("stoppingProtonAnalysis.MinAccumLevelToSave"));
 
   // Define categories for color drawing. Have a look at highland/src/highland2/highlandUtils/src/CategoriesUtils.hxx
   anaUtils::AddStandardCategories();
@@ -47,7 +47,7 @@ bool StoppingProtonAnalysis::Initialize(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineInputConverters(){
+void stoppingProtonAnalysis::DefineInputConverters(){
 //********************************************************************
   
   /* In this method we add the to the InputManager (accessed by input() ) the InputConverters created 
@@ -60,14 +60,14 @@ void StoppingProtonAnalysis::DefineInputConverters(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineSelections(){
+void stoppingProtonAnalysis::DefineSelections(){
 //********************************************************************
 
-  sel().AddSelection("StoppingProtonSelection", "Stopping Proton Selection", new StoppingProtonSelection(false)); // true/false for forcing break  
+  sel().AddSelection("stoppingProtonSelection", "Stopping Proton Selection", new stoppingProtonSelection(false)); // true/false for forcing break  
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineCorrections(){
+void stoppingProtonAnalysis::DefineCorrections(){
 //********************************************************************
 
   // Some corrections are defined in baseAnalysis
@@ -77,7 +77,7 @@ void StoppingProtonAnalysis::DefineCorrections(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineSystematics(){
+void stoppingProtonAnalysis::DefineSystematics(){
 //********************************************************************
   
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -85,7 +85,7 @@ void StoppingProtonAnalysis::DefineSystematics(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineConfigurations(){
+void stoppingProtonAnalysis::DefineConfigurations(){
 //********************************************************************
 
   // Some configurations are defined in baseAnalysis
@@ -93,7 +93,7 @@ void StoppingProtonAnalysis::DefineConfigurations(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineMicroTrees(bool addBase){
+void stoppingProtonAnalysis::DefineMicroTrees(bool addBase){
 //********************************************************************
 
   // Variables from baseAnalysis (run, event, ...)
@@ -115,7 +115,7 @@ void StoppingProtonAnalysis::DefineMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::DefineTruthTree(){
+void stoppingProtonAnalysis::DefineTruthTree(){
 //********************************************************************
 
   // Variables from baseAnalysis (run, event, ...)
@@ -123,7 +123,7 @@ void StoppingProtonAnalysis::DefineTruthTree(){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::FillMicroTrees(bool addBase){
+void stoppingProtonAnalysis::FillMicroTrees(bool addBase){
 //********************************************************************
 
   // Variables from baseAnalysis (run, event, ...)
@@ -146,7 +146,7 @@ void StoppingProtonAnalysis::FillMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::FillToyVarsInMicroTrees(bool addBase){
+void stoppingProtonAnalysis::FillToyVarsInMicroTrees(bool addBase){
 //********************************************************************
 
    // Fill the common variables
@@ -154,7 +154,7 @@ void StoppingProtonAnalysis::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-bool StoppingProtonAnalysis::CheckFillTruthTree(const AnaTrueVertex& vtx){
+bool stoppingProtonAnalysis::CheckFillTruthTree(const AnaTrueVertex& vtx){
 //********************************************************************
 
   (void) vtx; // to avoid warning for unused vtx variable
@@ -164,7 +164,7 @@ bool StoppingProtonAnalysis::CheckFillTruthTree(const AnaTrueVertex& vtx){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::FillTruthTree(const AnaTrueVertex& vtx){
+void stoppingProtonAnalysis::FillTruthTree(const AnaTrueVertex& vtx){
 //********************************************************************
 
   // Fill the common variables
@@ -172,7 +172,7 @@ void StoppingProtonAnalysis::FillTruthTree(const AnaTrueVertex& vtx){
 }
 
 //********************************************************************
-void StoppingProtonAnalysis::FillCategories(){
+void stoppingProtonAnalysis::FillCategories(){
 //********************************************************************
 
   // For the candidate
