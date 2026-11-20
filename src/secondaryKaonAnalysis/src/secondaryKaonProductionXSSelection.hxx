@@ -1,5 +1,5 @@
-#ifndef secondaryKaonXSSelection_h
-#define secondaryKaonXSSelection_h
+#ifndef secondaryKaonProductionXSSelection_h
+#define secondaryKaonProductionXSSelection_h
 
 #include "secondaryKaonAnalysis.hxx"
 #include "secondaryKaonSelection.hxx"
@@ -11,10 +11,10 @@
 #include "SystId.hxx"
 #include "SubDetId.hxx"
 
-class secondaryKaonXSSelection: public SelectionBase{
+class secondaryKaonProductionXSSelection: public SelectionBase{
  public:
-  secondaryKaonXSSelection(bool forceBreak=true);
-  virtual ~secondaryKaonXSSelection(){}
+  secondaryKaonProductionXSSelection(bool forceBreak=true);
+  virtual ~secondaryKaonProductionXSSelection(){}
 
   //---- These are mandatory functions
   void DefineSteps();

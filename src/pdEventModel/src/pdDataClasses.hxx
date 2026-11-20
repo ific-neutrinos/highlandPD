@@ -335,7 +335,7 @@ public:
   /// Distance to the closest particle (computed by secondaryProtonSelection)
   Double_t Distance_to_closest_particle;
 
-  /// Daughter forced by secondaryKaonXSSelection, and whether it matches the true one
+  /// Daughter forced by secondaryKaonProductionXSSelection, and whether it matches the true one
   bool forced_daughter;
   bool forced_daughter_matched;
 };

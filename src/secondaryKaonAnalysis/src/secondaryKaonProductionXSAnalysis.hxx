@@ -1,5 +1,5 @@
-#ifndef secondaryKaonXSAnalysis_h
-#define secondaryKaonXSAnalysis_h
+#ifndef secondaryKaonProductionXSAnalysis_h
+#define secondaryKaonProductionXSAnalysis_h
 
 #include "baseAnalysis.hxx"
 #include "ToyBoxKaon.hxx"
@@ -10,15 +10,15 @@
 
 #include "TH1F.h"
 
-namespace secondaryKaonXSAnalysisConstants{
+namespace secondaryKaonProductionXSAnalysisConstants{
 
   const UInt_t NMAXSAVEDCANDIDATES     = 10;
 }
 
-class secondaryKaonXSAnalysis: public baseAnalysis {
+class secondaryKaonProductionXSAnalysis: public baseAnalysis {
  public:
-  secondaryKaonXSAnalysis(AnalysisAlgorithm* ana=NULL);
-  virtual ~secondaryKaonXSAnalysis(){}
+  secondaryKaonProductionXSAnalysis(AnalysisAlgorithm* ana=NULL);
+  virtual ~secondaryKaonProductionXSAnalysis(){}
 
   //---- These are mandatory functions
   void DefineSelections();
@@ -96,12 +96,12 @@ private:
 
 public:
 
-  enum enumConf_secondaryKaonXSAnalysis{
+  enum enumConf_secondaryKaonProductionXSAnalysis{
     detmass_syst=baseAnalysis::enumConfLast_baseAnalysis+1,    
-    enumConfLast_secondaryKaonXSAnalysis
+    enumConfLast_secondaryKaonProductionXSAnalysis
   };
 
-  enum enumSyst_secondaryKaonXSAnalysis{
+  enum enumSyst_secondaryKaonProductionXSAnalysis{
     kdEdxVariation=0,
     kRecombination,
     kSCEGeometric,
@@ -110,7 +110,7 @@ public:
     kBeamPartWeight,
     kBeamMomWeight,
     kProtonBackgroundWeight,
-    enumSystLast_secondaryKaonXSAnalysis
+    enumSystLast_secondaryKaonProductionXSAnalysis
   };  
 };
 

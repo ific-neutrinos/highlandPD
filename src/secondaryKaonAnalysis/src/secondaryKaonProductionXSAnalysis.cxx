@@ -1,4 +1,4 @@
-#include "secondaryKaonXSAnalysis.hxx"
+#include "secondaryKaonProductionXSAnalysis.hxx"
 #include "Parameters.hxx"
 #include "CategoriesUtils.hxx"
 #include "BasicUtils.hxx"
@@ -6,7 +6,7 @@
 #include "baseToyMaker.hxx"
 #include "pdDataClasses.hxx"
 
-#include "secondaryKaonXSSelection.hxx"
+#include "secondaryKaonProductionXSSelection.hxx"
 #include "secondaryKaonSelectionNoBranches.hxx"
 #include "kaonAnalysisUtils.hxx"
 
@@ -27,13 +27,13 @@
 #include "RecombinationDataCorrection.hxx"
 
 //********************************************************************
-secondaryKaonXSAnalysis::secondaryKaonXSAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
+secondaryKaonProductionXSAnalysis::secondaryKaonProductionXSAnalysis(AnalysisAlgorithm* ana) : baseAnalysis(ana) {
 //********************************************************************
 
 }
 
 //********************************************************************
-bool secondaryKaonXSAnalysis::Initialize(){
+bool secondaryKaonProductionXSAnalysis::Initialize(){
 //********************************************************************
 
   // Initialize the baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -90,7 +90,7 @@ bool secondaryKaonXSAnalysis::Initialize(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineInputConverters(){
+void secondaryKaonProductionXSAnalysis::DefineInputConverters(){
 //********************************************************************
 
   // add a single converter (a copy of the one in highland/baseAnalysis)
@@ -100,14 +100,14 @@ void secondaryKaonXSAnalysis::DefineInputConverters(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineSelections(){
+void secondaryKaonProductionXSAnalysis::DefineSelections(){
 //********************************************************************
 
-  sel().AddSelection("XS", "kaon XS selection", new secondaryKaonXSSelection(false));
+  sel().AddSelection("XS", "kaon XS selection", new secondaryKaonProductionXSSelection(false));
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineCorrections(){
+void secondaryKaonProductionXSAnalysis::DefineCorrections(){
 //********************************************************************
 
   baseAnalysis::DefineCorrections();
@@ -120,7 +120,7 @@ void secondaryKaonXSAnalysis::DefineCorrections(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineSystematics(){
+void secondaryKaonProductionXSAnalysis::DefineSystematics(){
 //********************************************************************
 
   // Some systematics are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -145,7 +145,7 @@ void secondaryKaonXSAnalysis::DefineSystematics(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineConfigurations(){
+void secondaryKaonProductionXSAnalysis::DefineConfigurations(){
 //********************************************************************
 
   // Some configurations are defined in baseAnalysis (highland/src/highland2/baseAnalysis)
@@ -172,7 +172,7 @@ void secondaryKaonXSAnalysis::DefineConfigurations(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineMicroTrees(bool addBase){
+void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
 //********************************************************************
 
   // -------- Add variables to the analysis tree ----------------------
@@ -199,12 +199,12 @@ void secondaryKaonXSAnalysis::DefineMicroTrees(bool addBase){
 
   // -------- Add candidates variables ----------------------
   if(_FillKaonCandidatesInfo){
-    kaonTree::AddKaonVariables_KaonCandidatesReco    (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    kaonTree::AddKaonVariables_KaonCandidatesTrue    (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+    kaonTree::AddKaonVariables_KaonCandidatesReco    (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+    kaonTree::AddKaonVariables_KaonCandidatesTrue    (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
     if(_FillKaonCandidatesHitInfo)
-      kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+      kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
     if(_FillKaonCandidatesPIDInfo)
-      kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+      kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
   }
 
   // -------- Add best candidate variables ----------------------
@@ -216,7 +216,7 @@ void secondaryKaonXSAnalysis::DefineMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::DefineTruthTree(){
+void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
 //********************************************************************
 
   // Variables from baseAnalysis (run, event, ...)   (highland/src/highland2/baseAnalysis)
@@ -230,7 +230,7 @@ void secondaryKaonXSAnalysis::DefineTruthTree(){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::FillMicroTrees(bool addBase){
+void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
 //********************************************************************
   
   // Variables from baseAnalysis (run, event, ...)  (highland/src/highland2/baseAnalysis)
@@ -296,7 +296,7 @@ void secondaryKaonXSAnalysis::FillMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::FillToyVarsInMicroTrees(bool addBase){
+void secondaryKaonProductionXSAnalysis::FillToyVarsInMicroTrees(bool addBase){
 //********************************************************************
 
   // Fill the common variables  (highland/src/highland2/baseAnalysis)
@@ -304,7 +304,7 @@ void secondaryKaonXSAnalysis::FillToyVarsInMicroTrees(bool addBase){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::FillTruthTree(){
+void secondaryKaonProductionXSAnalysis::FillTruthTree(){
 //********************************************************************
 
   // Fill the "truth" tree
@@ -373,7 +373,7 @@ void secondaryKaonXSAnalysis::FillTruthTree(){
 }
 
 //********************************************************************
-bool secondaryKaonXSAnalysis::CheckFillTruthTree(const AnaTrueParticlePD* part){
+bool secondaryKaonProductionXSAnalysis::CheckFillTruthTree(const AnaTrueParticlePD* part){
 //********************************************************************
 
   if(!part)return false;
@@ -384,7 +384,7 @@ bool secondaryKaonXSAnalysis::CheckFillTruthTree(const AnaTrueParticlePD* part){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
+void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
   // Fill the common variables (highland/src/highland2/baseAnalysis)
@@ -402,7 +402,7 @@ void secondaryKaonXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 }
 
 //********************************************************************
-void secondaryKaonXSAnalysis::FillCategories(){
+void secondaryKaonProductionXSAnalysis::FillCategories(){
 //********************************************************************
 
   // For the beam track
@@ -465,7 +465,7 @@ void secondaryKaonXSAnalysis::FillCategories(){
 }
 
 //********************************************************************
-bool secondaryKaonXSAnalysis::FinalizeConfiguration(){
+bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
 //********************************************************************
   
   // This is called before FillMicroTrees()

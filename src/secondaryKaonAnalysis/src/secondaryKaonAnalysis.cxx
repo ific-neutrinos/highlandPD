@@ -8,7 +8,7 @@
 
 #include "secondaryKaonSelection.hxx"
 #include "secondaryKaonSelectionNoBranches.hxx"
-#include "secondaryKaonXSSelection.hxx"
+#include "secondaryKaonProductionXSSelection.hxx"
 #include "secondaryProtonSelection.hxx"
 #include "kaonAnalysisUtils.hxx"
 
@@ -70,7 +70,7 @@ bool secondaryKaonAnalysis::Initialize(){
 
   // Parameters
   _xs_selection = ND::params().GetParameterI("secondaryKaonAnalysis.XSSelection");
-  if(_xs_selection)_selection_name = "secondaryKaonXSSelection";
+  if(_xs_selection)_selection_name = "secondaryKaonProductionXSSelection";
   else             _selection_name = "secondaryKaonSelection";
 
   // Define standard categories for color drawing

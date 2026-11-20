@@ -1,6 +1,6 @@
 #include "TPad.h"
 #include "TMultiGraph.h"
-#include "secondaryKaonXSSelection.hxx"
+#include "secondaryKaonProductionXSSelection.hxx"
 #include "secondaryKaonSelection.hxx"
 #include "EventBoxKaon.hxx"
 #include "Parameters.hxx"
@@ -8,13 +8,13 @@
 #include "pdBaseSelection.hxx"
 
 //********************************************************************
-secondaryKaonXSSelection::secondaryKaonXSSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxKaon) {
+secondaryKaonProductionXSSelection::secondaryKaonProductionXSSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxKaon) {
 //********************************************************************
   
 }
 
 //********************************************************************
-void secondaryKaonXSSelection::DefineSteps(){
+void secondaryKaonProductionXSSelection::DefineSteps(){
 //********************************************************************
 
   //copy steps from pdBaseSelection
@@ -135,7 +135,7 @@ bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 }
 
 //**************************************************
-void secondaryKaonXSSelection::InitializeEvent(AnaEventC& eventC){
+void secondaryKaonProductionXSSelection::InitializeEvent(AnaEventC& eventC){
 //**************************************************
 
   AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 
