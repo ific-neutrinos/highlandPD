@@ -5,6 +5,19 @@ Remoto: `github.com/ific-neutrinos/highlandPD`. Rama de integración: `develop`.
 
 Este fichero recoge la auditoría hecha el 13-nov-2026 y el plan acordado. El usuario escribe en español.
 
+## Estado para retomar (20-nov-2026, tarde)
+
+Corriendo en FNAL al cerrar:
+- `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19.log` y `mu_cand_big19.root`. El usuario traerá el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/` (ahí están también 50 minitrees de la submuestra para probar en local).
+- Prestage de `PDSPProd4a_MC_6GeV_gen_datadriven_reco1_sce_datadriven_v1_01`-`v1_03` (tmux `prestage6`; estaban en cinta) y listas `lists/filelist_mc_6GeV_v1_<v>.txt` de `v1_01`-`v1_09` (tmux `listas6`). Ver con `check_locality.sh <lista> 20`.
+
+Hecho hoy: logs de la 23390 revisados (todo bien); eje del haz validado (el fcl no cambia, vale para 3-7 GeV); escritura en persistent (token interactivo + `justin/to_persistent.sh`) y copia de `20261119big` completa; `setup_larsoft.sh` con `PD_TOKEN`; README de highlandAnalysis; renombres a la convención de highland (test de regresión idéntico); primer estudio de candidatos a mu (`mu_candidates_minitrees.C`).
+
+Siguientes pasos:
+1. Con `mu_cand_big19.root`: comprobar las pistas de los 500 eventos (Michel pegado al mu, dirección vertical de los cósmicos, dE/dx contra protones), buscar la combinación de cortes y mirar el espectro de rango (¿ajuste del pico?). Ideas en la sección de análisis nuevos.
+2. Tag: cuando el prestage avance, `git pull` en FNAL (highlandPD hasta `1390807` o posterior, highlandAnalysis `de92335`; el push lo hace el usuario), recompilar highlandPD **desde cero** (directorios renombrados) y el módulo, tarball, prueba corta en FermiGrid, tags en highland, highlandPD y highlandAnalysis.
+3. Producción de MC a 6 GeV por bloques (`v1_01`-`v1_03` primero): `submit.sh` por definición, `collect.sh` a una carpeta por definición, `to_persistent.sh`.
+
 ## Forma de trabajar (acordada)
 
 - Trabajar en una rama creada desde `develop`, por ejemplo `cleanup/highlandPD`. No tocar `develop` ni hacer merge ni push sin que el usuario lo pida. El usuario no quiere subir nada ni abrir PR hasta tener todos los cambios hechos (fases completas), para no dejar cosas a medias en el remoto.
