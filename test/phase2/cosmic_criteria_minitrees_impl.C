@@ -241,11 +241,12 @@ namespace ccrit {
     long bitNear[2][2] = {{0}}, bitMu[2][2] = {{0}};
     long critMixed = 0;                  // jerarquías con valores distintos de CosmicCriteria entre sus PFParticles
     long nCritHier = 0;                  // jerarquías con CosmicCriteria rellenado
-    std::vector<double> muP, muPSlice;   // momento por rango de los mu de K+ emparejados (todos; beam slice)
-    std::vector<double> scoreBkg, scoreTarget;   // solo slices con puntuación (> -900)
-    long nScoreNone[2] = {0, 0};                  // slices sin puntuación: [sin objetivos, con objetivos]
-    std::vector<int> nTargetSlices;      // por evento: slices de fuera con algún objetivo
-    std::vector<double> topSliceFrac;    // por evento: fracción de los hits de objetivos en su slice principal
+    // Acumuladores por grupo de eventos: [0] normales, [1] con volcado completo (FullDump)
+    std::vector<double> muP[2], muPSlice[2];     // momento por rango de los mu de K+ emparejados (todos; beam slice)
+    std::vector<double> scoreBkg[2], scoreTarget[2];   // solo slices con puntuación (> -900)
+    long nScoreNone[2][2] = {{0, 0}, {0, 0}};    // slices sin puntuación: [grupo][sin objetivos, con objetivos]
+    std::vector<int> nTargetSlices[2];   // por evento: slices de fuera con algún objetivo
+    std::vector<double> topSliceFrac[2]; // por evento: fracción de los hits de objetivos en su slice principal
 
     CosmicCriteria(){
       // ComputeRangeMomentum carga las tablas de PID (pd::services()), que leen parámetros: fuera de
@@ -266,6 +267,7 @@ namespace ccrit {
       }
       if(slice.empty())return;
       if((which == 1 && info->FullDump) || (which == 2 && !info->FullDump))return;
+      const int g = info->FullDump ? 1 : 0;
       const std::vector<Seg> segs = SliceSegments(slice);
       const std::vector<TVector3> ends = SliceEnds(slice);
 
@@ -293,8 +295,8 @@ namespace ccrit {
           auto is = bestSlice.find(t->ID);
           auto io = bestOut.find(t->ID);
           if(muFromK){
-            if(is != bestSlice.end()){ muPSlice.push_back(MuRangeP(is->second->Length)); muP.push_back(muPSlice.back()); }
-            else if(io != bestOut.end())muP.push_back(MuRangeP(io->second->Length));
+            if(is != bestSlice.end()){ muPSlice[g].push_back(MuRangeP(is->second->Length)); muP[g].push_back(muPSlice[g].back()); }
+            else if(io != bestOut.end())muP[g].push_back(MuRangeP(io->second->Length));
           }
           if(is != bestSlice.end() || io == bestOut.end())continue;
           targets[io->second] = {true, muFromK};
@@ -389,16 +391,16 @@ namespace ccrit {
       Event ev;
       ev.fullDump = info->FullDump;
       for(auto& ks : slices){
-        if(ks.second.score > -900)(ks.second.hasTarget ? scoreTarget : scoreBkg).push_back(ks.second.score);
-        else nScoreNone[ks.second.hasTarget]++;
+        if(ks.second.score > -900)(ks.second.hasTarget ? scoreTarget[g] : scoreBkg[g]).push_back(ks.second.score);
+        else nScoreNone[g][ks.second.hasTarget]++;
         ev.slices.push_back(ks.second);
       }
       events.push_back(ev);
       if(!targetHits.empty()){
         double sum = 0, mx = 0;
         for(auto& th : targetHits){ sum += th.second; mx = std::max(mx, th.second); }
-        nTargetSlices.push_back(targetHits.size());
-        if(sum > 0)topSliceFrac.push_back(mx/sum);
+        nTargetSlices[g].push_back(targetHits.size());
+        if(sum > 0)topSliceFrac[g].push_back(mx/sum);
       }
     }
 
@@ -408,20 +410,28 @@ namespace ccrit {
       return v[std::min(v.size()-1, size_t(f*v.size()))];
     }
 
+    // Puntuación de los slices sin objetivos de los dos grupos: los umbrales de (d) son los mismos en las dos tablas
+    std::vector<double> AllScoreBkg() const {
+      std::vector<double> v = scoreBkg[0];
+      v.insert(v.end(), scoreBkg[1].begin(), scoreBkg[1].end());
+      return v;
+    }
+
     std::vector<Crit> Criteria() const {
       std::vector<Crit> c;
+      const std::vector<double> bkg = AllScoreBkg();
       for(double r : {10., 20., 50.})
         c.push_back({Form("(a) cilindro R = %g cm", r), [r](const Slice&, const Hier& h){ return AnyPart(h, [r](const PartV& p){ return p.dSeg < r; }); }});
       for(double r : {10., 20., 50.})
         c.push_back({Form("(b) extremos R = %g cm", r), [r](const Slice&, const Hier& h){ return AnyPart(h, [r](const PartV& p){ return p.dEnd < r; }); }});
       c.push_back({"(c) p rango = 236 +- 20 %", [](const Slice&, const Hier& h){ return AnyPart(h, [](const PartV& p){ return std::fabs(p.p - kMuP) < 0.2*kMuP; }); }});
       for(double q : {0.5, 0.8, 0.9, 0.95, 0.99}){
-        const double thr = Quantile(scoreBkg, q);
+        const double thr = Quantile(bkg, q);
         c.push_back({Form("(d) puntuación > p%.0f (%.3g)", 100*q, thr), [thr](const Slice& s, const Hier&){ return s.score > thr; }});
       }
       for(double r : {20., 50.})
         c.push_back({Form("(e) slice cercano R = %g cm", r), [r](const Slice& s, const Hier&){ return AnyPart(s, [r](const PartV& p){ return p.dEnd < r; }); }});
-      const double thr95 = Quantile(scoreBkg, 0.95);
+      const double thr95 = Quantile(bkg, 0.95);
       c.push_back({"(d) p95 o (e) R = 50 cm", [thr95](const Slice& s, const Hier&){
         return s.score > thr95 || AnyPart(s, [](const PartV& p){ return p.dEnd < 50; }); }});
       for(double r : {20., 50.})
@@ -437,7 +447,7 @@ namespace ccrit {
       for(double r : {50., 100., 150.})
         c.push_back({Form("(i) (h') a < %g cm del eje", r), [muLike, r](const Slice&, const Hier& h){
           return AnyPart(h, [muLike, r](const PartV& p){ return muLike(p) && p.stops && p.dAxis < r; }); }});
-      const double thr99 = Quantile(scoreBkg, 0.99);
+      const double thr99 = Quantile(bkg, 0.99);
       c.push_back({"(k) (h') en un slice del haz", [muLike, thr99](const Slice& s, const Hier& h){
         const bool beamSlice = s.score > thr99 || AnyPart(s, [](const PartV& p){ return p.dEnd < 50; });
         return beamSlice && AnyPart(h, [muLike](const PartV& p){ return muLike(p) && p.stops; }); }});
@@ -476,7 +486,7 @@ namespace ccrit {
         sel.push_back(c);
       }
       std::cout << std::endl << "===== " << title << " =====" << std::endl;
-      PrintEvents(sel);
+      PrintEvents(sel, fullDump ? 1 : 0);
     }
 
     // Dónde están los mu de K+ que hoy irían en resumen
@@ -514,7 +524,7 @@ namespace ccrit {
                 << "; su slice tiene puntuación de Pandora: " << Frac(scored, n) << std::endl << std::endl;
     }
 
-    void PrintEvents(const std::vector<Event>& events) const {
+    void PrintEvents(const std::vector<Event>& events, int g) const {
       const double nEv = events.size();
       long complete = 0, summary = 0, summaryParts = 0, nSlices = 0;
       long nT = 0, nTNow = 0, nMu = 0, nMuNow = 0;
@@ -536,21 +546,21 @@ namespace ccrit {
       std::cout << "Objetivos (cadena del haz emparejada fuera): " << nT << " (hoy completos: " << nTNow
                 << ", " << Form("%.0f", hT/std::max(1L, nT)) << " hits de media)" << std::endl;
       std::cout << "  de ellos mu de K+: " << nMu << " (hoy completos: " << nMuNow << ")" << std::endl;
-      if(!nTargetSlices.empty()){
+      if(!nTargetSlices[g].empty()){
         double m = 0, f = 0;
-        for(int n : nTargetSlices)m += n;
-        for(double x : topSliceFrac)f += x;
+        for(int n : nTargetSlices[g])m += n;
+        for(double x : topSliceFrac[g])f += x;
         std::cout << Form("  eventos con objetivos: %zu; slices de fuera con objetivos por evento %.2f; fracción de sus hits en el slice principal %.0f %%",
-                          nTargetSlices.size(), m/nTargetSlices.size(), 100*f/std::max<size_t>(1, topSliceFrac.size())) << std::endl;
+                          nTargetSlices[g].size(), m/nTargetSlices[g].size(), 100*f/std::max<size_t>(1, topSliceFrac[g].size())) << std::endl;
       }
       std::cout << std::endl << "Puntuación de haz de los slices de fuera con puntuación (cuantiles 10/50/90/99 %); sin puntuación (-999): "
-                << nScoreNone[0] << " sin objetivos y " << nScoreNone[1] << " con objetivos (no pasan los criterios (d)):" << std::endl;
-      std::cout << Form("  sin objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreBkg.size(), Quantile(scoreBkg,.1), Quantile(scoreBkg,.5), Quantile(scoreBkg,.9), Quantile(scoreBkg,.99)) << std::endl;
-      std::cout << Form("  con objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreTarget.size(), Quantile(scoreTarget,.1), Quantile(scoreTarget,.5), Quantile(scoreTarget,.9), Quantile(scoreTarget,.99)) << std::endl;
+                << nScoreNone[g][0] << " sin objetivos y " << nScoreNone[g][1] << " con objetivos (no pasan los criterios (d)):" << std::endl;
+      std::cout << Form("  sin objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreBkg[g].size(), Quantile(scoreBkg[g],.1), Quantile(scoreBkg[g],.5), Quantile(scoreBkg[g],.9), Quantile(scoreBkg[g],.99)) << std::endl;
+      std::cout << Form("  con objetivos (%zu): %.3g / %.3g / %.3g / %.3g", scoreTarget[g].size(), Quantile(scoreTarget[g],.1), Quantile(scoreTarget[g],.5), Quantile(scoreTarget[g],.9), Quantile(scoreTarget[g],.99)) << std::endl;
 
       std::cout << std::endl << "Momento por rango (muón) de los PFParticles emparejados con un mu de K+ (MeV/c, cuantiles 10/25/50/75/90 %):" << std::endl;
-      std::cout << Form("  todos (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muP.size(), Quantile(muP,.1), Quantile(muP,.25), Quantile(muP,.5), Quantile(muP,.75), Quantile(muP,.9)) << std::endl;
-      std::cout << Form("  beam slice (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muPSlice.size(), Quantile(muPSlice,.1), Quantile(muPSlice,.25), Quantile(muPSlice,.5), Quantile(muPSlice,.75), Quantile(muPSlice,.9)) << std::endl;
+      std::cout << Form("  todos (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muP[g].size(), Quantile(muP[g],.1), Quantile(muP[g],.25), Quantile(muP[g],.5), Quantile(muP[g],.75), Quantile(muP[g],.9)) << std::endl;
+      std::cout << Form("  beam slice (%zu): %.0f / %.0f / %.0f / %.0f / %.0f", muPSlice[g].size(), Quantile(muPSlice[g],.1), Quantile(muPSlice[g],.25), Quantile(muPSlice[g],.5), Quantile(muPSlice[g],.75), Quantile(muPSlice[g],.9)) << std::endl;
 
       std::cout << std::endl << "Por criterio. Eficiencia sobre los objetivos que hoy van en resumen (en número y ponderada por hits)" << std::endl
                 << "y sobre los mu de K+ (todos / hoy en resumen); coste: jerarquías y PFParticles por evento que pasarían" << std::endl

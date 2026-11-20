@@ -80,7 +80,7 @@ namespace kfate {
     static const char* names[kNFates] = {
       "beam slice: primario", "beam slice: hija del primario", "beam slice: generación >= 2",
       "beam slice: dentro de otra partícula (hits)",
-      "fuera: cósmico completo", "fuera: cósmico en resumen", "  de ellos IsClearCosmic",
+      "fuera: cósmico completo", "fuera: cósmico en resumen", "fuera (completo o en resumen): IsClearCosmic",
       "fuera: dentro de otra partícula (hits)",
       "evento sin beam slice", "no reconstruida (deja hits)", "sin hits en el TPC" };
     return names[f];
