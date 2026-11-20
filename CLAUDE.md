@@ -5,18 +5,30 @@ Remoto: `github.com/ific-neutrinos/highlandPD`. Rama de integración: `develop`.
 
 Este fichero recoge la auditoría hecha el 13-nov-2026 y el plan acordado. El usuario escribe en español.
 
-## Estado para retomar (20-nov-2026, tarde)
+## Estado para retomar (21-nov-2026)
 
-Corriendo en FNAL al cerrar:
-- `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19.log` y `mu_cand_big19.root`. El usuario traerá el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/` (ahí están también 50 minitrees de la submuestra para probar en local).
-- Prestage de `PDSPProd4a_MC_6GeV_gen_datadriven_reco1_sce_datadriven_v1_01`-`v1_03` (tmux `prestage6`; estaban en cinta) y listas `lists/filelist_mc_6GeV_v1_<v>.txt` de `v1_01`-`v1_09` (tmux `listas6`). Ver con `check_locality.sh <lista> 20`.
+Corriendo en FNAL (lanzadas el 21-nov con `nohup`, desde highlandPD con `98622d5`): `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19v2.root` (variables nuevas) y `kaon_origin_minitrees.C` → `kaon_origin_big19.log`. Traer el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/`.
 
-Hecho hoy: logs de la 23390 revisados (todo bien); eje del haz validado (el fcl no cambia, vale para 3-7 GeV); escritura en persistent (token interactivo + `justin/to_persistent.sh`) y copia de `20261119big` completa; `setup_larsoft.sh` con `PD_TOKEN`; README de highlandAnalysis; renombres a la convención de highland (test de regresión idéntico); primer estudio de candidatos a mu (`mu_candidates_minitrees.C`).
+Módulo listo para el tag (highlandAnalysis `bc6e41d`, sin push): ventana de candidatos a mu 150-350 MeV/c (`MuCandidateLength: [21.20, 104.53]`), `SaveTrueAncestors` (antecesores de las partículas true guardadas fuera de la cadena del haz; las cadenas se rompían sobre todo en hijas de `neutronInelastic`: en 3 eventos, 105 enlazadas y 0 rotas) y `MuCandidateShowers` (código listo, apagado: +61 % de tamaño). Probado en FNAL con 10 eventos de MC: +4 % de tamaño, `count_module` sin incoherencias. Falta probar con datos.
 
-Siguientes pasos:
-1. Con `mu_cand_big19.root`: comprobar las pistas de los 500 eventos (Michel pegado al mu, dirección vertical de los cósmicos, dE/dx contra protones), buscar la combinación de cortes y mirar el espectro de rango (¿ajuste del pico?). Ideas en la sección de análisis nuevos.
-2. Tag: cuando el prestage avance, `git pull` en FNAL (highlandPD hasta `1390807` o posterior, highlandAnalysis `de92335`; el push lo hace el usuario), recompilar highlandPD **desde cero** (directorios renombrados) y el módulo, tarball, prueba corta en FermiGrid, tags en highland, highlandPD y highlandAnalysis.
-3. Producción de MC a 6 GeV por bloques (`v1_01`-`v1_03` primero): `submit.sh` por definición, `collect.sh` a una carpeta por definición, `to_persistent.sh`.
+Siguientes pasos: prueba con datos (10 eventos), tag (recompilar highlandPD desde cero, tarball, prueba corta en FermiGrid, tags de highland, highlandPD y highlandAnalysis), producción de MC a 6 GeV por bloques (`v1_01`-`v1_03` primero: `check_locality.sh`, `submit.sh`, `collect.sh`, `to_persistent.sh`). Con `mu_cand_big19v2.root`: variables nuevas (Michel alrededor de la parada, lo que acaba en el inicio, media truncada, z de los extremos para los diverters) y origen de la K con toda la estadística.
+
+### Análisis de producción (secondaryKaonProductionXS), 20-21 nov
+
+Objetivo: PRD con la medida A, sigma de producción de K+ en la primera interacción del haz (luego doble diferencial en T_K, theta_K). Señal: la primera K de la cadena (subiendo las K+ -> K+ de `kaonplusInelastic`) es hija directa del haz que dispara. Las K+ de interacciones secundarias (K0L, pi, neutrones) son fondo, y la K+ del haz tras K+ -> K+ no es producción. La medida B (rendimiento en blanco grueso) sirve como primer paso de validación.
+
+Macros (`test/phase2/`, sobre el árbol plano de `mu_candidates_minitrees.C`; las de `mu_cand_*` leen en una pasada con `mu_cand_common.h`, ~10 s): `mu_cand_cutflow.C` (cadena, N-1, espectro), `mu_cand_plots.C` (PDF por categoría: inicial, variables dentro/fuera de la beam slice, cortes), `mu_cand_scan.C` (umbrales), `mu_cand_pions.C`, `mu_cand_signal.C` (pérdidas y escala de rango), `mu_cand_fit.C` (ajuste del pico con pseudoexperimentos), `mu_cand_eff.C` (reparto de la eficiencia), `kaon_origin_minitrees.C` (origen de las K en la truth). Figuras en `~/Documents/Work/DUNE/analysis/PDSP/claude/plots/mu_candidates/`.
+
+Resultados con `mu_cand_big19.root` (73.070 eventos de MC a 6 GeV):
+- Dentro y fuera de la beam slice son poblaciones distintas (pasadas de Pandora distintas): cadenas de cortes separadas (`InSliceSteps`, `OutSliceSteps`). Fuera, Pandora cuelga los rayos delta como hijas: el número de hijas solo sirve dentro.
+- Cadena corta (chi2 mu < 6, Michel de la partícula > 0,02, ventana [205, 240] MeV/c, más geometría por población): 236 de señal, ~680 de fondo, S/B 0,35 (dentro 0,38, fuera 0,27). Optimizado en la misma muestra: optimista.
+- Fondo que queda: ~60 % pi+- de interacciones de pi del haz, mitad trozos de piones más largos y mitad piones enteros que se paran (pi+ con Michel: casi irreducible salvo por la forma del Bragg y lo que hay en el inicio).
+- Rango: pico en 228 MeV/c (2 cm más corto que la truth en los mu bien reconstruidos), anchura ~8 MeV/c. Ajuste gaussiana + exp(pol2): sesgo +12 % dentro y +45 % fuera con la señal de la tesis, 2-6 % con la señal ampliada (los mu+ de K+ sin cadena completa en la truth hacían un pico en el fondo). Error estadístico dentro: 15 % con esta muestra, ~6 % con 6 veces más (los datos de 6 GeV).
+- Eficiencia (K en reposo): 7,9 % final. Reconstrucción: 72 % con PFParticle, 46 % traza (Pandora llama shower a ~1/3 de los mu emparejados), 37 % en la ventana y con la geometría del módulo. El 35 % de la señal está en eventos sin beam slice (para A no sirven: la probabilidad de beam slice entra en la eficiencia y es un sistemático que hay que validar en datos).
+- Origen de los mu+ de K+ en reposo (34, 50 ficheros locales, antes del arreglo del módulo): primera interacción 24 % (la mitad con K+ -> K+), secundarias 21 %, K+ del haz 9 %, cadena cortada o sin madre 41 % (arreglado en el módulo).
+- Pico raro a ~570 MeV/c: trazas del haz cortadas en el electron diverter (z ~ 220 y 440 cm, dice el usuario).
+- Descartado: K+ del haz paradas como muestra de control (a 6 GeV casi ninguna se para: 2 en la ventana en 73.000 eventos).
+- Una CNN o un BDT: primero un BDT con las variables nuevas; ojo con esculpir el espectro de rango y con datos frente a MC.
 
 ## Forma de trabajar (acordada)
 
