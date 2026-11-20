@@ -5,9 +5,9 @@ Remoto: `github.com/ific-neutrinos/highlandPD`. Rama de integración: `develop`.
 
 Este fichero recoge la auditoría hecha el 13-nov-2026 y el plan acordado. El usuario escribe en español.
 
-## Estado para retomar (21-nov-2026)
+## Estado para retomar (20-nov-2026)
 
-Corriendo en FNAL (lanzadas el 21-nov con `nohup`, desde highlandPD con `98622d5`): `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19v2.root` (variables nuevas) y `kaon_origin_minitrees.C` → `kaon_origin_big19.log`. Traer el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/`.
+Corriendo en FNAL (lanzadas el 20-nov con `nohup`, desde highlandPD con `98622d5`): `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19v2.root` (variables nuevas) y `kaon_origin_minitrees.C` → `kaon_origin_big19.log`. Traer el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/`.
 
 Módulo listo para el tag (highlandAnalysis `bc6e41d`, sin push): ventana de candidatos a mu 150-350 MeV/c (`MuCandidateLength: [21.20, 104.53]`), `SaveTrueAncestors` (antecesores de las partículas true guardadas fuera de la cadena del haz; las cadenas se rompían sobre todo en hijas de `neutronInelastic`: en 3 eventos, 105 enlazadas y 0 rotas) y `MuCandidateShowers` (código listo, apagado: +61 % de tamaño). Probado en FNAL con 10 eventos de MC: +4 % de tamaño, `count_module` sin incoherencias. Falta probar con datos.
 

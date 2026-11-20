@@ -28,7 +28,7 @@ int mu_cand_eff(const char* in){
   ts->SetBranchAddress("entry", &entry); ts->SetBranchAddress("hasSlice", &hasSlice); ts->SetBranchAddress("matched", &matched);
   ts->SetBranchAddress("isTrack", &isTrack); ts->SetBranchAddress("inSlice", &inSlice); ts->SetBranchAddress("complete", &complete);
   ts->SetBranchAddress("contained", &contained); ts->SetBranchAddress("kMomEnd", &kMomEnd); ts->SetBranchAddress("pRange", &pRange);
-  // desde el 21-nov el árbol sig tiene también los mu+ de K en reposo que no son la señal de antes (isSignalOld)
+  // desde el 20-nov el árbol sig tiene también los mu+ de K en reposo que no son la señal de antes (isSignalOld)
   Int_t isSignalOld = 1;
   if(ts->GetBranch("isSignalOld"))ts->SetBranchAddress("isSignalOld", &isSignalOld);
 

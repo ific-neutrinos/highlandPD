@@ -15,7 +15,7 @@
 // madre es un K+ que acaba en Decay y desciende del haz. kMomEnd: momento final de esa K (MeV/c;
 // ~0 = en reposo).
 //
-// Añadido el 21-nov (las ramas anteriores no cambian para las trazas):
+// Añadido el 20-nov (las ramas anteriores no cambian para las trazas):
 //   - Candidatos tipo shower (isShower): PFParticles sin traza con traza forzada (pandora2Track); longitud,
 //     extremos y chi2 de la traza forzada; sin hits de calorimetría (dE/dx, chi2 por orientación y
 //     actividad en hits a -1).
@@ -154,7 +154,7 @@ namespace mucand {
     return a;
   }
 
-  // ---- Variables añadidas el 21-nov ----
+  // ---- Variables añadidas el 20-nov ----
   const double kWirePitch = 0.479;   // cm, plano de colección
   const double kTickCm = 0.0785;     // cm por tick (0,5 us x ~1,57 mm/us)
   const double kRadii[3] = {5., 10., 20.};
@@ -289,7 +289,7 @@ namespace mucand {
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, intPeakRR, dirYStop; Int_t stopAtB;
     // truth
     Int_t tPDG, tParentPDG, tProcStart, tOrigin, tFromBeam, tSignal, tGen, tFromBeamK; Float_t tKMomEnd, tPur, tEff, tLength;
-    // añadidas el 21-nov
+    // añadidas el 20-nov
     Int_t isShower;
     Float_t startX, startY, startZ, stopX, stopY, stopZ, cosBeam, trMean, trMeanBody;
     Int_t arN[3], arNMichel[3]; Float_t arMichel[3], arCharge[3];
@@ -302,7 +302,7 @@ namespace mucand {
   // mu+ true de K+ de la cadena del haz: qué le pasa en la reco
   struct Sig {
     Int_t entry, fullDump, hasSlice, matched, isTrack, inSlice, complete, inWindow, contained; Float_t kMomEnd, pRange, trueLength, axisMin, nearestToEnd;
-    // añadidas el 21-nov
+    // añadidas el 20-nov
     Int_t isSignalOld, tKOrigin, matchedType; Float_t muMom, tStartZ, tEndZ, pRangeShower;
   };
 
@@ -439,7 +439,7 @@ namespace mucand {
         c.tFromBeam = (t && beamTrue) ? DescendsFrom(t->ID, beamTrue->ID, byID) : 0;
         double km; c.tSignal = isSignal(t, km); c.tKMomEnd = km;
         c.tPur = p->TruePur; c.tEff = p->TrueEff; c.tLength = t ? (V(t->PositionEnd) - V(t->Position)).Mag() : -1;   // distancia inicio-fin
-        // añadidas el 21-nov
+        // añadidas el 20-nov
         const TVector3 stop = c.stopAtB ? b : a, start = c.stopAtB ? a : b;
         c.startX = start.X(); c.startY = start.Y(); c.startZ = start.Z(); c.stopX = stop.X(); c.stopY = stop.Y(); c.stopZ = stop.Z();
         c.cosBeam = (stop - start).Unit().Dot(kAxisDir);
@@ -461,7 +461,7 @@ namespace mucand {
       for(AnaTrueParticleB* t : spill->TrueParticles){
         double km;
         const bool old = isSignal(t, km);
-        // añadido el 21-nov: todos los mu+ de desintegración no cósmicos con p true de K en reposo
+        // añadido el 20-nov: todos los mu+ de desintegración no cósmicos con p true de K en reposo
         const bool atRest = t->PDG == -13 && t->ProcessStart == AnaTrueParticleB::Decay && static_cast<const AnaTrueParticlePD*>(t)->Origin != 2 &&
                             t->Momentum > 0.230 && t->Momentum < 0.241;   // GeV/c
         if(!old && !atRest)continue;
@@ -575,7 +575,7 @@ namespace mucand {
       long nGroup[kNGroups] = {0};
       for(Long64_t i = 0; i < tc->GetEntries(); i++){
         tc->GetEntry(i);
-        if(x.isShower || !ModuleCuts(x))continue;   // el resumen, solo con trazas (como antes del 21-nov)
+        if(x.isShower || !ModuleCuts(x))continue;   // el resumen, solo con trazas (como antes del 20-nov)
         const int g = Group(x);
         const bool isSig = g == 0 || g == 6;
         if(!x.fullDump){ cat[x.inSlice][Category(x)]++; total++; }
@@ -642,7 +642,7 @@ namespace mucand {
       std::vector<double> nearest;
       for(Long64_t i = 0; i < u->GetEntries(); i++){
         u->GetEntry(i);
-        if(!y.isSignalOld)continue;   // el resumen, con la señal de antes del 21-nov
+        if(!y.isSignalOld)continue;   // el resumen, con la señal de antes del 20-nov
         n++; if(y.kMomEnd < 50)rest++;
         if(y.contained)contained++;
         if(y.matched)matched++;

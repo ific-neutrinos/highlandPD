@@ -22,7 +22,7 @@ namespace mucut {
     Int_t entry, fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
     Int_t tPDG, tParentPDG, tOrigin, tSignal, tProcStart, tFromBeam;
     Float_t tLength, tPur, tEff;
-    Int_t isShower = 0;   // desde el 21-nov (candidatos tipo shower); 0 en los ficheros anteriores
+    Int_t isShower = 0;   // desde el 20-nov (candidatos tipo shower); 0 en los ficheros anteriores
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd, actMichelA, actMichelB;
   };
@@ -69,7 +69,7 @@ namespace mucut {
 
   // Lee los candidatos con p de rango en [100, 600] que pasan los cortes del módulo salvo la ventana.
   // orientByChi2: extremo de parada = el de la orientación con mejor chi2 mu (por defecto, el de mayor dE/dx).
-  // withShowers: también los candidatos tipo shower (ficheros desde el 21-nov; por defecto, solo trazas)
+  // withShowers: también los candidatos tipo shower (ficheros desde el 20-nov; por defecto, solo trazas)
   std::vector<C> Load(const char* in, bool orientByChi2 = false, bool withShowers = false){
     std::vector<C> cands;
     TFile f(in);
@@ -194,12 +194,12 @@ namespace mucut {
     return s;
   }
   std::vector<Step> InSliceSteps(){
-    // 21-nov: tras el N-1 de la cadena larga (fuera eje > 10, chi2 p, dE/dx inicio y cnnEM) y el escaneo de
+    // 20-nov: tras el N-1 de la cadena larga (fuera eje > 10, chi2 p, dE/dx inicio y cnnEM) y el escaneo de
     // mu_cand_scan.C (chi2 mu, Michel y ventana; superficie plana alrededor de estos valores)
     return Steps({"caras35", "vtx>15", "chi2mu<6", "dedxStop>3", "ventana205", "michel"});
   }
   std::vector<Step> OutSliceSteps(){
-    // 21-nov: fuera caras > 20 y cnnEM (N-1); chi2 mu, Michel y ventana de mu_cand_scan.C
+    // 20-nov: fuera caras > 20 y cnnEM (N-1); chi2 mu, Michel y ventana de mu_cand_scan.C
     return Steps({"noclear", "eje<60", "chi2mu<6", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "ventana205", "michel"});
   }
 
