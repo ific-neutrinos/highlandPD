@@ -34,15 +34,26 @@ namespace mucut {
     int tPDG, tParentPDG, tOrigin, actStart, actStop, nHits2, nDaughters;
     double pRange, length, axisMin, vtxMin, facesMax, dEdxStop, dEdxStart, chi2muStop, chi2pStop, michelStop;
     double cnnTrk, cnnEM, cnnMichel, intPeak, dirYStop;
-    double facesStop, facesStart, actMichelStop;   // distancia de cada extremo a las caras; CNN Michel de las partículas a < 10 cm de la parada
+    double facesStop, facesStart, actMichelStop;
+    double chi2muOther, dEdxA, dEdxB;   // chi2 mu con la orientación contraria; dE/dx en PositionStart y PositionEnd de Pandora
+    bool stopAtB;   // distancia de cada extremo a las caras; CNN Michel de las partículas a < 10 cm de la parada
   };
 
   constexpr int kNGroups = 6;
   const char* kGroupName[kNGroups] = {"señal", "mu cósmico", "protón", "pi+-", "EM", "resto"};
 
+  // Señal ampliada: además de los mu+ de K+ de la cadena del haz (tSignal), cualquier mu+ no cósmico creado
+  // en una desintegración cuya madre es un K+ o no está guardada (K de interacciones secundarias cuya
+  // cadena no se guarda en la truth). Para estos no se sabe si la K estaba en reposo.
+  bool gBroadSignal = false;
+  bool BroadSignal(const In& x){
+    return x.tPDG == -13 && x.tOrigin != 2 && x.tProcStart == 2 && (x.tParentPDG == 321 || x.tParentPDG == 0);
+  }
+
   // -2: fondo de eventos con volcado (no se usa)
   int Group(const In& x){
     if(x.tSignal)return x.tKMomEnd < 50 ? 0 : -1;
+    if(gBroadSignal && BroadSignal(x))return 0;
     if(x.fullDump)return -2;
     if(std::abs(x.tPDG) == 13 && x.tOrigin == 2)return 1;
     if(std::abs(x.tPDG) == 2212)return 2;
@@ -54,8 +65,9 @@ namespace mucut {
   bool InWindow(const C& c){ return c.pRange >= 180 && c.pRange <= 300; }   // ventana del módulo
   bool ModuleNoWindow(const C& c){ return c.facesMax >= 10 && c.axisMin <= 150; }
 
-  // Lee los candidatos con p de rango en [100, 600] que pasan los cortes del módulo salvo la ventana
-  std::vector<C> Load(const char* in){
+  // Lee los candidatos con p de rango en [100, 600] que pasan los cortes del módulo salvo la ventana.
+  // orientByChi2: extremo de parada = el de la orientación con mejor chi2 mu (por defecto, el de mayor dE/dx)
+  std::vector<C> Load(const char* in, bool orientByChi2 = false){
     std::vector<C> cands;
     TFile f(in);
     TTree* t = (TTree*)f.Get("cand");
@@ -75,11 +87,16 @@ namespace mucut {
       C c;
       c.group = Group(x);
       if(c.group == -2)continue;
-      const bool b = x.stopAtB;
+      bool b = x.stopAtB;
+      if(orientByChi2){
+        const double cB = x.chi2muF < 0 ? 1e9 : x.chi2muF, cA = x.chi2muR < 0 ? 1e9 : x.chi2muR;   // F: parada en B
+        if(cA < 1e9 || cB < 1e9)b = cB <= cA;
+      }
       c.inSlice = x.inSlice; c.hasSlice = x.hasSlice; c.complete = x.complete; c.clearCosmic = x.clearCosmic;
       c.tProcStart = x.tProcStart; c.tFromBeam = x.tFromBeam; c.tLength = x.tLength; c.tPur = x.tPur; c.tEff = x.tEff;
       c.tPDG = x.tPDG; c.tParentPDG = x.tParentPDG; c.tOrigin = x.tOrigin; c.nHits2 = x.nHits2;
       c.actStart = b ? x.actPartsA : x.actPartsB; c.actStop = b ? x.actPartsB : x.actPartsA; c.nDaughters = x.nDaughters;
+      c.chi2muOther = b ? x.chi2muR : x.chi2muF; c.dEdxA = x.dEdxA; c.dEdxB = x.dEdxB; c.stopAtB = b;
       c.facesStop = b ? x.facesB : x.facesA; c.facesStart = b ? x.facesA : x.facesB; c.actMichelStop = b ? x.actMichelB : x.actMichelA;
       c.pRange = x.pRange; c.length = x.length;
       c.axisMin = std::min(x.axisA, x.axisB); c.vtxMin = std::min(x.vtxA, x.vtxB); c.facesMax = std::max(x.facesA, x.facesB);

@@ -39,9 +39,10 @@ namespace mucut {
   double Q(std::vector<double>& v, double q){ return v[std::min<size_t>(v.size() - 1, size_t(q*v.size()))]; }
 }
 
-int mu_cand_cutflow(const char* in, const char* out = "mu_cand_cutflow.root", long nEvents = 73070, long nEventsNormal = 65977){
+int mu_cand_cutflow(const char* in, const char* out = "mu_cand_cutflow.root", bool orientByChi2 = false, long nEvents = 73070, long nEventsNormal = 65977){
   using namespace mucut;
-  const std::vector<C> cands = Load(in);
+  const std::vector<C> cands = Load(in, orientByChi2);
+  if(orientByChi2)std::cout << "Extremo de parada: orientación con mejor chi2 mu" << std::endl;
   if(cands.empty())return 1;
 
   const double scaleB = double(nEvents)/nEventsNormal;
