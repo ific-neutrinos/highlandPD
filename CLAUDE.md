@@ -280,6 +280,7 @@ Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `ph
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
 - Separar el núcleo `pd*` (una librería) de los análisis (una librería y un ejecutable cada uno, opcionales vía CMake).
+- **Convención de nombres de las clases** (decidido con el usuario el 20-nov): unificar `xxxPD` / `pdXxx` en las clases internas (`EventBoxPD`, `ToyBoxPD`, `CreateMiniTreePD` frente a `pdBaseAnalysis`, `pdBaseConverter`, `pdAnaUtils`...). Nunca las clases de datos (`AnaSpillPD`, `AnaParticlePD`...): ROOT guarda sus nombres en los minitrees. Los paquetes, las clases de análisis y selección, los ficheros de parámetros y los ejecutables ya siguen la convención de highland (paquetes y clases de análisis en minúscula, como `baseAnalysis`).
 - Factorizar el copy-paste:
   - El bloque que recalcula los χ² (`Chi2Proton`, `Chi2Muon`, `Chi2ndf`) está en 4 variaciones y su restauración en 3 `UndoSystematic`: helper común (sirve también para el bug A1 de la auditoría).
   - El bucle "partículas + `Original`" se repite en las 11 correcciones y el de la `SystBox` en las 6 variaciones.
