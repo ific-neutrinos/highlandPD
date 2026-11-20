@@ -19,19 +19,20 @@ namespace mucut {
 
   // Lo que se lee del árbol (mismos tipos que mu_candidates_minitrees_impl.C)
   struct In {
-    Int_t fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2;
+    Int_t fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
     Int_t tPDG, tParentPDG, tOrigin, tSignal;
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
-    Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd;
+    Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd, actMichelA, actMichelB;
   };
 
   // Candidato en memoria, con las variables ya referidas al extremo de parada
   struct C {
     int group;          // 0 señal, 1 mu cósmico, 2 p, 3 pi, 4 EM, 5 resto, -1 señal en vuelo
     bool inSlice, hasSlice, complete, clearCosmic;
-    int tPDG, tParentPDG, tOrigin, actStart, nHits2;
+    int tPDG, tParentPDG, tOrigin, actStart, actStop, nHits2, nDaughters;
     double pRange, length, axisMin, vtxMin, facesMax, dEdxStop, dEdxStart, chi2muStop, chi2pStop, michelStop;
     double cnnTrk, cnnEM, cnnMichel, intPeak, dirYStop;
+    double facesStop, facesStart, actMichelStop;   // distancia de cada extremo a las caras; CNN Michel de las partículas a < 10 cm de la parada
   };
 
   constexpr int kNGroups = 6;
@@ -60,10 +61,10 @@ namespace mucut {
     In x;
     t->SetBranchStatus("*", 0);
 #define MC_BR(v) t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, &x.v);
-    MC_BR(fullDump) MC_BR(hasSlice) MC_BR(inSlice) MC_BR(complete) MC_BR(stopAtB) MC_BR(clearCosmic) MC_BR(actPartsA) MC_BR(actPartsB) MC_BR(nHits2)
+    MC_BR(fullDump) MC_BR(hasSlice) MC_BR(inSlice) MC_BR(complete) MC_BR(stopAtB) MC_BR(clearCosmic) MC_BR(actPartsA) MC_BR(actPartsB) MC_BR(nHits2) MC_BR(nDaughters)
     MC_BR(tPDG) MC_BR(tParentPDG) MC_BR(tOrigin) MC_BR(tSignal)
     MC_BR(pRange) MC_BR(length) MC_BR(cnnTrk) MC_BR(cnnEM) MC_BR(cnnMichel) MC_BR(facesA) MC_BR(facesB) MC_BR(axisA) MC_BR(axisB) MC_BR(vtxA) MC_BR(vtxB)
-    MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd)
+    MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
 #undef MC_BR
     const Long64_t nEntries = t->GetEntries();
     for(Long64_t i = 0; i < nEntries; i++){
@@ -75,7 +76,8 @@ namespace mucut {
       const bool b = x.stopAtB;
       c.inSlice = x.inSlice; c.hasSlice = x.hasSlice; c.complete = x.complete; c.clearCosmic = x.clearCosmic;
       c.tPDG = x.tPDG; c.tParentPDG = x.tParentPDG; c.tOrigin = x.tOrigin; c.nHits2 = x.nHits2;
-      c.actStart = b ? x.actPartsA : x.actPartsB;
+      c.actStart = b ? x.actPartsA : x.actPartsB; c.actStop = b ? x.actPartsB : x.actPartsA; c.nDaughters = x.nDaughters;
+      c.facesStop = b ? x.facesB : x.facesA; c.facesStart = b ? x.facesA : x.facesB; c.actMichelStop = b ? x.actMichelB : x.actMichelA;
       c.pRange = x.pRange; c.length = x.length;
       c.axisMin = std::min(x.axisA, x.axisB); c.vtxMin = std::min(x.vtxA, x.vtxB); c.facesMax = std::max(x.facesA, x.facesB);
       c.dEdxStop = b ? x.dEdxB : x.dEdxA; c.dEdxStart = b ? x.dEdxA : x.dEdxB;

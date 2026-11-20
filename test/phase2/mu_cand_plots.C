@@ -10,7 +10,8 @@
 //   1-3. p de rango con los cortes del módulo salvo la ventana: todos, en la beam slice y fuera.
 //        Fuera de la beam slice, fuera de la ventana del módulo (180-300) solo hay resumen: el escalón es
 //        del módulo, no de la física.
-//   4... un corte por página: a la izquierda con los cortes anteriores (cadena), a la derecha con todos
+//   4-16. variables candidatas con los cortes del módulo: apiladas y formas normalizadas por categoría.
+//   17... un corte por página: a la izquierda con los cortes anteriores (cadena), a la derecha con todos
 //        los demás (N-1). Línea vertical donde se corta. Base: cortes del módulo, ventana incluida
 //        (salvo en la página de la ventana estrecha, donde se quita).
 #include "mu_cand_common.h"
@@ -91,6 +92,36 @@ namespace muplot {
     tx->SetNDC(); tx->SetTextSize(0.033);
     tx->DrawLatex(0.13, 0.85, Form("S = %.0f, B = %.0f, S/B = %.3f", h[0]->Integral(), B, B > 0 ? h[0]->Integral()/B : 0.));
   }
+
+  // Formas normalizadas a área 1 por categoría (líneas), para ver si una variable separa
+  void DrawShapes(const std::vector<C>& cands, const std::function<bool(const C&)>& sel, const std::function<double(const C&)>& var,
+                  int nbins, double xmin, double xmax, const std::string& title, const std::string& xtitle, bool logy, Drawn& d){
+    static int id = 0; id++;
+    TH1D* h[kNGroups];
+    for(int g = 0; g < kNGroups; g++){
+      h[g] = new TH1D(Form("n%d_%d", id, g), Form("%s;%s;fracci#acute{o}n", Tx(title).c_str(), Tx(xtitle).c_str()), nbins, xmin, xmax);
+      h[g]->SetLineColor(kColor[g]); h[g]->SetLineWidth(g == 0 ? 4 : 2); h[g]->SetFillStyle(0);
+      d.keep.emplace_back(h[g]);
+    }
+    for(const C& c : cands){
+      if(c.group < 0 || !sel(c))continue;
+      double v = var(c);
+      if(v < xmin)continue;
+      v = std::min(xmax - 1e-6*(xmax - xmin), v);
+      h[c.group]->Fill(v);
+    }
+    double ymax = 0;
+    for(int g = 0; g < kNGroups; g++){ if(h[g]->Integral() > 0)h[g]->Scale(1./h[g]->Integral()); ymax = std::max(ymax, h[g]->GetMaximum()); }
+    h[0]->SetMaximum(logy ? 3*ymax : 1.15*ymax);
+    if(logy){ h[0]->SetMinimum(1e-4); gPad->SetLogy(); }
+    h[0]->Draw("hist");
+    for(int g = kNGroups - 1; g >= 1; g--)h[g]->Draw("hist same");
+    h[0]->Draw("hist same");
+    TLegend* leg = new TLegend(0.65, 0.65, 0.89, 0.89); d.keep.emplace_back(leg);
+    leg->SetBorderSize(0); leg->SetFillStyle(0); leg->SetTextSize(0.035);
+    for(int g = 0; g < kNGroups; g++)leg->AddEntry(h[g], Tx(kGroupName[g]).c_str(), "l");
+    leg->Draw();
+  }
 }
 
 int mu_cand_plots(const char* in, const char* outdir, long nEvents = 73070, long nEventsNormal = 65977){
@@ -124,6 +155,34 @@ int mu_cand_plots(const char* in, const char* outdir, long nEvents = 73070, long
       cv.cd(1); Draw(cands, s.sel, pRange, 50, 100, 600, s.title, "p por rango (hipótesis #mu, MeV/c)", {180, 300}, false, scaleB, d);
       cv.cd(2); Draw(cands, s.sel, pRange, 50, 100, 600, "(escala log)", "p por rango (hipótesis #mu, MeV/c)", {180, 300}, true, scaleB, d);
       Save(s.tag);
+    }
+  }
+
+  // Variables candidatas (sin cortar): con los cortes del módulo (ventana incluida)
+  {
+    struct V { const char* tag; const char* name; std::function<double(const C&)> var; int nb; double x0, x1; bool logy; };
+    const V vars[] = {
+      {"chi2mu",      "#chi^{2}_{#mu}/ndf (parada en el extremo de mayor dE/dx)", [](const C& c){ return c.chi2muStop; }, 60, 0, 60, false},
+      {"nhijas",      "n#acute{u}mero de hijas (Pandora)", [](const C& c){ return double(c.nDaughters); }, 8, -0.5, 7.5, true},
+      {"caras_min",   "distancia m#acute{i}nima de los dos extremos a las caras (cm)", [](const C& c){ return std::min(c.facesStop, c.facesStart); }, 50, 0, 150, false},
+      {"caras_inicio","distancia del extremo de inicio (no parada) a las caras (cm)", [](const C& c){ return c.facesStart; }, 50, 0, 150, false},
+      {"caras_parada","distancia del extremo de parada a las caras (cm)", [](const C& c){ return c.facesStop; }, 50, 0, 150, false},
+      {"eje",         "distancia m#acute{i}nima al eje del haz (cm)", [](const C& c){ return c.axisMin; }, 50, 0, 150, false},
+      {"diry",        "componente y de la direcci#acute{o}n hacia la parada", [](const C& c){ return c.dirYStop; }, 40, -1, 1, false},
+      {"dedx_parada", "dE/dx medio en los 5 cm del extremo de parada (MeV/cm)", [](const C& c){ return c.dEdxStop; }, 60, 0, 20, false},
+      {"dedx_inicio", "dE/dx medio en los 5 cm del extremo de inicio (MeV/cm)", [](const C& c){ return c.dEdxStart; }, 60, 0, 10, false},
+      {"michel_propios", "CNN Michel media de los hits propios a < 5 cm de la parada", [](const C& c){ return c.michelStop; }, 50, 0, 1, true},
+      {"act_parada",  "part#acute{i}culas con un extremo a < 10 cm de la parada", [](const C& c){ return double(c.actStop); }, 8, -0.5, 7.5, true},
+      {"act_michel",  "CNN Michel media de esas part#acute{i}culas (-1: ninguna)", [](const C& c){ return c.actMichelStop; }, 51, -1.04, 1, true},
+      {"cnnmichel",   "CNN Michel de la part#acute{i}cula entera", [](const C& c){ return c.cnnMichel; }, 50, 0, 0.5, true},
+    };
+    auto sel = [](const C& c){ return InWindow(c); };
+    for(const V& v : vars){
+      cv.Clear(); cv.Divide(2, 1);
+      Drawn d;
+      cv.cd(1); Draw(cands, sel, v.var, v.nb, v.x0, v.x1, "Cortes del m#acute{o}dulo", v.name, {}, v.logy, scaleB, d);
+      cv.cd(2); DrawShapes(cands, sel, v.var, v.nb, v.x0, v.x1, "Formas (#acute{a}rea 1)", v.name, v.logy, d);
+      Save(std::string("var_") + v.tag);
     }
   }
 
