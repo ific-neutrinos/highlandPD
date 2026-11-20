@@ -19,7 +19,7 @@ namespace mucut {
 
   // Lo que se lee del árbol (mismos tipos que mu_candidates_minitrees_impl.C)
   struct In {
-    Int_t fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
+    Int_t entry, fullDump, hasSlice, inSlice, complete, stopAtB, clearCosmic, actPartsA, actPartsB, nHits2, nDaughters;
     Int_t tPDG, tParentPDG, tOrigin, tSignal, tProcStart, tFromBeam;
     Float_t tLength, tPur, tEff;
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
@@ -28,6 +28,7 @@ namespace mucut {
 
   // Candidato en memoria, con las variables ya referidas al extremo de parada
   struct C {
+    int entry;          // entrada del minitree (para enlazar con el árbol sig)
     int group;          // 0 señal, 1 mu cósmico, 2 p, 3 pi, 4 EM, 5 resto, -1 señal en vuelo
     bool inSlice, hasSlice, complete, clearCosmic;
     int tProcStart, tFromBeam; double tLength, tPur, tEff;   // truth: proceso de creación, longitud true inicio-fin, pureza, completitud
@@ -75,7 +76,7 @@ namespace mucut {
     In x;
     t->SetBranchStatus("*", 0);
 #define MC_BR(v) t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, &x.v);
-    MC_BR(fullDump) MC_BR(hasSlice) MC_BR(inSlice) MC_BR(complete) MC_BR(stopAtB) MC_BR(clearCosmic) MC_BR(actPartsA) MC_BR(actPartsB) MC_BR(nHits2) MC_BR(nDaughters)
+    MC_BR(entry) MC_BR(fullDump) MC_BR(hasSlice) MC_BR(inSlice) MC_BR(complete) MC_BR(stopAtB) MC_BR(clearCosmic) MC_BR(actPartsA) MC_BR(actPartsB) MC_BR(nHits2) MC_BR(nDaughters)
     MC_BR(tPDG) MC_BR(tParentPDG) MC_BR(tOrigin) MC_BR(tSignal) MC_BR(tProcStart) MC_BR(tFromBeam) MC_BR(tLength) MC_BR(tPur) MC_BR(tEff)
     MC_BR(pRange) MC_BR(length) MC_BR(cnnTrk) MC_BR(cnnEM) MC_BR(cnnMichel) MC_BR(facesA) MC_BR(facesB) MC_BR(axisA) MC_BR(axisB) MC_BR(vtxA) MC_BR(vtxB)
     MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
@@ -85,6 +86,7 @@ namespace mucut {
       t->GetEntry(i);
       if(x.pRange < 100 || x.pRange > 600)continue;
       C c;
+      c.entry = x.entry;
       c.group = Group(x);
       if(c.group == -2)continue;
       bool b = x.stopAtB;
