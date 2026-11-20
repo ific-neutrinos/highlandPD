@@ -125,6 +125,51 @@ namespace mucut {
     };
   }
 
+  // Cortes por población (la beam slice y lo de fuera los reconstruyen pasadas distintas de Pandora y tienen
+  // fondos distintos: dentro la traza del haz y sus pi y p; fuera cósmicos y EM). Cada uno se define una vez.
+  Step MakeStep(const std::string& key){
+    if(key == "noclear")   return {"no IsClearCosmic", [](const C& c){ return !c.clearCosmic; }, [](const C& c){ return double(c.clearCosmic); },
+                                   2, -0.5, 1.5, "IsClearCosmic", {0.5}, false};
+    if(key == "caras20")   return {"extremos a > 20 cm de las caras", [](const C& c){ return std::min(c.facesStop, c.facesStart) > 20; },
+                                   [](const C& c){ return std::min(c.facesStop, c.facesStart); }, 50, 0, 150, "distancia mínima de los dos extremos a las caras (cm)", {20}, false};
+    if(key == "caras35")   return {"extremos a > 35 cm de las caras", [](const C& c){ return std::min(c.facesStop, c.facesStart) > 35; },
+                                   [](const C& c){ return std::min(c.facesStop, c.facesStart); }, 50, 0, 150, "distancia mínima de los dos extremos a las caras (cm)", {35}, false};
+    if(key == "eje<60")    return {"dist. al eje < 60 cm", [](const C& c){ return c.axisMin < 60; }, [](const C& c){ return c.axisMin; },
+                                   50, 0, 150, "distancia mínima al eje del haz (cm)", {60}, false};
+    if(key == "eje>10")    return {"dist. al eje > 10 cm", [](const C& c){ return c.axisMin > 10; }, [](const C& c){ return c.axisMin; },
+                                   50, 0, 150, "distancia mínima al eje del haz (cm)", {10}, false};
+    if(key == "vtx>15")    return {"dist. al vértice > 15 cm", [](const C& c){ return c.vtxMin < 0 || c.vtxMin > 15; }, [](const C& c){ return c.vtxMin; },
+                                   52, -4, 300, "distancia mínima al vértice del haz (cm; < 0: sin vértice)", {15}, false};
+    if(key == "chi2mu<5")  return {"chi2 mu < 5", [](const C& c){ return c.chi2muStop >= 0 && c.chi2muStop < 5; }, [](const C& c){ return c.chi2muStop; },
+                                   60, 0, 60, "#chi^{2}_{#mu}/ndf (parada en el extremo de mayor dE/dx)", {5}, false};
+    if(key == "dedxStop>3")return {"dE/dx parada > 3", [](const C& c){ return c.dEdxStop > 3; }, [](const C& c){ return c.dEdxStop; },
+                                   60, 0, 20, "dE/dx medio en los 5 cm del extremo de parada (MeV/cm)", {3}, false};
+    if(key == "dedxStart>1.8")return {"dE/dx inicio > 1.8", [](const C& c){ return c.dEdxStart > 1.8; }, [](const C& c){ return c.dEdxStart; },
+                                   50, 0, 10, "dE/dx medio en los 5 cm del extremo de inicio (MeV/cm)", {1.8}, false};
+    if(key == "chi2p>80")  return {"chi2 p > 80", [](const C& c){ return c.chi2pStop > 80; }, [](const C& c){ return c.chi2pStop; },
+                                   60, 0, 400, "#chi^{2}_{p}/ndf (misma orientación)", {80}, false};
+    if(key == "cnnEM")     return {"cnnEM < 0.5", [](const C& c){ return c.cnnEM < 0.5; }, [](const C& c){ return c.cnnEM; },
+                                   50, 0, 1, "puntuación CNN EM de la partícula", {0.5}, false};
+    if(key == "ventana")   return {"p rango en [200, 245]", [](const C& c){ return c.pRange >= 200 && c.pRange <= 245; }, [](const C& c){ return c.pRange; },
+                                   60, 100, 400, "p por rango (hipótesis #mu, MeV/c)", {200, 245}, false};
+    if(key == "michel")    return {"cnnMichel > 0.02", [](const C& c){ return c.cnnMichel > 0.02; }, [](const C& c){ return c.cnnMichel; },
+                                   50, 0, 0.5, "puntuación CNN Michel de la partícula", {0.02}, true};
+    std::cerr << "MakeStep: corte desconocido " << key << std::endl;
+    exit(1);
+  }
+
+  std::vector<Step> Steps(const std::vector<std::string>& keys){
+    std::vector<Step> s;
+    for(const std::string& k : keys)s.push_back(MakeStep(k));
+    return s;
+  }
+  std::vector<Step> InSliceSteps(){
+    return Steps({"caras35", "eje>10", "vtx>15", "chi2mu<5", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "cnnEM", "ventana", "michel"});
+  }
+  std::vector<Step> OutSliceSteps(){
+    return Steps({"noclear", "eje<60", "caras20", "chi2mu<5", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "cnnEM", "ventana", "michel"});
+  }
+
   // Pasa los pasos [0, upto] salvo skip
   bool Pass(const std::vector<Step>& s, const C& c, int skip = -1, int upto = 1000){
     for(int i = 0; i < (int)s.size() && i <= upto; i++)if(i != skip && !s[i].pass(c))return false;

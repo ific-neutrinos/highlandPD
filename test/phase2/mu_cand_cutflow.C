@@ -49,23 +49,31 @@ int mu_cand_cutflow(const char* in, const char* out = "mu_cand_cutflow.root", lo
   const int nS = steps.size();
   std::cout << "Eventos " << nEvents << " (normales " << nEventsNormal << "); fondo escalado x" << scaleB << std::endl;
 
-  // Cortes acumulados y N-1, en la ventana del módulo
-  std::vector<Tally> cum(nS + 1), nm1(nS + 1);
-  for(const C& c : cands){
-    if(c.group < 0 || !InWindow(c))continue;
-    cum[0].n[c.group]++;
-    for(int i = 0; i < nS; i++){ if(!steps[i].pass(c))break; cum[i + 1].n[c.group]++; }
-    for(int i = 0; i < nS; i++)if(Pass(steps, c, i))nm1[i].n[c.group]++;
-    if(Pass(steps, c))nm1[nS].n[c.group]++;
-  }
-  std::cout << std::endl << "Cortes acumulados (candidatos):" << std::endl;
-  Header();
-  Row("cortes del módulo", cum[0], scaleB, nEvents);
-  for(int i = 0; i < nS; i++)Row("+ " + steps[i].name, cum[i + 1], scaleB, nEvents);
-  std::cout << std::endl << "N-1 (todos los cortes menos uno):" << std::endl;
-  Header();
-  Row("todos", nm1[nS], scaleB, nEvents);
-  for(int i = 0; i < nS; i++)Row("sin " + steps[i].name, nm1[i], scaleB, nEvents);
+  // Cortes acumulados y N-1, en la ventana del módulo: cadena común antigua y una por población
+  auto Tables = [&](const std::vector<Step>& st, const std::function<bool(const C&)>& pop, const std::string& label){
+    const int n = st.size();
+    std::vector<Tally> cum(n + 1), nm1(n + 1);
+    for(const C& c : cands){
+      if(c.group < 0 || !pop(c))continue;
+      // la ventana estrecha ya está dentro de la del módulo; sin ella, la base es la ventana del módulo
+      if(!InWindow(c))continue;
+      cum[0].n[c.group]++;
+      for(int i = 0; i < n; i++){ if(!st[i].pass(c))break; cum[i + 1].n[c.group]++; }
+      for(int i = 0; i < n; i++)if(Pass(st, c, i))nm1[i].n[c.group]++;
+      if(Pass(st, c))nm1[n].n[c.group]++;
+    }
+    std::cout << std::endl << "== " << label << " ==" << std::endl << "Cortes acumulados (candidatos):" << std::endl;
+    Header();
+    Row("cortes del módulo", cum[0], scaleB, nEvents);
+    for(int i = 0; i < n; i++)Row("+ " + st[i].name, cum[i + 1], scaleB, nEvents);
+    std::cout << std::endl << "N-1 (todos los cortes menos uno):" << std::endl;
+    Header();
+    Row("todos", nm1[n], scaleB, nEvents);
+    for(int i = 0; i < n; i++)Row("sin " + st[i].name, nm1[i], scaleB, nEvents);
+  };
+  Tables(steps, [](const C&){ return true; }, "Cadena común (DefaultSteps), todos");
+  Tables(InSliceSteps(), [](const C& c){ return c.inSlice; }, "En la beam slice (InSliceSteps)");
+  Tables(OutSliceSteps(), [](const C& c){ return !c.inSlice; }, "Fuera de la beam slice (OutSliceSteps)");
 
   // Variables tras todos los cortes
   struct V { const char* name; std::function<double(const C&)> get; };

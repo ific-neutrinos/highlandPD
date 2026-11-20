@@ -13,6 +13,8 @@
 //   4... un corte por página: a la izquierda con los cortes anteriores (cadena), a la derecha con todos
 //        los demás (N-1). Línea vertical donde se corta. Base: cortes del módulo, ventana incluida
 //        (salvo en la página de la ventana estrecha, donde se quita).
+// mu_cand_cortes_bs.pdf y mu_cand_cortes_fuera.pdf: lo mismo con la cadena de cada población (InSliceSteps y
+// OutSliceSteps), con una primera página del p de rango de la población.
 // En otro PDF (mu_cand_vars.pdf), una página por variable candidata con los cortes del módulo: arriba en la
 // beam slice y abajo fuera (las reconstruyen pasadas distintas de Pandora), apiladas y formas normalizadas.
 #include "mu_cand_common.h"
@@ -177,7 +179,9 @@ int mu_cand_plots(const char* in, const char* outdir, long nEvents = 73070, long
       {"act_michel",  "CNN Michel media de esas part#acute{i}culas (-1: ninguna)", [](const C& c){ return c.actMichelStop; }, 51, -1.04, 1, true},
       {"cnnmichel",   "CNN Michel de la part#acute{i}cula entera", [](const C& c){ return c.cnnMichel; }, 50, 0, 0.5, true},
     };
-    // En otro PDF (mu_cand_vars.pdf): arriba en la beam slice, abajo fuera (pasadas distintas de Pandora)
+    // mu_cand_cortes_bs.pdf y mu_cand_cortes_fuera.pdf: lo mismo con la cadena de cada población (InSliceSteps y
+// OutSliceSteps), con una primera página del p de rango de la población.
+// En otro PDF (mu_cand_vars.pdf): arriba en la beam slice, abajo fuera (pasadas distintas de Pandora)
     auto selIn = [](const C& c){ return InWindow(c) && c.inSlice; };
     auto selOut = [](const C& c){ return InWindow(c) && !c.inSlice; };
     const std::string pdfv = std::string(outdir) + "/mu_cand_vars.pdf";
@@ -199,20 +203,47 @@ int mu_cand_plots(const char* in, const char* outdir, long nEvents = 73070, long
     std::cout << pv << " páginas en " << pdfv << std::endl;
   }
 
-  // Un corte por página
-  for(int i = 0; i < (int)steps.size(); i++){
-    const Step& s = steps[i];
-    const bool isWindow = s.name.rfind("p rango", 0) == 0;
-    auto base = [isWindow](const C& c){ return isWindow || InWindow(c); };
-    auto before = [&, i](const C& c){ return base(c) && Pass(steps, c, -1, i - 1); };
-    auto nm1 = [&, i](const C& c){ return base(c) && Pass(steps, c, i); };
-    cv.Clear(); cv.Divide(2, 1);
-    Drawn d;
-    cv.cd(1); Draw(cands, before, s.var, s.nbins, s.xmin, s.xmax, Form("%d. %s: con los cortes anteriores", i + 1, s.name.c_str()), s.xtitle, s.lines, s.logy, scaleB, d);
-    cv.cd(2); Draw(cands, nm1, s.var, s.nbins, s.xmin, s.xmax, Form("%d. %s: N-1 (todos los demás)", i + 1, s.name.c_str()), s.xtitle, s.lines, s.logy, scaleB, d);
-    Save(Form("corte%d", i + 1));
-  }
+  // Un corte por página (cadena común antigua, en mu_cand_plots.pdf)
+  auto CutPages = [&](const std::vector<Step>& st, const std::function<bool(const C&)>& pop, const std::string& label,
+                      const std::function<void(const std::string&)>& save){
+    for(int i = 0; i < (int)st.size(); i++){
+      const Step& s = st[i];
+      const bool isWindow = s.name.rfind("p rango", 0) == 0;
+      auto base = [isWindow, &pop](const C& c){ return pop(c) && (isWindow || InWindow(c)); };
+      auto before = [&, i](const C& c){ return base(c) && Pass(st, c, -1, i - 1); };
+      auto nm1 = [&, i](const C& c){ return base(c) && Pass(st, c, i); };
+      cv.Clear(); cv.Divide(2, 1);
+      Drawn d;
+      cv.cd(1); Draw(cands, before, s.var, s.nbins, s.xmin, s.xmax, Form("%s%d. %s: con los cortes anteriores", label.c_str(), i + 1, s.name.c_str()), s.xtitle, s.lines, s.logy, scaleB, d);
+      cv.cd(2); Draw(cands, nm1, s.var, s.nbins, s.xmin, s.xmax, Form("%s%d. %s: N-1 (todos los dem#acute{a}s)", label.c_str(), i + 1, s.name.c_str()), s.xtitle, s.lines, s.logy, scaleB, d);
+      save(Form("corte%d", i + 1));
+    }
+  };
+  CutPages(steps, [](const C&){ return true; }, "", Save);
   cv.Print((pdf + "]").c_str());
   std::cout << page << " páginas en " << pdf << " (y PNG en " << outdir << ")" << std::endl;
+
+  // Cadenas por población: mu_cand_cortes_bs.pdf y mu_cand_cortes_fuera.pdf
+  struct Pop { const char* tag; const char* label; std::vector<Step> st; std::function<bool(const C&)> sel; };
+  const Pop pops[] = {{"bs", "[BS] ", InSliceSteps(), [](const C& c){ return c.inSlice; }},
+                      {"fuera", "[fuera] ", OutSliceSteps(), [](const C& c){ return !c.inSlice; }}};
+  for(const Pop& p : pops){
+    const std::string pdfp = std::string(outdir) + "/mu_cand_cortes_" + p.tag + ".pdf";
+    int n = 0;
+    cv.Print((pdfp + "[").c_str());
+    // primera página: p de rango de la población con los cortes del módulo salvo la ventana, y con todos los cortes salvo la ventana
+    {
+      int iw = -1; for(int i = 0; i < (int)p.st.size(); i++)if(p.st[i].name.rfind("p rango", 0) == 0)iw = i;
+      cv.Clear(); cv.Divide(2, 1);
+      Drawn d;
+      auto pr = [](const C& c){ return c.pRange; };
+      cv.cd(1); Draw(cands, p.sel, pr, 50, 100, 600, std::string(p.label) + "cortes del m#acute{o}dulo salvo la ventana", "p por rango (hip#acute{o}tesis #mu, MeV/c)", {180, 300}, true, scaleB, d);
+      cv.cd(2); Draw(cands, [&](const C& c){ return p.sel(c) && Pass(p.st, c, iw); }, pr, 50, 100, 600, std::string(p.label) + "todos los cortes salvo la ventana", "p por rango (hip#acute{o}tesis #mu, MeV/c)", {200, 245}, false, scaleB, d);
+      n++; cv.Print(pdfp.c_str()); cv.Print(Form("%s/%s_%02d_prange.png", outdir, p.tag, n));
+    }
+    CutPages(p.st, p.sel, p.label, [&](const std::string& tag){ n++; cv.Print(pdfp.c_str()); cv.Print(Form("%s/%s_%02d_%s.png", outdir, p.tag, n, tag.c_str())); });
+    cv.Print((pdfp + "]").c_str());
+    std::cout << n << " páginas en " << pdfp << std::endl;
+  }
   return 0;
 }
