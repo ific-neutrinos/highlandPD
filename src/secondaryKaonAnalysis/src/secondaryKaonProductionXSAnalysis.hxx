@@ -42,6 +42,13 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
 
   bool Initialize();
   void FillCategories();
+
+  /// Signal of the production measurement (measure A): the first K+ of the chain (going up through the
+  /// K+ -> K+ of kaonplusInelastic) is a direct daughter of the triggering beam particle. K+ from
+  /// secondary interactions are background, and the beam K+ after K+ -> K+ is not production.
+  bool IsProductionSignal(const AnaTrueParticlePD* kaon);
+  /// Sets the Signal flag of the true particle of a candidate (used by the reduced categories, code 3210)
+  void SetIsSignal(AnaParticlePD* part);
   void DefineInputConverters();
 
 

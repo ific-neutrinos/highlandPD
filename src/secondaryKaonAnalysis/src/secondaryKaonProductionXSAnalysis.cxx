@@ -424,6 +424,7 @@ void secondaryKaonProductionXSAnalysis::FillCategories(){
     if(box().Candidates.size()>0){
       for(int i = 0; i < (int)box().Candidates.size(); i++){
 	anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[i]),              "candidate",   1);
+	SetIsSignal(box().Candidates[i]);
 	kaonAnaUtils::FillCandidateParticleReducedCategory(box().Candidates[i]);
 	kaonAnaUtils::FillCandidateDaughterParticleReducedCategory(box().Candidates[i]);
 	if(!box().Candidates[i]->Daughters.empty()){
@@ -450,6 +451,8 @@ void secondaryKaonProductionXSAnalysis::FillCategories(){
     // ---------- best kaon candidate variables --------------
     if(box().Candidates.size()>0){
       anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]), "bestcandidate");
+      //the signal flag of the true kaon is needed by the category (also when the candidates block is off)
+      SetIsSignal(box().Candidates[branchmax]);
       kaonAnaUtils::FillBestCandidateParticleReducedCategory(static_cast<AnaParticlePD*>(box().Candidates[branchmax]));
       if(!box().Candidates[branchmax]->Daughters.empty())
 	anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]->Daughters[0]), "bestcandidatedau");
@@ -527,4 +530,37 @@ bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
     }
   }
   return true;
+}
+
+//********************************************************************
+bool secondaryKaonProductionXSAnalysis::IsProductionSignal(const AnaTrueParticlePD* kaon){
+//********************************************************************
+
+  // Same definition as test/phase2/kaon_origin_minitrees_impl.C
+  if(!kaon || kaon->PDG != 321) return false;
+  const AnaTrueParticle* beamTrue = pdAnaUtils::GetBeamTrueParticle(GetSpill());
+  if(!beamTrue) return false;
+
+  // go up through the K+ -> K+ to the first K+ of the chain
+  const AnaTrueParticlePD* first = kaon;
+  for(int depth = 0; depth < 1000; depth++){
+    if(first->ID == beamTrue->ID) return false;  // the beam K+ itself (also after K+ -> K+): not production
+    if(first->ParentID == 0) return false;      // another root (pileup, cosmic...)
+    const AnaTrueParticlePD* parent = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles, first->ParentID);
+    if(!parent) return false;                   // broken chain: cannot be classified
+    if(parent->PDG != 321)
+      return parent->ID == beamTrue->ID;        // signal if the first K+ is a direct daughter of the beam
+    first = parent;
+  }
+  return false;
+}
+
+//********************************************************************
+void secondaryKaonProductionXSAnalysis::SetIsSignal(AnaParticlePD* part){
+//********************************************************************
+
+  if(!part) return;
+  AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
+  if(!truepart) return;
+  truepart->Signal = IsProductionSignal(truepart);
 }
