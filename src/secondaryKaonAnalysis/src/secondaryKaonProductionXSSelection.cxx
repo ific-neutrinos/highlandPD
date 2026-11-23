@@ -1,149 +1,153 @@
-#include "TPad.h"
-#include "TMultiGraph.h"
 #include "secondaryKaonProductionXSSelection.hxx"
-#include "secondaryKaonSelection.hxx"
 #include "EventBoxKaon.hxx"
-#include "Parameters.hxx"
-#include "pdAnalysisUtils.hxx"
 #include "pdBaseSelection.hxx"
+#include "kaonAnalysisUtils.hxx"
+
+//********************************************************************
+std::string muCandCuts::Name(int id){
+//********************************************************************
+
+  switch(id){
+    case kPopulation:    return "poblaci#acute{o}n";
+    case kFaces35:       return Form("extremos a > %.0f cm de las caras", kFacesMin);
+    case kNoClearCosmic: return "no IsClearCosmic";
+    case kAxis60:        return Form("eje < %.0f cm", kAxisMax);
+    case kVertex15:      return Form("v#acute{e}rtice > %.0f cm", kVertexMin);
+    case kChi2Mu:        return Form("#chi^{2}_{#mu} < %.0f", kChi2MuMax);
+    case kdEdxStop:      return Form("dE/dx parada > %.0f", kdEdxStopMin);
+    case kChi2p:         return Form("#chi^{2}_{p} > %.0f", kChi2pMin);
+    case kdEdxStart:     return Form("dE/dx inicio > %.1f", kdEdxStartMin);
+    case kGaps:          return "sin extremos en los huecos";
+    case kWindow:        return Form("p rango en [%.0f, %.0f]", kWindowMin, kWindowMax);
+    case kMichelHits:    return Form("hits Michel #geq %d", kMichelHitsMin);
+  }
+  return "?";
+}
+
+//********************************************************************
+bool muCandCuts::Pass(int id, const muCandUtils::Candidate& c, int pop){
+//********************************************************************
+
+  switch(id){
+    case kPopulation:    return c.inSlice == (pop == 0);
+    case kFaces35:       return std::min(FacesStop(c), FacesStart(c)) > kFacesMin;
+    case kNoClearCosmic: return !c.clearCosmic;
+    case kAxis60:        return AxisMin(c) < kAxisMax;
+    case kVertex15:      return VertexMin(c) < 0 || VertexMin(c) > kVertexMin;
+    case kChi2Mu:        return Chi2MuStop(c) >= 0 && Chi2MuStop(c) < kChi2MuMax;
+    case kdEdxStop:      return dEdxStop(c) > kdEdxStopMin;
+    case kChi2p:         return Chi2pStop(c) > kChi2pMin;
+    case kdEdxStart:     return dEdxStart(c) > kdEdxStartMin;
+    case kGaps:          return GapDist(c.startZ) >= kGapHalfWidth && GapDist(c.stopZ) >= kGapHalfWidth;
+    case kWindow:        return c.pRange >= kWindowMin && c.pRange <= kWindowMax;
+    case kMichelHits:    return c.arNMichel[1] < -900 ? c.cnnMichel > 0.02 : c.arNMichel[1] >= kMichelHitsMin;
+  }
+  return false;
+}
+
+//********************************************************************
+std::vector<int> muCandCuts::Chain(int pop){
+//********************************************************************
+
+  if(pop == 0)return {kPopulation, kFaces35, kVertex15, kChi2Mu, kdEdxStop, kGaps, kWindow, kMichelHits};
+  return {kPopulation, kNoClearCosmic, kAxis60, kChi2Mu, kdEdxStop, kChi2p, kdEdxStart, kGaps, kWindow, kMichelHits};
+}
 
 //********************************************************************
 secondaryKaonProductionXSSelection::secondaryKaonProductionXSSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxKaon) {
 //********************************************************************
-  
+
 }
 
 //********************************************************************
 void secondaryKaonProductionXSSelection::DefineSteps(){
 //********************************************************************
 
-  //copy steps from pdBaseSelection
-  AddStep(StepBase::kAction,   "find beam track",            new FindBeamTrackAction(), true   );// in pdBaseAnalysis/src/pdBaseSelection  
-  AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pdBaseSelection  
-  AddStep(StepBase::kCut,    "beam particle is pion-like",   new BeamPDGCut(211));
-  //select events using beam instrumentation
+  // El primario de Pandora, para las variables del haz (no corta: siempre devuelve true)
+  AddStep(StepBase::kAction, "find beam track",     new FindBeamTrackAction());// in pdBaseAnalysis/src/pdBaseSelection
+  AddStep(StepBase::kAction, "get mu candidates",   new GetMuCandidatesAction());
+  AddStep(StepBase::kCut,    "mu candidate exists", new MuCandidateExistsCut(), true);
 
-  AddStep(StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForXSAction(),true   );
-  AddStep(StepBase::kCut,      "we have a kaon",             new EventHasKaonCut(),  true);
-  
-  AddStep(StepBase::kAction,   "get forced daughter",        new GetForcedDaughterAction()   );
+  // una rama por población
+  AddSplit(2);
+  for(int pop = 0; pop < 2; pop++){
+    const std::vector<int> chain = muCandCuts::Chain(pop);
+    for(int i = 0; i < (int)chain.size(); i++){
+      const std::string title = chain[i] == muCandCuts::kPopulation ? (pop == 0 ? "en la beam slice" : "fuera de la beam slice") : muCandCuts::Name(chain[i]);
+      AddStep(pop, StepBase::kCut, title, new MuCandidateCut(pop, i + 1, chain[i]), true);
+    }
+  }
+  SetBranchAlias(0, "en la beam slice", 0);
+  SetBranchAlias(1, "fuera de la beam slice", 1);
 
   SetPreSelectionAccumLevel(-1);
-
-  SetBranchAlias(0,"NO BRANCH :)");
 }
 
 //**************************************************
-bool GetKaonsForXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+bool GetMuCandidatesAction::Apply(AnaEventC& eventC, ToyBoxB& boxB) const{
 //**************************************************
 
-  (void)event;
-  
-  // Cast the ToyBox to the appropriate type
-  ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);
+  ToyBoxMuCand& box = *static_cast<ToyBoxMuCand*>(&boxB);
+  AnaEventPD& event = *static_cast<AnaEventPD*>(&eventC);
 
-  // Get the beam track
-  AnaParticlePD* beamTrack = box.MainTrack;
-    
-  //look over daughters and look for candidates
-  for(int i = 0; i < (int)beamTrack->Daughters.size(); i++){
-    AnaParticlePD* part = static_cast<AnaParticlePD*>(beamTrack->Daughters[i]);
-    if((int)part->Daughters.size()>1)continue;
-    std::pair<double,int> pid = pdAnaUtils::Chi2PID(*part,321);
-    if(pid.first<0)continue;
-    double chi_kaon = pid.first/pid.second;
-    pid = pdAnaUtils::Chi2PID(*part,2212);
-    if(pid.first<0)continue;
-    double chi_prot = pid.first/pid.second;
-    if(chi_prot-chi_kaon<50)
-      box.Candidates.push_back(part);
+  std::vector<AnaParticlePD*> parts;
+  for(int i = 0; i < event.nParticles; i++)parts.push_back(static_cast<AnaParticlePD*>(event.Particles[i]));
+  std::vector<AnaTrueParticleB*> trueParts;
+  for(int i = 0; i < event.nTrueParticles; i++)trueParts.push_back(event.TrueParticles[i]);
+  const AnaBeamPD* beam = static_cast<AnaBeamPD*>(event.Beam);
+  const AnaTrueParticleB* beamTrue = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
+  const int isMC = event.GetIsMC() ? 1 : 0;
+
+  muCandUtils::EventContext ctx;
+  muCandUtils::MakeContext(ctx, parts, event.UnassociatedHits, trueParts, beamTrue, isMC);
+  box.HasVertex = ctx.hasVtx;
+  if(ctx.hasVtx){ box.VertexPos[0] = ctx.vtx.X(); box.VertexPos[1] = ctx.vtx.Y(); box.VertexPos[2] = ctx.vtx.Z(); }
+
+  for(const AnaParticlePD* p : parts){
+    muCandUtils::Candidate c;
+    if(!muCandUtils::Compute(p, ctx, c))continue;
+    box.NPreselected++;
+    // preselección geométrica del módulo: un extremo a >= 10 cm de las caras y uno a <= 150 cm del eje
+    if(std::max(c.facesA, c.facesB) < 10 || muCandCuts::AxisMin(c) > 150)continue;
+    box.Candidates.push_back(c);
+    box.Population.push_back(c.inSlice ? 0 : 1);
+    box.Level.push_back(0);
   }
-  
-  return true;  
+  return true;
 }
 
-  
-
-//   //cast the box
-
-//   //get the current branch  
-
-//   //if there is kaon, cut in its chi2
-//   else return false;
-
 //**************************************************
-bool GetForcedDaughterAction::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+bool MuCandidateExistsCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 //**************************************************
 
   (void)event;
-  
-  // Cast the ToyBox to the appropriate type
-  ToyBoxKaon& box = *static_cast<ToyBoxKaon*>(&boxB);
+  return !static_cast<ToyBoxMuCand*>(&boxB)->Candidates.empty();
+}
 
-  // Get the array of parts from the event
-  AnaParticleB** parts = static_cast<AnaEventB*>(&event)->Particles;
-  int nParts           = static_cast<AnaEventB*>(&event)->nParticles;
+//**************************************************
+bool MuCandidateCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+//**************************************************
 
-  // loop over candidates
-  for(int ican = 0; ican < (int)box.Candidates.size(); ican++){
-    AnaParticlePD* candidate = box.Candidates[ican];
-    // skip candidates with daughters
-    if(!candidate->Daughters.empty())continue;
-    double dis_min = 10000;
-    int i_closest = -1;
-    //loop over particles and look for the one starting closer to the end point of the candidate
-    for(int ipart = 0; ipart < nParts; ipart++){
-      AnaParticlePD* part = static_cast<AnaParticlePD*>(parts[ipart]);
-      if(candidate->UniqueID == part->UniqueID)continue; //skip itself
-      if(part->isPandora)continue; //skip beam particle
-      if(part->Type!=2)continue; //skip showers maybe not needed?
-      double mom = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
-      if(mom < 0.2 || mom > 0.3)continue;
-      double dis = 0;
-      for(int i = 0; i < 3; i++)dis += pow(part->PositionStart[i]-candidate->PositionEnd[i],2);
-      dis = sqrt(dis);
-      if(dis < dis_min){
-	dis_min = dis;
-	i_closest = ipart;
-      }
-    }
-    if(i_closest == -1 || dis_min>3){ //above three almost everything are protons
-      //if here and no forced daughter, remove candidate
-      if(candidate->Daughters.empty())
-	box.Candidates.erase(box.Candidates.begin()+ican);
-      ican--;
-      continue;
-    }
-    //associate the closest one as forced daughter
-    AnaParticlePD* forced_dau = static_cast<AnaParticlePD*>(parts[i_closest]);
-    candidate->forced_daughter = true;
-    candidate->Daughters.push_back(forced_dau);
-    
-    //check true matching if possible
-    AnaTrueParticlePD* truecandidate = static_cast<AnaTrueParticlePD*>(candidate->TrueObject);
-    AnaTrueParticlePD* trueforced_dau = static_cast<AnaTrueParticlePD*>(forced_dau->TrueObject);
-    if(!truecandidate || !trueforced_dau)continue;
-    for(int i = 0; i < (int)truecandidate->Daughters.size(); i++){
-      if(truecandidate->Daughters[i] == trueforced_dau->ID){
-	candidate->forced_daughter_matched = true;
-	break;
-      }
-    }
+  (void)event;
+  ToyBoxMuCand& box = *static_cast<ToyBoxMuCand*>(&boxB);
+  bool any = false;
+  for(size_t i = 0; i < box.Candidates.size(); i++){
+    if(box.Population[i] != _pop || box.Level[i] != _index - 1)continue;
+    if(muCandCuts::Pass(_id, box.Candidates[i], _pop))box.Level[i] = _index;
+    if(box.Level[i] == _index)any = true;
   }
-    
-  return true;  
+  return any;
 }
 
 //**************************************************
 void secondaryKaonProductionXSSelection::InitializeEvent(AnaEventC& eventC){
 //**************************************************
 
-  AnaEventB& event = *static_cast<AnaEventB*>(&eventC); 
+  AnaEventB& event = *static_cast<AnaEventB*>(&eventC);
 
-  // Create the appropriate EventBox if it does not exist yet
+  // EventBox de los kaones (grupos de objetos para los sistemáticos; ahora no se usan)
   if (!event.EventBoxes[EventBoxId::kEventBoxKaon])
     event.EventBoxes[EventBoxId::kEventBoxKaon] = new EventBoxKaon();
 
   boxUtils::FillKaonXS(event);
 }
-

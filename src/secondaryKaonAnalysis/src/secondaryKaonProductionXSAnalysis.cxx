@@ -1,14 +1,13 @@
 #include "secondaryKaonProductionXSAnalysis.hxx"
+#include "secondaryKaonProductionXSSelection.hxx"
 #include "Parameters.hxx"
 #include "CategoriesUtils.hxx"
 #include "BasicUtils.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "baseToyMaker.hxx"
 #include "pdDataClasses.hxx"
-
-#include "secondaryKaonProductionXSSelection.hxx"
-#include "secondaryKaonSelectionNoBranches.hxx"
 #include "kaonAnalysisUtils.hxx"
+#include "muCandidateUtils.hxx"
 
 #include "HighlandMiniTreeConverter.hxx"
 #include "PDSPAnalyzerTreeConverter.hxx"
@@ -42,15 +41,10 @@ bool secondaryKaonProductionXSAnalysis::Initialize(){
   // Minimum accum cut level (how many cuts should be passed) to save event into the output tree
   SetMinAccumCutLevelToSave(ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.MinAccumLevelToSave"));
 
-  _FillBeamInstrumentationInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamInstrumentationInfo");
-  _FillBeamParticleInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleInfo");
-  _FillBeamParticleHitsInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleHitsInfo");
+  _FillBeamInstrumentationInfo   = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamInstrumentationInfo");
+  _FillBeamParticleInfo          = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleInfo");
+  _FillBeamParticleHitsInfo      = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleHitsInfo");
   _FillBeamParticleDaughtersInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBeamParticleDaughtersInfo");
-  _FillKaonCandidatesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesInfo");
-  _FillKaonCandidatesHitInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesHitInfo");
-  _FillKaonCandidatesPIDInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatePIDInfo");
-  _FillBestKaonCandidateInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillBestKaonCandidateInfo");
-  _FillToyVariablesInfo = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.FillToyVariablesInfo");
 
   _ApplydQdxSystematic = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplydQdxSystematic");
   _ApplyRecombinationSystematic = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationSystematic");
@@ -64,27 +58,29 @@ bool secondaryKaonProductionXSAnalysis::Initialize(){
   _ApplySCECorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection");
   _ApplydEdxCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplydEdxCorrection");
   _ApplyRecombinationCorrection = ND::params().GetParameterI("secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationCorrection");
-  
-  // Define standard categories for color drawing
-  if(_FillBeamParticleInfo)
-    anaUtils::AddStandardCategories();        // This is for the candidate particle
-  if(_FillBeamInstrumentationInfo)
-    anaUtils::AddStandardCategories("beam");  // This is for the Beam Instrumentation particle
-  if(_FillBestKaonCandidateInfo){
-    anaUtils::AddStandardCategories("bestcandidate");  // This is for the best candidate of each event
-    anaUtils::AddStandardCategories("bestcandidatedau");  // This is for the best candidate of each event
-  }
-  
-  if(_FillBeamParticleDaughtersInfo)
-    anaUtils::AddStandardObjectCategories("dau"   ,standardPDTree::seltrk_ndau ,"seltrk_ndau",1);
 
-  // Add standard categories for the candidates
-  if(_FillKaonCandidatesInfo){
-    anaUtils::AddStandardObjectCategories("candidate"   ,kaonTree::ncandidates,"ncandidates",1);
-    anaUtils::AddStandardObjectCategories("candidatedau",kaonTree::ncandidates,"ncandidates",1);
-    // Add our own categories (in secondaryKaonAnalysisUtils.cxx)
+  // Categories for color drawing
+  if(_FillBeamParticleInfo){
+    anaUtils::AddStandardCategories();        // primario de la beam slice
+    kaonAnaUtils::AddBeamParticleReducedCategory();
+    kaonAnaUtils::AddBeamParticleOriginCategory();
   }
-  kaonAnaUtils::AddCustomCategories();//to be checked
+  if(_FillBeamInstrumentationInfo)
+    anaUtils::AddStandardCategories("beam");  // partícula de la instrumentación del haz
+  if(_FillBeamParticleDaughtersInfo)
+    anaUtils::AddStandardObjectCategories("dau", standardPDTree::seltrk_ndau, "seltrk_ndau", 1);
+
+  // candidatos a mu: categorías estándar (candparticle, ...) y la propia (candmu)
+  anaUtils::AddStandardObjectCategories("cand", ncand, "ncand", 1);
+  {
+    std::string types[] = {"#mu de K (A)", "#mu de K (secundaria)", "#mu de K (K^{+} del haz)", "#mu de K (pileup)", "#mu de K (cadena cortada)",
+                           "#pi^{#pm}", "p", "#mu c#acute{o}smico", "e, #gamma", NAMEOTHER, NAMENOTRUTH};
+    int codes[]          = {1, 2, 3, 4, 5, 211, 2212, 13, 11, CATOTHER, CATNOTRUTH};
+    int colors[]         = {2, 46, 6, 28, 30, 4, 8, 7, 5, COLOTHER, COLNOTRUTH};
+    const int N = sizeof(types)/sizeof(types[0]);
+    std::reverse(types, types + N); std::reverse(codes, codes + N); std::reverse(colors, colors + N);
+    anaUtils::_categ->AddObjectCategory("candmu", ncand, "ncand", N, types, codes, colors, 1, -100);
+  }
 
   return true;
 }
@@ -175,11 +171,9 @@ void secondaryKaonProductionXSAnalysis::DefineConfigurations(){
 void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
 //********************************************************************
 
-  // -------- Add variables to the analysis tree ----------------------
-
   // Variables from baseAnalysis (run, event, ...)   (highland/src/highland2/baseAnalysis)
   if (addBase) baseAnalysis::DefineMicroTrees(addBase);
-  
+
   // Add standard sets of variables for ProtoDUNE analysis  (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
   standardPDTree::AddStandardVariables_EventInfo(output());
   if(_FillBeamInstrumentationInfo){
@@ -197,22 +191,102 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
     }
   }
 
-  // -------- Add candidates variables ----------------------
-  if(_FillKaonCandidatesInfo){
-    kaonTree::AddKaonVariables_KaonCandidatesReco    (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    kaonTree::AddKaonVariables_KaonCandidatesTrue    (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    if(_FillKaonCandidatesHitInfo)
-      kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-    if(_FillKaonCandidatesPIDInfo)
-      kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonProductionXSAnalysisConstants::NMAXSAVEDCANDIDATES);
-  }
+  // -------- evento --------
+  AddVarI  (output(), fulldump,       "MC: volcado completo (evento con un K+ secundario)");
+  AddVarI  (output(), hasslice,       "hay beam slice");
+  AddVarI  (output(), hasvertex,      "hay vértice (final del primario de la beam slice)");
+  AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
+  AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
+  AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
 
-  // -------- Add best candidate variables ----------------------
-  if(_FillBestKaonCandidateInfo){
-    kaonTree::AddKaonVariables_KaonBestCandidateReco    (output());
-    kaonTree::AddKaonVariables_KaonBestCandidateHitsReco(output());
-    kaonTree::AddKaonVariables_KaonBestCandidateTrue    (output());
-  }
+  // -------- candidatos (contador ncand) --------
+  const UInt_t N = secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES;
+  AddVarMaxSizeVI (output(), cand_pop,           "población: 0 en la beam slice, 1 fuera",                       ncand, N);
+  AddVarMaxSizeVI (output(), cand_level,         "cortes de la cadena de su población que pasa seguidos",        ncand, N);
+  AddVarMaxSizeVI (output(), cand_isshower,      "sin traza (longitud de la traza forzada)",                     ncand, N);
+  AddVarMaxSizeVI (output(), cand_complete,      "con hits (no en resumen)",                                     ncand, N);
+  AddVarMaxSizeVI (output(), cand_isprimary,     "es el primario de Pandora",                                    ncand, N);
+  AddVarMaxSizeVI (output(), cand_ndau,          "hijas de Pandora",                                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_length,        "longitud (cm)",                                                ncand, N);
+  AddVarMaxSizeVF (output(), cand_prange,        "p de rango, hipótesis mu (MeV/c)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu,        "chi2/ndf de mu con la parada en el extremo de mayor dE/dx",    ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu_other,  "chi2/ndf de mu con la orientación contraria",                  ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2p,         "chi2/ndf de protón, misma orientación",                        ncand, N);
+  AddVarMaxSizeVF (output(), cand_dedx_stop,     "dE/dx medio en los 5 cm de la parada (MeV/cm)",                ncand, N);
+  AddVarMaxSizeVF (output(), cand_dedx_start,    "dE/dx medio en los 5 cm del inicio (MeV/cm)",                  ncand, N);
+  AddVarMaxSizeVF (output(), cand_faces_stop,    "distancia de la parada a las caras (cm)",                      ncand, N);
+  AddVarMaxSizeVF (output(), cand_faces_start,   "distancia del inicio a las caras (cm)",                        ncand, N);
+  AddVarMaxSizeVF (output(), cand_axis_min,      "distancia mínima de un extremo al eje del haz (cm)",           ncand, N);
+  AddVarMaxSizeVF (output(), cand_vtx_min,       "distancia mínima de un extremo al vértice (cm; -1 sin vértice)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_slice_min,     "distancia mínima de un extremo a la beam slice (cm; 0 dentro)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_cnn_trk,       "CNN traza media de la partícula",                              ncand, N);
+  AddVarMaxSizeVF (output(), cand_cnn_em,        "CNN EM media de la partícula",                                 ncand, N);
+  AddVarMaxSizeVF (output(), cand_cnn_michel,    "CNN Michel media de la partícula",                             ncand, N);
+  AddVarMaxSizeVI (output(), cand_clearcosmic,   "IsClearCosmic de Pandora",                                     ncand, N);
+  AddVarMaxSizeVI (output(), cand_cosmiccrit,    "CosmicCriteria del módulo",                                    ncand, N);
+  AddVarMaxSize3MF(output(), cand_start,         "posición del inicio (cm, sin SCE)",                            ncand, N);
+  AddVarMaxSize3MF(output(), cand_stop,          "posición de la parada (cm, sin SCE)",                          ncand, N);
+  AddVarMaxSizeVF (output(), cand_cosbeam,       "coseno inicio -> parada con el eje del haz",                   ncand, N);
+  AddVarMaxSizeVF (output(), cand_diry_stop,     "componente y de la dirección hacia la parada",                 ncand, N);
+  AddVarMaxSizeVF (output(), cand_trmean,        "media truncada del dE/dx (MeV/cm)",                            ncand, N);
+  AddVarMaxSizeVF (output(), cand_trmean_body,   "media truncada sin 5 cm de cada extremo (MeV/cm)",             ncand, N);
+  AddVarMaxSizeVF (output(), cand_intpeak,       "pico de dE/dx interior (media de 5 hits; MeV/cm)",             ncand, N);
+  AddVarMaxSizeVF (output(), cand_intpeak_rr,    "residual range del pico interior (cm)",                        ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_n5,         "hits (plano 2) a < 5 cm de la parada",                         ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_n10,        "hits (plano 2) a < 10 cm de la parada",                        ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_n20,        "hits (plano 2) a < 20 cm de la parada",                        ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_nmichel5,   "hits con CNN Michel > 0,5 a < 5 cm de la parada",              ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_nmichel10,  "hits con CNN Michel > 0,5 a < 10 cm de la parada",             ncand, N);
+  AddVarMaxSizeVI (output(), cand_ar_nmichel20,  "hits con CNN Michel > 0,5 a < 20 cm de la parada",             ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_michel5,    "CNN Michel media de los hits a < 5 cm de la parada",           ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_michel10,   "CNN Michel media de los hits a < 10 cm de la parada",          ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_michel20,   "CNN Michel media de los hits a < 20 cm de la parada",          ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_charge5,    "carga a < 5 cm de la parada (ADC x tick)",                     ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_charge10,   "carga a < 10 cm de la parada (ADC x tick)",                    ncand, N);
+  AddVarMaxSizeVF (output(), cand_ar_charge20,   "carga a < 20 cm de la parada (ADC x tick)",                    ncand, N);
+  AddVarMaxSizeVI (output(), cand_as_n5,         "hits a < 5 cm del inicio",                                     ncand, N);
+  AddVarMaxSizeVI (output(), cand_as_n10,        "hits a < 10 cm del inicio",                                    ncand, N);
+  AddVarMaxSizeVF (output(), cand_as_charge5,    "carga a < 5 cm del inicio",                                    ncand, N);
+  AddVarMaxSizeVF (output(), cand_as_charge10,   "carga a < 10 cm del inicio",                                   ncand, N);
+  AddVarMaxSizeVI (output(), cand_k_n,           "PFParticles con un extremo a < 10 cm del inicio",              ncand, N);
+  AddVarMaxSizeVI (output(), cand_k_istrack,     "el de mayor dE/dx de esos es traza",                           ncand, N);
+  AddVarMaxSizeVF (output(), cand_k_dedx,        "su dE/dx en ese extremo (MeV/cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_k_length,      "su longitud (cm)",                                             ncand, N);
+  AddVarMaxSizeVI (output(), cand_ndau_trk,      "hijas traza (Pandora)",                                        ncand, N);
+  AddVarMaxSizeVI (output(), cand_ndau_shw,      "hijas shower (Pandora)",                                       ncand, N);
+  AddVarMaxSizeVI (output(), cand_dau_nearstop,  "hijas con un extremo a < 10 cm de la parada",                  ncand, N);
+  AddVarMaxSizeVF (output(), cand_dau_maxmichel, "CNN Michel máxima de las hijas",                               ncand, N);
+  AddVarMaxSizeVF (output(), cand_vc_dist,       "distancia vértice -> inicio (cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_vc_cover,      "fracción del segmento vértice -> inicio con puntos a < 2 cm",  ncand, N);
+  AddVarMaxSizeVF (output(), cand_vc_maxgap,     "tramo vacío más largo de ese segmento (cm)",                   ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_s_dv,       "enlace vértice -> inicio: distancia de su extremo al vértice (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_s_de,       "enlace vértice -> inicio: distancia de su otro extremo al inicio (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_s_len,      "enlace vértice -> inicio: longitud (cm)",                      ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_s_dedx,     "enlace vértice -> inicio: dE/dx en el extremo del inicio",     ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_p_dv,       "enlace vértice -> parada: distancia al vértice (cm)",          ncand, N);
+  AddVarMaxSizeVF (output(), cand_lk_p_de,       "enlace vértice -> parada: distancia a la parada (cm)",         ncand, N);
+  AddVarMaxSizeVF (output(), cand_dstart_v,      "distancia inicio - vértice (cm)",                              ncand, N);
+  AddVarMaxSizeVF (output(), cand_dstop_v,       "distancia parada - vértice (cm)",                              ncand, N);
+  AddVarMaxSizeVI (output(), cand_sh_nsp,        "shower: space points",                                         ncand, N);
+  AddVarMaxSizeVF (output(), cand_sh_lin,        "shower: linealidad (valor propio mayor / suma)",               ncand, N);
+  AddVarMaxSizeVF (output(), cand_sh_lencore,    "shower: longitud del núcleo (cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_sh_lenbragg,   "shower: longitud hasta el pico de Bragg (cm)",                 ncand, N);
+  AddVarMaxSizeVF (output(), cand_sh_prange_core,"shower: p de rango con la longitud del núcleo (MeV/c)",        ncand, N);
+  // truth
+  AddVarMaxSizeVI (output(), cand_tpdg,          "truth: PDG",                                                   ncand, N);
+  AddVarMaxSizeVI (output(), cand_tparentpdg,    "truth: PDG de la madre (0 sin madre guardada)",                ncand, N);
+  AddVarMaxSizeVI (output(), cand_tprocstart,    "truth: proceso de creación",                                   ncand, N);
+  AddVarMaxSizeVI (output(), cand_torigin,       "truth: Origin (2 cósmico, 4 haz)",                             ncand, N);
+  AddVarMaxSizeVI (output(), cand_tfrombeam,     "truth: desciende del haz que dispara",                         ncand, N);
+  AddVarMaxSizeVI (output(), cand_tsignal,       "truth: mu+ de K+ de la cadena del haz (señal antigua)",        ncand, N);
+  AddVarMaxSizeVF (output(), cand_tkmomend,      "truth: momento final de su K (MeV/c; ~0 en reposo)",          ncand, N);
+  AddVarMaxSizeVI (output(), cand_tkorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_tpur,          "truth: pureza",                                                ncand, N);
+  AddVarMaxSizeVF (output(), cand_teff,          "truth: completitud",                                           ncand, N);
+  AddVarMaxSizeVF (output(), cand_tlength,       "truth: distancia inicio-fin (cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_tmom,          "truth: momento inicial (MeV/c)",                               ncand, N);
+  AddVarMaxSizeVF (output(), cand_tvtxerr,       "truth: distancia del vértice reco al final true del haz (cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_tlk_s_isk,     "truth: el enlace vértice -> inicio es la K madre",             ncand, N);
 }
 
 //********************************************************************
@@ -222,76 +296,150 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
   // Variables from baseAnalysis (run, event, ...)   (highland/src/highland2/baseAnalysis)
   baseAnalysis::DefineTruthTree();
 
-  // Add standard sets of variables for ProtoDUNE analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
-  
-  // Add specific variables for the kaon candidates
-  kaonTree::AddKaonVariables_TrueKaonCandidates(output());
+  if(_FillBeamInstrumentationInfo)
+    standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
+
+  AddVarI  (output(), truemu_korigin,   "origen de la K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)");
+  AddVarF  (output(), truemu_mom,       "momento del mu (MeV/c)");
+  AddVarF  (output(), truemu_kmomend,   "momento final de la K madre (MeV/c; -1 sin madre K guardada)");
+  AddVar3VF(output(), truemu_start,     "inicio del mu (cm)");
+  AddVar3VF(output(), truemu_end,       "final del mu (cm)");
+  AddVarI  (output(), truemu_contained, "inicio y final en el volumen activo");
+  AddVarI  (output(), truemu_beampdg,   "PDG de la partícula true del haz que dispara");
 }
 
 //********************************************************************
 void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
 //********************************************************************
-  
+
   // Variables from baseAnalysis (run, event, ...)  (highland/src/highland2/baseAnalysis)
-  if (addBase) baseAnalysis::FillMicroTreesBase(addBase); 
-  
+  if (addBase) baseAnalysis::FillMicroTreesBase(addBase);
+
   // Fill standard variables for the PD analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::FillStandardVariables_EventInfo(        output(), &GetEvent());
+  standardPDTree::FillStandardVariables_EventInfo(output(), &GetEvent());
   if(_FillBeamInstrumentationInfo){
-    standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
-    standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
+    standardPDTree::FillStandardVariables_BeamInstrumentationReco(output(), GetSpill().Beam);
+    standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
   }
-  if(_FillBeamParticleInfo){
-    standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack);
-    standardPDTree::FillStandardVariables_BeamParticleTrue(    output(), box().MainTrack);    
+  // sin beam slice no hay primario (MainTrack nulo): las funciones de standardPDTree no rellenan nada
+  if(_FillBeamParticleInfo && box().MainTrack){
+    standardPDTree::FillStandardVariables_BeamParticleReco(output(), box().MainTrack);
+    standardPDTree::FillStandardVariables_BeamParticleTrue(output(), box().MainTrack);
     if(_FillBeamParticleHitsInfo)
       standardPDTree::FillStandardVariables_BeamParticleHitsReco(output(), box().MainTrack);
     if(_FillBeamParticleDaughtersInfo){
       int ndau = std::min(20,(int)box().MainTrack->Daughters.size());
       for(int i = 0; i < ndau; i++){
-	standardPDTree::FillStandardVariables_BeamParticleDaughtersReco(output(), static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]));
-	standardPDTree::FillStandardVariables_BeamParticleDaughtersTrue(output(), static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]));
-	output().IncrementCounter(standardPDTree::seltrk_ndau);
+        standardPDTree::FillStandardVariables_BeamParticleDaughtersReco(output(), static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]));
+        standardPDTree::FillStandardVariables_BeamParticleDaughtersTrue(output(), static_cast<AnaParticlePD*>(box().MainTrack->Daughters[i]));
+        output().IncrementCounter(standardPDTree::seltrk_ndau);
       }
     }
   }
-  
-  // ---------- kaon candidates variables --------------
-  if(_FillKaonCandidatesInfo){
-    if(box().Candidates.size()>0){
-      for(int i = 0; i < std::min((int)box().Candidates.size(),(int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES); i++){
-	AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[i]->ParentID));
-	kaonTree::FillKaonVariables_KaonCandidatesReco    (output(), box().Candidates[i] ,parent);
-	kaonTree::FillKaonVariables_KaonCandidatesTrue    (output(), box().Candidates[i]);
-	if(_FillKaonCandidatesHitInfo)
-	  kaonTree::FillKaonVariables_KaonCandidatesHitsReco(output(), box().Candidates[i]);
-	if(_FillKaonCandidatesPIDInfo)
-	  kaonTree::FillKaonVariables_KaonCandidatesRecoPID (output(), box().Candidates[i]);
-	output().IncrementCounter(kaonTree::ncandidates);
-      } 
-    }
-  }
 
-  // ---------- best kaon candidate variables --------------
-  if(_FillBestKaonCandidateInfo){
-    //get the kaon selection and get the branch with a larger AccumLevel
-    SelectionBase* ksel = sel().GetSelection("XS"); //todo fix this
-    int branchmax = 0;
-    int max       = 0;  
-    for(UInt_t ibranch = 0; ibranch < ksel->GetNBranches(); ibranch++){
-      if(ksel->GetAccumCutLevel(ibranch) > max){
-	max = ksel->GetAccumCutLevel(ibranch);
-	branchmax = ibranch;
-      }
-    }
+  // -------- evento --------
+  const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(GetEvent().EventInfo);
+  output().FillVar(fulldump, (Int_t)(info && info->FullDump));
+  const ToyBoxMuCand& b = box();
+  bool slice = false;
+  for(const muCandUtils::Candidate& c : b.Candidates)if(c.hasSlice){ slice = true; break; }
+  output().FillVar(hasslice, (Int_t)slice);
+  output().FillVar(hasvertex, (Int_t)b.HasVertex);
+  output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
+  output().FillVar(nmucand_presel, b.NPreselected);
+  output().FillVar(nmucand, (Int_t)b.Candidates.size());
 
-    if(box().Candidates.size()>0){
-      AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[branchmax]->ParentID));
-      kaonTree::FillKaonVariables_KaonBestCandidateReco    (output(), box().Candidates[branchmax], parent);
-      kaonTree::FillKaonVariables_KaonBestCandidateHitsReco(output(), box().Candidates[branchmax]);
-      kaonTree::FillKaonVariables_KaonBestCandidateTrue    (output(), box().Candidates[branchmax], parent);
-    }
+  // -------- candidatos --------
+  const int nmax = std::min((int)b.Candidates.size(), (int)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
+  for(int i = 0; i < nmax; i++){
+    const muCandUtils::Candidate& c = b.Candidates[i];
+    output().FillVectorVar(cand_pop,           b.Population[i]);
+    output().FillVectorVar(cand_level,         b.Level[i]);
+    output().FillVectorVar(cand_isshower,      c.isShower);
+    output().FillVectorVar(cand_complete,      c.complete);
+    output().FillVectorVar(cand_isprimary,     c.isPrimary);
+    output().FillVectorVar(cand_ndau,          c.nDaughters);
+    output().FillVectorVar(cand_length,        c.length);
+    output().FillVectorVar(cand_prange,        c.pRange);
+    output().FillVectorVar(cand_chi2mu,        (Float_t)muCandCuts::Chi2MuStop(c));
+    output().FillVectorVar(cand_chi2mu_other,  (Float_t)muCandCuts::Chi2MuOther(c));
+    output().FillVectorVar(cand_chi2p,         (Float_t)muCandCuts::Chi2pStop(c));
+    output().FillVectorVar(cand_dedx_stop,     (Float_t)muCandCuts::dEdxStop(c));
+    output().FillVectorVar(cand_dedx_start,    (Float_t)muCandCuts::dEdxStart(c));
+    output().FillVectorVar(cand_faces_stop,    (Float_t)muCandCuts::FacesStop(c));
+    output().FillVectorVar(cand_faces_start,   (Float_t)muCandCuts::FacesStart(c));
+    output().FillVectorVar(cand_axis_min,      (Float_t)muCandCuts::AxisMin(c));
+    output().FillVectorVar(cand_vtx_min,       (Float_t)muCandCuts::VertexMin(c));
+    output().FillVectorVar(cand_slice_min,     (Float_t)std::min(c.sliceA, c.sliceB));
+    output().FillVectorVar(cand_cnn_trk,       c.cnnTrk);
+    output().FillVectorVar(cand_cnn_em,        c.cnnEM);
+    output().FillVectorVar(cand_cnn_michel,    c.cnnMichel);
+    output().FillVectorVar(cand_clearcosmic,   c.clearCosmic);
+    output().FillVectorVar(cand_cosmiccrit,    c.cosmicCriteria);
+    const Float_t start[3] = {c.startX, c.startY, c.startZ}, stop[3] = {c.stopX, c.stopY, c.stopZ};
+    output().FillMatrixVarFromArray(cand_start, start, 3);
+    output().FillMatrixVarFromArray(cand_stop,  stop,  3);
+    output().FillVectorVar(cand_cosbeam,       c.cosBeam);
+    output().FillVectorVar(cand_diry_stop,     c.dirYStop);
+    output().FillVectorVar(cand_trmean,        c.trMean);
+    output().FillVectorVar(cand_trmean_body,   c.trMeanBody);
+    output().FillVectorVar(cand_intpeak,       c.intPeak);
+    output().FillVectorVar(cand_intpeak_rr,    c.intPeakRR);
+    output().FillVectorVar(cand_ar_n5,         c.arN[0]);
+    output().FillVectorVar(cand_ar_n10,        c.arN[1]);
+    output().FillVectorVar(cand_ar_n20,        c.arN[2]);
+    output().FillVectorVar(cand_ar_nmichel5,   c.arNMichel[0]);
+    output().FillVectorVar(cand_ar_nmichel10,  c.arNMichel[1]);
+    output().FillVectorVar(cand_ar_nmichel20,  c.arNMichel[2]);
+    output().FillVectorVar(cand_ar_michel5,    c.arMichel[0]);
+    output().FillVectorVar(cand_ar_michel10,   c.arMichel[1]);
+    output().FillVectorVar(cand_ar_michel20,   c.arMichel[2]);
+    output().FillVectorVar(cand_ar_charge5,    c.arCharge[0]);
+    output().FillVectorVar(cand_ar_charge10,   c.arCharge[1]);
+    output().FillVectorVar(cand_ar_charge20,   c.arCharge[2]);
+    output().FillVectorVar(cand_as_n5,         c.asN5);
+    output().FillVectorVar(cand_as_n10,        c.asN10);
+    output().FillVectorVar(cand_as_charge5,    c.asCharge5);
+    output().FillVectorVar(cand_as_charge10,   c.asCharge10);
+    output().FillVectorVar(cand_k_n,           c.kN);
+    output().FillVectorVar(cand_k_istrack,     c.kIsTrack);
+    output().FillVectorVar(cand_k_dedx,        c.kDEdx);
+    output().FillVectorVar(cand_k_length,      c.kLength);
+    output().FillVectorVar(cand_ndau_trk,      c.nDauTrk);
+    output().FillVectorVar(cand_ndau_shw,      c.nDauShw);
+    output().FillVectorVar(cand_dau_nearstop,  c.dauNearStop);
+    output().FillVectorVar(cand_dau_maxmichel, c.dauMaxMichel);
+    output().FillVectorVar(cand_vc_dist,       c.vcDist);
+    output().FillVectorVar(cand_vc_cover,      c.vcCover);
+    output().FillVectorVar(cand_vc_maxgap,     c.vcMaxGap);
+    output().FillVectorVar(cand_lk_s_dv,       c.lkSdV);
+    output().FillVectorVar(cand_lk_s_de,       c.lkSdE);
+    output().FillVectorVar(cand_lk_s_len,      c.lkSLen);
+    output().FillVectorVar(cand_lk_s_dedx,     c.lkSdEdx);
+    output().FillVectorVar(cand_lk_p_dv,       c.lkPdV);
+    output().FillVectorVar(cand_lk_p_de,       c.lkPdE);
+    output().FillVectorVar(cand_dstart_v,      c.dStartV);
+    output().FillVectorVar(cand_dstop_v,       c.dStopV);
+    output().FillVectorVar(cand_sh_nsp,        c.shNSP);
+    output().FillVectorVar(cand_sh_lin,        c.shLin);
+    output().FillVectorVar(cand_sh_lencore,    c.shLenCore);
+    output().FillVectorVar(cand_sh_lenbragg,   c.shLenBragg);
+    output().FillVectorVar(cand_sh_prange_core,c.shPRangeCore);
+    output().FillVectorVar(cand_tpdg,          c.tPDG);
+    output().FillVectorVar(cand_tparentpdg,    c.tParentPDG);
+    output().FillVectorVar(cand_tprocstart,    c.tProcStart);
+    output().FillVectorVar(cand_torigin,       c.tOrigin);
+    output().FillVectorVar(cand_tfrombeam,     c.tFromBeam);
+    output().FillVectorVar(cand_tsignal,       c.tSignal);
+    output().FillVectorVar(cand_tkmomend,      c.tKMomEnd);
+    output().FillVectorVar(cand_tkorigin,      c.tKOrigin);
+    output().FillVectorVar(cand_tpur,          c.tPur);
+    output().FillVectorVar(cand_teff,          c.tEff);
+    output().FillVectorVar(cand_tlength,       c.tLength);
+    output().FillVectorVar(cand_tmom,          c.tMom);
+    output().FillVectorVar(cand_tvtxerr,       c.tVtxErr);
+    output().FillVectorVar(cand_tlk_s_isk,     c.tLkSIsK);
+    output().IncrementCounter(ncand);
   }
 }
 
@@ -373,93 +521,99 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(){
 }
 
 //********************************************************************
+bool secondaryKaonProductionXSAnalysis::IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t){
+//********************************************************************
+
+  return t && t->PDG == -13 && t->ProcessStart == AnaTrueParticleB::Decay && static_cast<const AnaTrueParticlePD*>(t)->Origin != 2 &&
+         t->Momentum > 0.230 && t->Momentum < 0.241;   // GeV/c
+}
+
+//********************************************************************
 bool secondaryKaonProductionXSAnalysis::CheckFillTruthTree(const AnaTrueParticlePD* part){
 //********************************************************************
 
-  if(!part)return false;
-  else if(abs(part->PDG)==321){
-    return true;
-  }
-  else return false;
+  return IsTrueMuFromKaonAtRest(part);
 }
 
 //********************************************************************
 void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& part){
 //********************************************************************
 
-  // Fill the common variables (highland/src/highland2/baseAnalysis)
-
   // Event variables
   output().FillVar(run,    GetSpill().EventInfo->Run);
   output().FillVar(subrun, GetSpill().EventInfo->SubRun);
   output().FillVar(evt,    GetSpill().EventInfo->Event);
-  
-  // Fill standard variables for the PD analysis (those methods are in highlandPD/src/pdUtils/standardPDTree.cxx)
-  standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
 
-  // Fill true kaons candidate info
-  kaonTree::FillKaonVariables_TrueKaonCandidates(output(), &part, NULL);
+  if(_FillBeamInstrumentationInfo)
+    standardPDTree::FillStandardVariables_BeamInstrumentationTrue(output(), GetSpill().Beam);
+
+  std::map<int, AnaTrueParticleB*> byID;
+  for(AnaTrueParticleB* t : GetSpill().TrueParticles)byID[t->ID] = t;
+  const AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
+  const AnaTrueParticleB* beamTrue = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
+
+  output().FillVar(truemu_korigin, muCandUtils::KOrigin(&part, beamTrue, byID));
+  output().FillVar(truemu_mom, (Float_t)(1000.*part.Momentum));
+  auto ik = byID.find(part.ParentID);
+  output().FillVar(truemu_kmomend, (Float_t)((ik != byID.end() && ik->second->PDG == 321) ? 1000.*ik->second->MomentumEnd : -1.));
+  output().FillVectorVarFromArray(truemu_start, part.Position, 3);
+  output().FillVectorVarFromArray(truemu_end,   part.PositionEnd, 3);
+  output().FillVar(truemu_contained, (Int_t)(muCandUtils::DistToFaces(muCandUtils::V(part.Position)) > 0 &&
+                                             muCandUtils::DistToFaces(muCandUtils::V(part.PositionEnd)) > 0));
+  output().FillVar(truemu_beampdg, beamTrue ? beamTrue->PDG : 0);
+}
+
+//********************************************************************
+int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Candidate& c){
+//********************************************************************
+
+  if(c.tPDG == 0)return CATNOTRUTH;
+  // mu+ de K+ en reposo: mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c, madre K+ (o no guardada)
+  const bool muK = c.tPDG == -13 && c.tProcStart == AnaTrueParticleB::Decay && c.tOrigin != 2 && c.tMom > 230 && c.tMom < 241 &&
+                   (c.tParentPDG == 321 || c.tParentPDG == 0);
+  if(muK){
+    switch(c.tKOrigin){
+      case 0: case 1: return 1;   // medida A (primera interacción del haz que dispara)
+      case 2:         return 2;   // interacción secundaria
+      case 3:         return 3;   // K+ del haz
+      case 6:         return 4;   // otra raíz: pileup del haz
+      default:        return 5;   // cadena cortada o madre no guardada
+    }
+  }
+  if(std::abs(c.tPDG) == 211)return 211;
+  if(std::abs(c.tPDG) == 2212)return 2212;
+  if(std::abs(c.tPDG) == 13 && c.tOrigin == 2)return 13;
+  if(std::abs(c.tPDG) == 11 || c.tPDG == 22)return 11;
+  return CATOTHER;
 }
 
 //********************************************************************
 void secondaryKaonProductionXSAnalysis::FillCategories(){
 //********************************************************************
 
-  // For the beam track
-  if(_FillBeamParticleInfo){
-    if(box().MainTrack){
-      anaUtils::FillCategories(&GetEvent(), box().MainTrack,""); // method in highland/src/highland2/highlandUtils
-      kaonAnaUtils::FillBeamParticleOriginCategory(box().MainTrack); // method in highland/src/highland2/highlandUtils
-      kaonAnaUtils::FillBeamParticleReducedCategory(box().MainTrack);
-      if(_FillBeamParticleDaughtersInfo){
-	int ndau = std::min(20,(int)box().MainTrack->Daughters.size());
-	for(int i = 0; i < ndau; i++)
-	  anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().MainTrack->Daughters[i]),"dau",1);
-      }
+  // primario de la beam slice
+  if(_FillBeamParticleInfo && box().MainTrack){
+    anaUtils::FillCategories(&GetEvent(), box().MainTrack,""); // method in highland/src/highland2/highlandUtils
+    kaonAnaUtils::FillBeamParticleOriginCategory(box().MainTrack);
+    kaonAnaUtils::FillBeamParticleReducedCategory(box().MainTrack);
+    if(_FillBeamParticleDaughtersInfo){
+      int ndau = std::min(20,(int)box().MainTrack->Daughters.size());
+      for(int i = 0; i < ndau; i++)
+        anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().MainTrack->Daughters[i]),"dau",1);
     }
   }
 
-  // for the candidates
-  if(_FillKaonCandidatesInfo){
-    if(box().Candidates.size()>0){
-      for(int i = 0; i < (int)box().Candidates.size(); i++){
-	anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[i]),              "candidate",   1);
-	SetIsSignal(box().Candidates[i]);
-	kaonAnaUtils::FillCandidateParticleReducedCategory(box().Candidates[i]);
-	kaonAnaUtils::FillCandidateDaughterParticleReducedCategory(box().Candidates[i]);
-	if(!box().Candidates[i]->Daughters.empty()){
-	  anaUtils::FillObjectCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[i]->Daughters[0]),"candidatedau",1);
-	  kaonAnaUtils::FillCandidateDaughterMuonCategory(box().Candidates[i], static_cast<AnaParticlePD*>(box().Candidates[i]->Daughters[0]));
-	  kaonAnaUtils::FillCandidateDaughterMuonReducedCategory(box().Candidates[i], static_cast<AnaParticlePD*>(box().Candidates[i]->Daughters[0]));
-	}
-      }
-    }
-  }
-  
-  //get the kaon selection and get the branch with a larger AccumLevel
-  if(_FillBestKaonCandidateInfo){
-    SelectionBase* ksel = sel().GetSelection("XS");
-    int branchmax = 0;
-    int max       = 0;  
-    for(UInt_t ibranch = 0; ibranch < ksel->GetNBranches(); ibranch++){
-      if(ksel->GetAccumCutLevel(ibranch) > max){
-	max = ksel->GetAccumCutLevel(ibranch);
-	branchmax = ibranch;
-      }
-    }
-
-    // ---------- best kaon candidate variables --------------
-    if(box().Candidates.size()>0){
-      anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]), "bestcandidate");
-      //the signal flag of the true kaon is needed by the category (also when the candidates block is off)
-      SetIsSignal(box().Candidates[branchmax]);
-      kaonAnaUtils::FillBestCandidateParticleReducedCategory(static_cast<AnaParticlePD*>(box().Candidates[branchmax]));
-      if(!box().Candidates[branchmax]->Daughters.empty())
-	anaUtils::FillCategories(&GetEvent(), static_cast<AnaParticleB*>(box().Candidates[branchmax]->Daughters[0]), "bestcandidatedau");
-    }
+  // candidatos, en el mismo orden que los vectores cand_*
+  const ToyBoxMuCand& b = box();
+  const int nmax = std::min((int)b.Candidates.size(), (int)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
+  for(int i = 0; i < nmax; i++){
+    AnaParticleB* p = const_cast<AnaParticlePD*>(b.Candidates[i].part);
+    anaUtils::FillObjectCategories(&GetEvent(), p, "cand", 1);
+    const int code = CandidateCategory(b.Candidates[i]);
+    anaUtils::_categ->SetObjectCode("candmu", code, code == CATNOTRUTH ? CATNOTRUTH : CATOTHER, -1);
   }
 
-  // For the beam
+  // instrumentación del haz
   if(_FillBeamInstrumentationInfo){
     AnaParticleB* beamPart = static_cast<AnaBeam*>(GetSpill().Beam)->BeamParticle;
     if (beamPart)
@@ -470,97 +624,32 @@ void secondaryKaonProductionXSAnalysis::FillCategories(){
 //********************************************************************
 bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
 //********************************************************************
-  
-  // This is called before FillMicroTrees()
 
-  const Int_t CandidatesAccumLevel = 1; //TODO: think about this
-  
-  // Save the accum level for the true particle associated to the recon one such that efficiencies can be computed from the truth tree
+  // This is called before FillMicroTrees(). Para el árbol truth: accum_level[rama] de cada mu+ de K+ en reposo =
+  // 1 + nivel del mejor candidato emparejado con él en esa rama (0 si ninguno; un candidato de la otra población
+  // cuenta como nivel 0 en esta rama). Solo la configuración por defecto.
   if(conf().GetCurrentConfigurationIndex() != ConfigurationManager::default_conf)
     return true;
 
-  std::vector<AnaTrueParticleB*> trueParts = GetSpill().TrueParticles;
-  // Loop over all true particles
-  for(std::vector<AnaTrueParticleB*>::iterator itp = trueParts.begin(); itp!=trueParts.end(); itp++) {
-    AnaTrueParticleB* part = *itp;
-    if(!part) continue;
-    
-    // When the AccumLevel has not been already saved for this vertex 
-    if(part->AccumLevel.size() == 0)
-      part->AccumLevel.resize(sel().GetNEnabledSelections());
-    
+  const ToyBoxMuCand& b = box();
+  for(AnaTrueParticleB* t : GetSpill().TrueParticles){
+    if(!IsTrueMuFromKaonAtRest(t))continue;
+    int best[2] = {-1, -1};
+    for(size_t i = 0; i < b.Candidates.size(); i++){
+      const AnaParticlePD* p = b.Candidates[i].part;
+      if(!p || !p->TrueObject || p->TrueObject->ID != t->ID)continue;
+      const int pop = b.Population[i];
+      best[pop] = std::max(best[pop], b.Level[i]);
+      best[1 - pop] = std::max(best[1 - pop], 0);
+    }
+    if(t->AccumLevel.size() == 0)t->AccumLevel.resize(sel().GetNEnabledSelections());
     for(std::vector<SelectionBase*>::iterator it = sel().GetSelections().begin(); it != sel().GetSelections().end(); it++){
-      
       if(!(*it)->IsEnabled())continue;
-      
-      Int_t isel = (*it)->GetEnabledIndex();
-
-      if (part->AccumLevel[isel].size() == 0)
-        part->AccumLevel[isel].resize((*it)->GetNBranches());
-      
-      // Hotfix (23-nov-2026): esta selección tiene una sola rama. Antes se llamaba a GetAccumCutLevel(i)
-      // con i = índice del candidato, que lee fuera del array con más de un candidato (accum_level del
-      // árbol truth con basura). Arreglo de fondo en la Fase 4 (highland trabaja por evento, no por candidato).
-      const Int_t level = (*it)->GetAccumCutLevel(0);
-      bool found = false;
-      int max_accum_level = -1;
-
-      for(int i = 0; i < (int)box().Candidates.size(); i++){
-	if(!box().Candidates[i]->TrueObject)continue;
-	if(box().Candidates[i]->TrueObject->ID == part->ID){
-	  if(level>max_accum_level) max_accum_level = level;
-	  found = true;
-	  //break;
-	}
-      }
-
-      int min_accum_level = 100;
-      for(int i = 0; i < (int)box().Candidates.size(); i++){
-	if(level<min_accum_level)min_accum_level=level;
-      }
-
-      if(!found){
-	part->AccumLevel[0][0] = std::min(min_accum_level, CandidatesAccumLevel);
-	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
-      }
-      else{
-	part->AccumLevel[0][0] = level;
-	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
-      }
+      const Int_t isel = (*it)->GetEnabledIndex();
+      if(t->AccumLevel[isel].size() == 0)t->AccumLevel[isel].resize((*it)->GetNBranches());
+      for(UInt_t ib = 0; ib < (*it)->GetNBranches() && ib < 2; ib++)
+        t->AccumLevel[isel][ib] = best[ib] >= 0 ? 1 + best[ib] : 0;
     }
   }
   return true;
-}
-
-//********************************************************************
-bool secondaryKaonProductionXSAnalysis::IsProductionSignal(const AnaTrueParticlePD* kaon){
-//********************************************************************
-
-  // Same definition as test/phase2/kaon_origin_minitrees_impl.C
-  if(!kaon || kaon->PDG != 321) return false;
-  const AnaTrueParticle* beamTrue = pdAnaUtils::GetBeamTrueParticle(GetSpill());
-  if(!beamTrue) return false;
-
-  // go up through the K+ -> K+ to the first K+ of the chain
-  const AnaTrueParticlePD* first = kaon;
-  for(int depth = 0; depth < 1000; depth++){
-    if(first->ID == beamTrue->ID) return false;  // the beam K+ itself (also after K+ -> K+): not production
-    if(first->ParentID == 0) return false;      // another root (pileup, cosmic...)
-    const AnaTrueParticlePD* parent = pdAnaUtils::GetTrueParticle(GetSpill().TrueParticles, first->ParentID);
-    if(!parent) return false;                   // broken chain: cannot be classified
-    if(parent->PDG != 321)
-      return parent->ID == beamTrue->ID;        // signal if the first K+ is a direct daughter of the beam
-    first = parent;
-  }
-  return false;
-}
-
-//********************************************************************
-void secondaryKaonProductionXSAnalysis::SetIsSignal(AnaParticlePD* part){
-//********************************************************************
-
-  if(!part) return;
-  AnaTrueParticlePD* truepart = static_cast<AnaTrueParticlePD*>(part->TrueObject);
-  if(!truepart) return;
-  truepart->Signal = IsProductionSignal(truepart);
 }

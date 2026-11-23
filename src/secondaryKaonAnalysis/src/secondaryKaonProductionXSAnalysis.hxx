@@ -2,17 +2,29 @@
 #define secondaryKaonProductionXSAnalysis_h
 
 #include "baseAnalysis.hxx"
-#include "ToyBoxKaon.hxx"
+#include "ToyBoxMuCand.hxx"
 #include "standardPDTree.hxx"
 #include "pdDataClasses.hxx"
-#include "kaonTree.hxx"
-#include "kaonAnalysisUtils.hxx"
 
-#include "TH1F.h"
-
+// Análisis de producción de K+ (medida A: sigma de producción de K+ en la primera interacción del haz) con el mu+ de
+// K+ -> mu+ nu en reposo (23-nov-2026). Selección en secondaryKaonProductionXSSelection.hxx; variables de los
+// candidatos en muCandidateUtils.hxx (las mismas que las macros de test/phase2).
+//
+// Árbol "ana": una entrada por evento con algún candidato; los candidatos, en vectores cand_* (contador ncand, hasta
+// NMAXMUCANDIDATES). cand_pop (0 en la beam slice, 1 fuera) y cand_level (cortes de la cadena de su población que pasa
+// seguidos; el primero es el de la población) permiten dibujar cualquier variable en cualquier etapa:
+//   ana->Draw("cand_prange", "cand_pop==0 && cand_level>=6")
+// accum_level[rama]: el del mejor candidato de cada población (+1 por el corte "hay algún candidato").
+// Categorías por candidato: "candmu" (mu de K por origen de la K, pi, p, mu cósmico, EM) y las estándar con prefijo
+// "cand" (candparticle, ...).
+// MC: los eventos con un K+ secundario tienen volcado completo (fulldump = 1: todos los PFParticles completos). El fondo
+// debe tomarse de los eventos normales (fulldump == 0), escalado por (eventos totales)/(normales); la señal, de todos.
+//
+// Árbol "truth": una entrada por mu+ de desintegración no cósmico con p true en [230, 241] MeV/c (de K+ en reposo),
+// con el origen de su K (truemu_korigin) y accum_level[rama] = 1 + nivel del mejor candidato emparejado en esa rama
+// (0 si no hay candidato emparejado).
 namespace secondaryKaonProductionXSAnalysisConstants{
-
-  const UInt_t NMAXSAVEDCANDIDATES     = 10;
+  const UInt_t NMAXMUCANDIDATES = 300;   // con 500 eventos de MC, máximo 118 y percentil 99 de 80
 }
 
 class secondaryKaonProductionXSAnalysis: public baseAnalysis {
@@ -31,50 +43,47 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   void FillMicroTrees(bool addBase=true);
   void FillToyVarsInMicroTrees(bool addBase=true);
 
-  bool CheckFillTruthTree(const AnaTrueVertex& vtx){return true;}
+  bool CheckFillTruthTree(const AnaTrueVertex& vtx){(void)vtx; return true;}
   bool CheckFillTruthTree(const AnaTrueParticlePD* part);
-
   bool FinalizeConfiguration();
+
   void FillTruthTree();
-  void FillTruthTree(const AnaTrueVertex& vtx){return;}
+  void FillTruthTree(const AnaTrueVertex& vtx){(void)vtx; return;}
   void FillTruthTree(const AnaTrueParticlePD& part);
   //--------------------
 
   bool Initialize();
   void FillCategories();
-
-  /// Signal of the production measurement (measure A): the first K+ of the chain (going up through the
-  /// K+ -> K+ of kaonplusInelastic) is a direct daughter of the triggering beam particle. K+ from
-  /// secondary interactions are background, and the beam K+ after K+ -> K+ is not production.
-  bool IsProductionSignal(const AnaTrueParticlePD* kaon);
-  /// Sets the Signal flag of the true particle of a candidate (used by the reduced categories, code 3210)
-  void SetIsSignal(AnaParticlePD* part);
   void DefineInputConverters();
-
 
   /// Get a casted AnaSpillC to AnaSpillPD from the InputManager
   AnaSpillPD& GetSpill(){return *static_cast<AnaSpillPD*>(&input().GetSpill());}
-  
+
   /// Get a casted AnaBunchBB to AnaBunchPD from the InputManager
   AnaBunchPD& GetBunch(){return *static_cast<AnaBunchPD*>(&input().GetBunch());}
 
-  /// Get a casted AnaEventC to AnaEventPD 
+  /// Get a casted AnaEventC to AnaEventPD
   AnaEventPD& GetEvent(){return *static_cast<AnaEventPD*>(_event);}
-  
+
   /// Create the appropriate event time from an Spill and a Bunch in that spill
   virtual AnaEventC* MakeEvent(){
     return new AnaEventPD(GetSpill(),GetBunch());
   }
-  
-  /// Returns the ToyBoxKaon
-  virtual const ToyBoxKaon& box(Int_t isel=-1) const {return *static_cast<const ToyBoxKaon*>(&boxB(isel));}
 
-  /// Returns the vertex for the ToyBoxKaon
+  /// Returns the ToyBoxMuCand
+  virtual const ToyBoxMuCand& box(Int_t isel=-1) const {return *static_cast<const ToyBoxMuCand*>(&boxB(isel));}
+
+  /// Returns the vertex for the ToyBoxMuCand
   virtual AnaVertexB* GetVertex() const{return box().Vertex;}
 
-  /// Returns the true vertex for the ToyBoxKaon
+  /// Returns the true vertex for the ToyBoxMuCand
   virtual AnaTrueVertexB* GetTrueVertex() const {return box().TrueVertex;}
 
+  /// Categoría true de un candidato (código de la categoría "candmu")
+  static int CandidateCategory(const muCandUtils::Candidate& c);
+
+  /// ¿Es un mu+ de K+ en reposo para el árbol truth? (mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c)
+  static bool IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t);
 
 private:
 
@@ -82,11 +91,6 @@ private:
   bool _FillBeamParticleInfo;
   bool _FillBeamParticleHitsInfo;
   bool _FillBeamParticleDaughtersInfo;
-  bool _FillKaonCandidatesInfo;
-  bool _FillKaonCandidatesHitInfo;
-  bool _FillKaonCandidatesPIDInfo;
-  bool _FillBestKaonCandidateInfo;
-  bool _FillToyVariablesInfo;
 
   bool _ApplydQdxSystematic;
   bool _ApplyRecombinationSystematic;
@@ -104,7 +108,7 @@ private:
 public:
 
   enum enumConf_secondaryKaonProductionXSAnalysis{
-    detmass_syst=baseAnalysis::enumConfLast_baseAnalysis+1,    
+    detmass_syst=baseAnalysis::enumConfLast_baseAnalysis+1,
     enumConfLast_secondaryKaonProductionXSAnalysis
   };
 
@@ -118,7 +122,36 @@ public:
     kBeamMomWeight,
     kProtonBackgroundWeight,
     enumSystLast_secondaryKaonProductionXSAnalysis
-  };  
+  };
+
+  // Variables de los árboles (el nombre de cada variable en el árbol es el del enum)
+  enum enumMicroTrees_secondaryKaonProductionXSAnalysis{
+    // evento
+    fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
+    hasslice, hasvertex, vertex, nmucand_presel, nmucand,
+    // candidatos (contador ncand)
+    ncand,
+    cand_pop, cand_level, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
+    cand_length, cand_prange, cand_chi2mu, cand_chi2mu_other, cand_chi2p, cand_dedx_stop, cand_dedx_start,
+    cand_faces_stop, cand_faces_start, cand_axis_min, cand_vtx_min, cand_slice_min,
+    cand_cnn_trk, cand_cnn_em, cand_cnn_michel, cand_clearcosmic, cand_cosmiccrit,
+    cand_start, cand_stop, cand_cosbeam, cand_diry_stop, cand_trmean, cand_trmean_body, cand_intpeak, cand_intpeak_rr,
+    cand_ar_n5, cand_ar_n10, cand_ar_n20, cand_ar_nmichel5, cand_ar_nmichel10, cand_ar_nmichel20,
+    cand_ar_michel5, cand_ar_michel10, cand_ar_michel20, cand_ar_charge5, cand_ar_charge10, cand_ar_charge20,
+    cand_as_n5, cand_as_n10, cand_as_charge5, cand_as_charge10,
+    cand_k_n, cand_k_istrack, cand_k_dedx, cand_k_length,
+    cand_ndau_trk, cand_ndau_shw, cand_dau_nearstop, cand_dau_maxmichel,
+    cand_vc_dist, cand_vc_cover, cand_vc_maxgap,
+    cand_lk_s_dv, cand_lk_s_de, cand_lk_s_len, cand_lk_s_dedx, cand_lk_p_dv, cand_lk_p_de,
+    cand_dstart_v, cand_dstop_v,
+    cand_sh_nsp, cand_sh_lin, cand_sh_lencore, cand_sh_lenbragg, cand_sh_prange_core,
+    // truth de los candidatos
+    cand_tpdg, cand_tparentpdg, cand_tprocstart, cand_torigin, cand_tfrombeam, cand_tsignal, cand_tkmomend, cand_tkorigin,
+    cand_tpur, cand_teff, cand_tlength, cand_tmom, cand_tvtxerr, cand_tlk_s_isk,
+    // árbol truth
+    truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained, truemu_beampdg,
+    enumMicroTreesLast_secondaryKaonProductionXSAnalysis
+  };
 };
 
 #endif

@@ -37,25 +37,24 @@
 ###############################################################################
 --- SECONDARY KAON XS ANALYSIS ---
 ###############################################################################
+(secondaryKaonProductionXS: producción de K+ con el mu+ de K+ -> mu+ nu en reposo; candidatos a mu, ver
+secondaryKaonProductionXSSelection.hxx)
 
 --- Cut levels --------
- < secondaryKaonAnalysis.xsAnalysis.MinAccumLevelToSave = 3 >   // minimum accum level to save the event
+ < secondaryKaonAnalysis.xsAnalysis.MinAccumLevelToSave = 1 >   // 1: eventos con algún candidato a mu
 
 --- Output tree ------------
  < secondaryKaonAnalysis.xsAnalysis.FillBeamInstrumentationInfo           = 1 >
  < secondaryKaonAnalysis.xsAnalysis.FillBeamParticleInfo                  = 1 >
  < secondaryKaonAnalysis.xsAnalysis.FillBeamParticleHitsInfo              = 0 >
  < secondaryKaonAnalysis.xsAnalysis.FillBeamParticleDaughtersInfo         = 1 >
- < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesInfo                = 1 >
- < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatesHitInfo             = 0 >
- < secondaryKaonAnalysis.xsAnalysis.FillKaonCandidatePIDInfo              = 0 >
- < secondaryKaonAnalysis.xsAnalysis.FillBestKaonCandidateInfo             = 0 >
- < secondaryKaonAnalysis.xsAnalysis.FillToyVariablesInfo                  = 0 >
 
 --- Corrections ------------
- < secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection                    = 1 >
+Apagadas: la selección se ajustó en las macros de test/phase2 sobre los minitrees sin correcciones (posiciones sin SCE,
+dE/dx del módulo). Encenderlas cambia las variables de los candidatos (extremos, dE/dx, chi2): es un estudio aparte.
+ < secondaryKaonAnalysis.xsAnalysis.ApplySCECorrection                    = 0 >
  < secondaryKaonAnalysis.xsAnalysis.ApplydEdxCorrection                   = 0 >
- < secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationCorrection          = 1 >
+ < secondaryKaonAnalysis.xsAnalysis.ApplyRecombinationCorrection          = 0 >
 
 --- Systematics ------------
  < secondaryKaonAnalysis.xsAnalysis.ApplydQdxSystematic                   = 0 >

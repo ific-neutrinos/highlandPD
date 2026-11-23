@@ -75,11 +75,13 @@ void boxUtils::FillKaonXS(AnaEventB& event, SubDetId::SubDetEnum det){
 
   EventBoxB* EventBox = event.EventBoxes[EventBoxId::kEventBoxKaon];
 
-  EventBox->nRecObjectsInGroup[EventBoxKaon::kKaonXS]=0;
-  anaUtils::CreateArray(EventBox->RecObjectsInGroup[EventBoxKaon::kKaonXS], 10*NMAXPARTICLES);
-
   AnaParticleB** parts = static_cast<AnaEventB*>(&event)->Particles;
   int nParts           = static_cast<AnaEventB*>(&event)->nParticles;
+
+  // tantas como partículas tenga el evento (antes 10*NMAXPARTICLES = 1000: los eventos con volcado completo de los
+  // minitrees del módulo tienen más y se escribía fuera del array, 23-nov-2026)
+  EventBox->nRecObjectsInGroup[EventBoxKaon::kKaonXS]=0;
+  anaUtils::CreateArray(EventBox->RecObjectsInGroup[EventBoxKaon::kKaonXS], std::max(1, nParts));
     
   //loop over particles
   int nCandidatesAndDaughters = 0;
