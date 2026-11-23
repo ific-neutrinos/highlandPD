@@ -35,11 +35,15 @@ namespace mucut {
     Int_t kN = -999, kIsTrack = -999; Float_t kDEdx = -999, kLength = -999, kPRange = -999;
     Int_t nDauTrk = -999, nDauShw = -999, dauHits = -999, dauNearStop = -999; Float_t dauMaxMichel = -999;
     Int_t tKOrigin = -999; Float_t tStartZ = -999, tEndZ = -999, tMom = -999;
+    // Desde el 23-nov (conexión con el vértice primario; ver mu_candidates_minitrees_impl.C)
+    Float_t lkSdV = -999, lkSdE = -999, lkSLen = -999, lkPdV = -999, lkPdE = -999, dStartV = -999, dStopV = -999, tVtxErr = -999;
+    Int_t tLkSIsK = -999;
   };
 
   // Candidato en memoria, con las variables ya referidas al extremo de parada
   struct C {
     int entry;          // entrada del minitree (para enlazar con el árbol sig)
+    bool fullDump;      // evento con volcado completo (MC con un K+ secundario)
     int group;          // 0 señal, 1 mu cósmico, 2 p, 3 pi, 4 EM, 5 resto, -1 señal en vuelo
     bool inSlice, hasSlice, complete, clearCosmic;
     int tProcStart, tFromBeam; double tLength, tPur, tEff;   // truth: proceso de creación, longitud true inicio-fin, pureza, completitud
@@ -57,6 +61,9 @@ namespace mucut {
     int kN, kIsTrack; double kDEdx, kLength, kPRange;
     int nDauTrk, nDauShw, dauHits, dauNearStop; double dauMaxMichel;
     int tKOrigin; double tStartZ, tEndZ, tMom;
+    // conexión con el vértice (23-nov): enlace con el inicio (S) y con la parada (P), distancia de cada extremo al
+    // vértice (referidos a la orientación de Load); error del vértice y si el enlace con el inicio es la K (truth)
+    double lkSdV, lkSdE, lkSLen, lkPdV, lkPdE, dStartV, dStopV, tVtxErr; int tLkSIsK;
   };
 
   // Opciones de la cadena corta (InSliceSteps, OutSliceSteps). Encendidas por defecto desde el 23-nov (revisión de
@@ -81,11 +88,15 @@ namespace mucut {
     return x.tPDG == -13 && x.tOrigin != 2 && x.tProcStart == 2 && (x.tParentPDG == 321 || x.tParentPDG == 0);
   }
 
-  // -2: fondo de eventos con volcado (no se usa)
+  // Si es true, Load no descarta el fondo de los eventos con volcado (grupo -2): para estudiar los mu+ de K que no son
+  // señal (pileup, cadenas cortadas), que están casi siempre en eventos con volcado. Para S/B, false.
+  bool gKeepFullDump = false;
+
+  // -2: fondo de eventos con volcado (no se usa, salvo con gKeepFullDump)
   int Group(const In& x){
     if(x.tSignal)return x.tKMomEnd < 50 ? 0 : -1;
     if(gBroadSignal && BroadSignal(x))return 0;
-    if(x.fullDump)return -2;
+    if(x.fullDump && !gKeepFullDump)return -2;
     if(std::abs(x.tPDG) == 13 && x.tOrigin == 2)return 1;
     if(std::abs(x.tPDG) == 2212)return 2;
     if(std::abs(x.tPDG) == 211)return 3;
@@ -124,6 +135,7 @@ namespace mucut {
     MC_OPT(kN) MC_OPT(kIsTrack) MC_OPT(kDEdx) MC_OPT(kLength) MC_OPT(kPRange)
     MC_OPT(nDauTrk) MC_OPT(nDauShw) MC_OPT(dauHits) MC_OPT(dauNearStop) MC_OPT(dauMaxMichel)
     MC_OPT(tKOrigin) MC_OPT(tStartZ) MC_OPT(tEndZ) MC_OPT(tMom)
+    MC_OPT(lkSdV) MC_OPT(lkSdE) MC_OPT(lkSLen) MC_OPT(lkPdV) MC_OPT(lkPdE) MC_OPT(dStartV) MC_OPT(dStopV) MC_OPT(tVtxErr) MC_OPT(tLkSIsK)
 #undef MC_OPT
 #undef MC_OPTA
     const Long64_t nEntries = t->GetEntries();
@@ -132,7 +144,7 @@ namespace mucut {
       if(x.pRange < 100 || x.pRange > 600)continue;
       if(x.isShower && !withShowers)continue;
       C c;
-      c.entry = x.entry;
+      c.entry = x.entry; c.fullDump = x.fullDump;
       c.group = Group(x);
       if(c.group == -2)continue;
       bool b = x.stopAtB;
@@ -169,6 +181,10 @@ namespace mucut {
         c.nDauTrk = x.nDauTrk; c.nDauShw = x.nDauShw; c.dauHits = x.dauHits;
         c.dauNearStop = same ? x.dauNearStop : -999; c.dauMaxMichel = x.dauMaxMichel;
         c.tKOrigin = x.tKOrigin; c.tStartZ = x.tStartZ; c.tEndZ = x.tEndZ; c.tMom = x.tMom;
+        c.lkSdV = same ? x.lkSdV : x.lkPdV; c.lkSdE = same ? x.lkSdE : x.lkPdE; c.lkSLen = same ? x.lkSLen : -999;
+        c.lkPdV = same ? x.lkPdV : x.lkSdV; c.lkPdE = same ? x.lkPdE : x.lkSdE;
+        c.dStartV = same ? x.dStartV : x.dStopV; c.dStopV = same ? x.dStopV : x.dStartV;
+        c.tVtxErr = x.tVtxErr; c.tLkSIsK = same ? x.tLkSIsK : -999;
       }
       if(!ModuleNoWindow(c))continue;
       cands.push_back(c);
