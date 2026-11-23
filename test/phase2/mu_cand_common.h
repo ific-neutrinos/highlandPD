@@ -25,6 +25,16 @@ namespace mucut {
     Int_t isShower = 0;   // desde el 20-nov (candidatos tipo shower); 0 en los ficheros anteriores
     Float_t pRange, length, cnnTrk, cnnEM, cnnMichel, facesA, facesB, axisA, axisB, vtxA, vtxB, dEdxA, dEdxB;
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, dirYStop, tKMomEnd, actMichelA, actMichelB;
+    // Desde el 20-nov (mu_candidates_minitrees 98622d5); -999 si el fichero no las tiene. Referidas al extremo
+    // de parada de stopAtB (el de mayor dE/dx)
+    Float_t startX = -999, startY = -999, startZ = -999, stopX = -999, stopY = -999, stopZ = -999, cosBeam = -999;
+    Float_t trMean = -999, trMeanBody = -999;
+    Int_t arN[3] = {-999, -999, -999}, arNMichel[3] = {-999, -999, -999};
+    Float_t arMichel[3] = {-999, -999, -999}, arCharge[3] = {-999, -999, -999};
+    Int_t asN5 = -999, asN10 = -999; Float_t asCharge5 = -999, asCharge10 = -999;
+    Int_t kN = -999, kIsTrack = -999; Float_t kDEdx = -999, kLength = -999, kPRange = -999;
+    Int_t nDauTrk = -999, nDauShw = -999, dauHits = -999, dauNearStop = -999; Float_t dauMaxMichel = -999;
+    Int_t tKOrigin = -999; Float_t tStartZ = -999, tEndZ = -999, tMom = -999;
   };
 
   // Candidato en memoria, con las variables ya referidas al extremo de parada
@@ -39,6 +49,14 @@ namespace mucut {
     double facesStop, facesStart, actMichelStop;
     double chi2muOther, dEdxA, dEdxB;   // chi2 mu con la orientación contraria; dE/dx en PositionStart y PositionEnd de Pandora
     bool stopAtB;   // distancia de cada extremo a las caras; CNN Michel de las partículas a < 10 cm de la parada
+    // Variables del 20-nov (ver In). Las de alrededor de los extremos (ar*, as*, k*) se calcularon con el
+    // extremo de parada de mayor dE/dx: con orientByChi2, si la orientación cambia, valen -999.
+    double startZ, stopZ, startY, stopY, cosBeam, trMean, trMeanBody;
+    int arN[3], arNMichel[3]; double arMichel[3], arCharge[3];
+    int asN5, asN10; double asCharge5, asCharge10;
+    int kN, kIsTrack; double kDEdx, kLength, kPRange;
+    int nDauTrk, nDauShw, dauHits, dauNearStop; double dauMaxMichel;
+    int tKOrigin; double tStartZ, tEndZ, tMom;
   };
 
   constexpr int kNGroups = 6;
@@ -84,6 +102,17 @@ namespace mucut {
     MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
 #undef MC_BR
     if(t->GetBranch("isShower")){ t->SetBranchStatus("isShower", 1); t->SetBranchAddress("isShower", &x.isShower); }
+    // ramas del 20-nov, si están (arrays sin &)
+#define MC_OPT(v)  if(t->GetBranch(#v)){ t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, &x.v); }
+#define MC_OPTA(v) if(t->GetBranch(#v)){ t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, x.v); }
+    MC_OPT(startX) MC_OPT(startY) MC_OPT(startZ) MC_OPT(stopX) MC_OPT(stopY) MC_OPT(stopZ) MC_OPT(cosBeam) MC_OPT(trMean) MC_OPT(trMeanBody)
+    MC_OPTA(arN) MC_OPTA(arNMichel) MC_OPTA(arMichel) MC_OPTA(arCharge)
+    MC_OPT(asN5) MC_OPT(asN10) MC_OPT(asCharge5) MC_OPT(asCharge10)
+    MC_OPT(kN) MC_OPT(kIsTrack) MC_OPT(kDEdx) MC_OPT(kLength) MC_OPT(kPRange)
+    MC_OPT(nDauTrk) MC_OPT(nDauShw) MC_OPT(dauHits) MC_OPT(dauNearStop) MC_OPT(dauMaxMichel)
+    MC_OPT(tKOrigin) MC_OPT(tStartZ) MC_OPT(tEndZ) MC_OPT(tMom)
+#undef MC_OPT
+#undef MC_OPTA
     const Long64_t nEntries = t->GetEntries();
     for(Long64_t i = 0; i < nEntries; i++){
       t->GetEntry(i);
@@ -110,6 +139,24 @@ namespace mucut {
       c.chi2muStop = b ? x.chi2muF : x.chi2muR; c.chi2pStop = b ? x.chi2pF : x.chi2pR;
       c.michelStop = b ? x.michelOwnB : x.michelOwnA;
       c.cnnTrk = x.cnnTrk; c.cnnEM = x.cnnEM; c.cnnMichel = x.cnnMichel; c.intPeak = x.intPeak; c.dirYStop = x.dirYStop;
+      {
+        const bool same = (b == (bool)x.stopAtB);   // misma orientación con la que se calcularon
+        c.startZ = same ? x.startZ : x.stopZ; c.stopZ = same ? x.stopZ : x.startZ;
+        c.startY = same ? x.startY : x.stopY; c.stopY = same ? x.stopY : x.startY;
+        c.cosBeam = (x.cosBeam < -900) ? -999 : (same ? x.cosBeam : -x.cosBeam);
+        c.trMean = x.trMean; c.trMeanBody = x.trMeanBody;
+        for(int r = 0; r < 3; r++){
+          c.arN[r] = same ? x.arN[r] : -999; c.arNMichel[r] = same ? x.arNMichel[r] : -999;
+          c.arMichel[r] = same ? x.arMichel[r] : -999; c.arCharge[r] = same ? x.arCharge[r] : -999;
+        }
+        c.asN5 = same ? x.asN5 : -999; c.asN10 = same ? x.asN10 : -999;
+        c.asCharge5 = same ? x.asCharge5 : -999; c.asCharge10 = same ? x.asCharge10 : -999;
+        c.kN = same ? x.kN : -999; c.kIsTrack = same ? x.kIsTrack : -999;
+        c.kDEdx = same ? x.kDEdx : -999; c.kLength = same ? x.kLength : -999; c.kPRange = same ? x.kPRange : -999;
+        c.nDauTrk = x.nDauTrk; c.nDauShw = x.nDauShw; c.dauHits = x.dauHits;
+        c.dauNearStop = same ? x.dauNearStop : -999; c.dauMaxMichel = x.dauMaxMichel;
+        c.tKOrigin = x.tKOrigin; c.tStartZ = x.tStartZ; c.tEndZ = x.tEndZ; c.tMom = x.tMom;
+      }
       if(!ModuleNoWindow(c))continue;
       cands.push_back(c);
     }
