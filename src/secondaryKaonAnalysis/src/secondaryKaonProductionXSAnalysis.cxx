@@ -495,17 +495,17 @@ bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
       if (part->AccumLevel[isel].size() == 0)
         part->AccumLevel[isel].resize((*it)->GetNBranches());
       
+      // Hotfix (23-nov-2026): esta selección tiene una sola rama. Antes se llamaba a GetAccumCutLevel(i)
+      // con i = índice del candidato, que lee fuera del array con más de un candidato (accum_level del
+      // árbol truth con basura). Arreglo de fondo en la Fase 4 (highland trabaja por evento, no por candidato).
+      const Int_t level = (*it)->GetAccumCutLevel(0);
       bool found = false;
-      int branch = 0;
       int max_accum_level = -1;
 
       for(int i = 0; i < (int)box().Candidates.size(); i++){
 	if(!box().Candidates[i]->TrueObject)continue;
 	if(box().Candidates[i]->TrueObject->ID == part->ID){
-	  if((*it)->GetAccumCutLevel(i)>max_accum_level){
-	    max_accum_level = (*it)->GetAccumCutLevel(i);
-	    branch = i;
-	  }
+	  if(level>max_accum_level) max_accum_level = level;
 	  found = true;
 	  //break;
 	}
@@ -513,7 +513,7 @@ bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
 
       int min_accum_level = 100;
       for(int i = 0; i < (int)box().Candidates.size(); i++){
-	if((*it)->GetAccumCutLevel(i)<min_accum_level)min_accum_level=(*it)->GetAccumCutLevel(i);
+	if(level<min_accum_level)min_accum_level=level;
       }
 
       if(!found){
@@ -521,7 +521,7 @@ bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
       }
       else{
-	part->AccumLevel[0][0] = (*it)->GetAccumCutLevel(branch);
+	part->AccumLevel[0][0] = level;
 	std::fill(part->AccumLevel[0].begin()+1, part->AccumLevel[0].end(), -1);
       }
     }
