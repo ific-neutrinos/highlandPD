@@ -427,6 +427,9 @@ namespace muCandUtils {
     // del mu a V; truth: ¿el PFParticle del enlace con S es la K madre del mu? (1 sí, 0 no, -1 sin enlace o sin truth)
     Float_t lkSdV, lkSdE, lkSLen, lkSdEdx; Int_t lkSIsTrack; Float_t lkPdV, lkPdE, lkPLen, lkPdEdx; Int_t lkPIsTrack;
     Float_t dStartV, dStopV; Int_t tLkSIsK, tLkPIsK;
+    // MC, añadidas el 23-nov: lo mismo con el vértice perfecto (EventContext::tvtx; -1 sin él) y la posición true de la
+    // interacción del haz que dispara (final de la partícula true del haz; -999 sin ella)
+    Float_t lktSdV, lktSdE, lktPdV, lktPdE, dStartTV, dStopTV; Float_t tBeamEndX, tBeamEndY, tBeamEndZ;
     // candidatos tipo shower: longitud desde los space points (sh*; -1 en las trazas o sin space points)
     Int_t shNSP; Float_t shLin, shLenExt, shLenCore, shLenBragg, shBraggRatio, shPRangeCore, shPRangeBragg;
   };
@@ -442,6 +445,10 @@ namespace muCandUtils {
     std::map<int, AnaTrueParticleB*> byID;
     const AnaTrueParticleB* beamTrue = nullptr;  // partícula true del haz que dispara
     int isMC = 1;
+    // MC: "vértice perfecto" en el sistema de la reconstrucción: el último hit (plano 2, con posición 3D) que la truth
+    // atribuye a la partícula del haz, a lo largo del eje del haz. Es donde el haz deja de depositar carga, con las
+    // mismas distorsiones (SCE) que las trazas: sirve para saber qué daría un buscador de vértice perfecto.
+    TVector3 tvtx; bool hasTVtx = false;
   };
 
   inline void MakeContext(EventContext& ctx, const std::vector<AnaParticlePD*>& parts, const std::vector<AnaHitPD>& unassoc,
@@ -457,6 +464,15 @@ namespace muCandUtils {
     for(AnaTrueParticleB* t : trueParts)ctx.byID[t->ID] = t;
     ctx.beamTrue = beamTrue;
     ctx.isMC = isMC;
+    if(beamTrue){
+      double best = -1e9;
+      for(const AnaParticlePD* p : parts)
+        for(const AnaHitPD& h : p->Hits[2]){
+          if(h.TrueID != beamTrue->ID || h.Position_NoSCE.X() < -900 || h.Position_NoSCE.Mag2() == 0)continue;
+          const double t = h.Position_NoSCE.Dot(kAxisDir);
+          if(t > best){ best = t; ctx.tvtx = h.Position_NoSCE; ctx.hasTVtx = true; }
+        }
+    }
   }
 
   // Distancia a la beam slice (segmentos de sus partículas); -1 sin beam slice
@@ -563,6 +579,11 @@ namespace muCandUtils {
         return static_cast<AnaTrueParticleB*>(iq->second->TrueObject)->ID == t->ParentID ? 1 : 0;
       };
       c.tLkSIsK = isK(ls); c.tLkPIsK = isK(lp); }
+    { Link ls, lp; if(ctx.hasTVtx){ ls = BestLink(ctx.tvtx, start, p, parts); lp = BestLink(ctx.tvtx, stop, p, parts); }
+      c.lktSdV = ls.dV; c.lktSdE = ls.dE; c.lktPdV = lp.dV; c.lktPdE = lp.dE;
+      c.dStartTV = ctx.hasTVtx ? (start - ctx.tvtx).Mag() : -1; c.dStopTV = ctx.hasTVtx ? (stop - ctx.tvtx).Mag() : -1;
+      c.tBeamEndX = beamTrue ? beamTrue->PositionEnd[0] : -999; c.tBeamEndY = beamTrue ? beamTrue->PositionEnd[1] : -999;
+      c.tBeamEndZ = beamTrue ? beamTrue->PositionEnd[2] : -999; }
     { ShowerLen sl; if(!isTrk)sl = ShowerLength(p);
       c.shNSP = sl.nSP; c.shLin = sl.lin; c.shLenExt = sl.lenExt; c.shLenCore = sl.lenCore; c.shLenBragg = sl.lenBragg; c.shBraggRatio = sl.braggRatio;
       c.shPRangeCore = sl.lenCore > 0 ? MuRangeP(sl.lenCore) : -1; c.shPRangeBragg = sl.lenBragg > 0 ? MuRangeP(sl.lenBragg) : -1; }

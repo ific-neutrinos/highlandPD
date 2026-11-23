@@ -135,7 +135,7 @@ public:
   enum enumMicroTrees_secondaryKaonProductionXSAnalysis{
     // evento
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
-    hasslice, hasvertex, vertex, nmucand_presel, nmucand,
+    hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex, tbeamend,
     // candidatos (contador ncand)
     ncand,
     cand_pop, cand_level, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
@@ -151,6 +151,7 @@ public:
     cand_vc_dist, cand_vc_cover, cand_vc_maxgap,
     cand_lk_s_dv, cand_lk_s_de, cand_lk_s_len, cand_lk_s_dedx, cand_lk_p_dv, cand_lk_p_de,
     cand_dstart_v, cand_dstop_v,
+    cand_lkt_s_dv, cand_lkt_s_de, cand_lkt_p_dv, cand_lkt_p_de, cand_dstart_tv, cand_dstop_tv,
     cand_sh_nsp, cand_sh_lin, cand_sh_lencore, cand_sh_lenbragg, cand_sh_prange_core,
     // truth de los candidatos
     cand_tpdg, cand_tparentpdg, cand_tprocstart, cand_torigin, cand_tfrombeam, cand_tsignal, cand_tkmomend, cand_tkorigin,

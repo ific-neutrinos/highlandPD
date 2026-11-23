@@ -34,6 +34,11 @@ public:
   /// Vértice usado por las variables de conexión: final del primario de la beam slice (sin él, HasVertex = false)
   bool HasVertex;
   Float_t VertexPos[3];
+
+  /// MC: vértice perfecto en el sistema de la reconstrucción (último hit de la partícula true del haz; ver
+  /// muCandUtils::EventContext::tvtx)
+  bool HasTrueVertex;
+  Float_t TrueVertexPos[3];
 };
 
 #endif

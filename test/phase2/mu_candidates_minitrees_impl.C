@@ -117,6 +117,9 @@ namespace mucand {
       tc->Branch("lkSdV", &c.lkSdV); tc->Branch("lkSdE", &c.lkSdE); tc->Branch("lkSLen", &c.lkSLen); tc->Branch("lkSdEdx", &c.lkSdEdx); tc->Branch("lkSIsTrack", &c.lkSIsTrack);
       tc->Branch("lkPdV", &c.lkPdV); tc->Branch("lkPdE", &c.lkPdE); tc->Branch("lkPLen", &c.lkPLen); tc->Branch("lkPdEdx", &c.lkPdEdx); tc->Branch("lkPIsTrack", &c.lkPIsTrack);
       tc->Branch("dStartV", &c.dStartV); tc->Branch("dStopV", &c.dStopV); tc->Branch("tLkSIsK", &c.tLkSIsK); tc->Branch("tLkPIsK", &c.tLkPIsK);
+      tc->Branch("lktSdV", &c.lktSdV); tc->Branch("lktSdE", &c.lktSdE); tc->Branch("lktPdV", &c.lktPdV); tc->Branch("lktPdE", &c.lktPdE);
+      tc->Branch("dStartTV", &c.dStartTV); tc->Branch("dStopTV", &c.dStopTV);
+      tc->Branch("tBeamEndX", &c.tBeamEndX); tc->Branch("tBeamEndY", &c.tBeamEndY); tc->Branch("tBeamEndZ", &c.tBeamEndZ);
       tc->Branch("shNSP", &c.shNSP); tc->Branch("shLin", &c.shLin); tc->Branch("shLenExt", &c.shLenExt); tc->Branch("shLenCore", &c.shLenCore);
       tc->Branch("shLenBragg", &c.shLenBragg); tc->Branch("shBraggRatio", &c.shBraggRatio); tc->Branch("shPRangeCore", &c.shPRangeCore); tc->Branch("shPRangeBragg", &c.shPRangeBragg);
       ts = new TTree("sig", "mu+ true de K+ de la cadena del haz");

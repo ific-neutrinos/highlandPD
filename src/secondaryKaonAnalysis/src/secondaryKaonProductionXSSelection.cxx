@@ -82,6 +82,8 @@ bool GetMuCandidatesAction::Apply(AnaEventC& eventC, ToyBoxB& boxB) const{
   muCandUtils::MakeContext(ctx, parts, event.UnassociatedHits, trueParts, beamTrue, isMC);
   box.HasVertex = ctx.hasVtx;
   if(ctx.hasVtx){ box.VertexPos[0] = ctx.vtx.X(); box.VertexPos[1] = ctx.vtx.Y(); box.VertexPos[2] = ctx.vtx.Z(); }
+  box.HasTrueVertex = ctx.hasTVtx;
+  if(ctx.hasTVtx){ box.TrueVertexPos[0] = ctx.tvtx.X(); box.TrueVertexPos[1] = ctx.tvtx.Y(); box.TrueVertexPos[2] = ctx.tvtx.Z(); }
 
   // Cada partícula: Compute dice si es candidato (longitud y extremos válidos, p de rango de mu en [100, 600] MeV/c)
   // y calcula sus variables; después, la preselección geométrica del módulo

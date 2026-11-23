@@ -199,6 +199,9 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
   AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
+  AddVarI  (output(), hastruevertex,  "MC: hay vértice perfecto (hits de la partícula true del haz)");
+  AddVar3VF(output(), truevertex,     "MC: vértice perfecto, último hit del haz true a lo largo del eje (cm, sistema de la reco)");
+  AddVar3VF(output(), tbeamend,       "MC: final true de la partícula del haz que dispara (cm, interacción)");
 
   // -------- candidatos (contador ncand) --------
   const UInt_t N = secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES;
@@ -268,6 +271,12 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_lk_p_de,       "enlace vértice -> parada: distancia a la parada (cm)",         ncand, N);
   AddVarMaxSizeVF (output(), cand_dstart_v,      "distancia inicio - vértice (cm)",                              ncand, N);
   AddVarMaxSizeVF (output(), cand_dstop_v,       "distancia parada - vértice (cm)",                              ncand, N);
+  AddVarMaxSizeVF (output(), cand_lkt_s_dv,      "MC, vértice perfecto: enlace con el inicio, extremo - vértice (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_lkt_s_de,      "MC, vértice perfecto: enlace con el inicio, otro extremo - inicio (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_lkt_p_dv,      "MC, vértice perfecto: enlace con la parada, extremo - vértice (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_lkt_p_de,      "MC, vértice perfecto: enlace con la parada, otro extremo - parada (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_dstart_tv,     "MC: distancia inicio - vértice perfecto (cm)",                 ncand, N);
+  AddVarMaxSizeVF (output(), cand_dstop_tv,      "MC: distancia parada - vértice perfecto (cm)",                 ncand, N);
   AddVarMaxSizeVI (output(), cand_sh_nsp,        "shower: space points",                                         ncand, N);
   AddVarMaxSizeVF (output(), cand_sh_lin,        "shower: linealidad (valor propio mayor / suma)",               ncand, N);
   AddVarMaxSizeVF (output(), cand_sh_lencore,    "shower: longitud del núcleo (cm)",                             ncand, N);
@@ -349,6 +358,14 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
   output().FillVar(nmucand, (Int_t)b.Candidates.size());
+  output().FillVar(hastruevertex, (Int_t)b.HasTrueVertex);
+  output().FillVectorVarFromArray(truevertex, b.TrueVertexPos, 3);
+  {
+    const AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
+    const AnaTrueParticleB* bt = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
+    const Float_t none[3] = {-999, -999, -999};
+    output().FillVectorVarFromArray(tbeamend, bt ? bt->PositionEnd : none, 3);
+  }
 
   // -------- candidatos --------
   // Uno por posición de los vectores cand_*, en el orden de SavedCandidates (el mismo que en FillCategories). Las
@@ -422,6 +439,12 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_lk_p_de,       c.lkPdE);
     output().FillVectorVar(cand_dstart_v,      c.dStartV);
     output().FillVectorVar(cand_dstop_v,       c.dStopV);
+    output().FillVectorVar(cand_lkt_s_dv,      c.lktSdV);
+    output().FillVectorVar(cand_lkt_s_de,      c.lktSdE);
+    output().FillVectorVar(cand_lkt_p_dv,      c.lktPdV);
+    output().FillVectorVar(cand_lkt_p_de,      c.lktPdE);
+    output().FillVectorVar(cand_dstart_tv,     c.dStartTV);
+    output().FillVectorVar(cand_dstop_tv,      c.dStopTV);
     output().FillVectorVar(cand_sh_nsp,        c.shNSP);
     output().FillVectorVar(cand_sh_lin,        c.shLin);
     output().FillVectorVar(cand_sh_lencore,    c.shLenCore);

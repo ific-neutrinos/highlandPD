@@ -11,6 +11,8 @@ ToyBoxMuCand::ToyBoxMuCand():ToyBoxPD(){
   NPreselected = 0;
   HasVertex = false;
   for(int i = 0; i < 3; i++)VertexPos[i] = -999;
+  HasTrueVertex = false;
+  for(int i = 0; i < 3; i++)TrueVertexPos[i] = -999;
 }
 
 //********************************************************************
@@ -40,5 +42,7 @@ void ToyBoxMuCand::ResetBase(){
   NPreselected = 0;
   HasVertex = false;
   for(int i = 0; i < 3; i++)VertexPos[i] = -999;
+  HasTrueVertex = false;
+  for(int i = 0; i < 3; i++)TrueVertexPos[i] = -999;
   SoftReset();  // just reset internal stuff
 }
