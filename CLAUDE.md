@@ -5,7 +5,13 @@ Remoto: `github.com/ific-neutrinos/highlandPD`. Rama de integración: `develop`.
 
 Este fichero recoge la auditoría hecha el 13-nov-2026 y el plan acordado. El usuario escribe en español.
 
-## Estado para retomar (20-nov-2026)
+## Estado para retomar (23-nov-2026)
+
+- **No se lanza más producción** (`v1_01`-`v1_09`) hasta tener claro, analizando `v1_00` (workflow 23410, recogido en `pdsp/mc/20261120v100`), que los minitrees tienen toda la información necesaria (decisión del usuario, 23-nov). El prestage sigue por bloques (`v1_01` en disco; `v1_02` lanzado).
+- Tag `dunesw_v09_56_00d00`: decidido ponerlo sobre los commits del tarball (highland `50e0989`, highlandPD `ca2e848`, highlandAnalysis `bc6e41d`), no después de los arreglos de los análisis: el tag dice qué código hizo los minitrees, y todos los bloques tienen que salir con el mismo tarball.
+- `count_module_minitrees.C` se corre sobre la lista de **salidas** (como `mc_big19.txt`), no sobre `filelist_mc_6GeV_v1_00.txt` (entradas de SAM). Puede ir desde scratch, sin esperar a persistent.
+
+## Estado anterior (20-nov-2026)
 
 Corriendo en FNAL (lanzadas el 20-nov con `nohup`, desde highlandPD con `98622d5`): `mu_candidates_minitrees.C` sobre `mc_big19.txt` → `mu_cand_big19v2.root` (variables nuevas) y `kaon_origin_minitrees.C` → `kaon_origin_big19.log`. Traer el root a `~/Documents/Work/DUNE/analysis/PDSP/claude/files/minitrees/mc/`.
 
@@ -173,7 +179,7 @@ Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 - `secondaryKaonProductionXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210. Pregunta abierta: ¿usar la misma definición que `secondaryKaonAnalysis`?
 
 Encontrado al renombrar (20-nov-2026), sin arreglar (ninguno lo causa el renombre; `ana` idéntico antes y después):
-- `secondaryProton` y `secondaryKaonProductionXS`: `accum_level` del árbol `truth` sale distinto en dos ejecuciones del mismo binario (hasta 8·10⁸): memoria sin inicializar.
+- Resuelto (23-nov, hotfix `7cda084`, `8732278`): `secondaryProton` y `secondaryKaonProductionXS` daban un `accum_level` del árbol `truth` distinto en cada ejecución. `FinalizeConfiguration` (copiado de `secondaryKaon`, que tiene una rama por candidato) llamaba a `GetAccumCutLevel(i)` con `i` = índice del candidato, con una sola rama. Ahora usa la rama 0; `ana` idéntico. Valgrind no lo detectaba.
 - `pdExample.exe` no arranca: `seltrk_csdarange_prot` está ya en `standardPDTree` y `pdExampleAnalysis` la vuelve a añadir.
 - `beamWeights` y `brokenTracks` solo leen el formato antiguo de pduneana (`pduneana/beamana`): no corren sobre los minitrees de highland.
 - Calibraciones (aparcadas por el usuario): con el prefijo de parámetros arreglado ya los leen, pero `dEdxCalibration` y `dQdxYZCalibration` acaban con corrupción de memoria en el bucle de eventos y `dQdxXCalibration` en `Initialize` (fichero personal `yz_corrections_mc_lifetime_mypc.root`).
@@ -315,6 +321,7 @@ Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `ph
 
 ## Fase 4 (después de reestructurar highland): reestructuración de PD
 
+- **Análisis con varios candidatos por evento** (dice el usuario, 23-nov): highland trabaja por evento, y `secondaryKaon` necesitó apaños (ramas por candidato, `FinalizeConfiguration` propio para el `accum_level` y el árbol `truth`). El hotfix de `accum_level` de `secondaryProton`/`secondaryKaonProductionXS` es temporal: en la reestructuración, repensar cómo highland trata selecciones por candidato y sus eficiencias en la truth.
 - Separar el núcleo `pd*` (una librería) de los análisis (una librería y un ejecutable cada uno, opcionales vía CMake).
 - **Convención de nombres de las clases** (decidido con el usuario el 20-nov): unificar `xxxPD` / `pdXxx` en las clases internas (`EventBoxPD`, `ToyBoxPD`, `CreateMiniTreePD` frente a `pdBaseAnalysis`, `pdBaseConverter`, `pdAnaUtils`...). Nunca las clases de datos (`AnaSpillPD`, `AnaParticlePD`...): ROOT guarda sus nombres en los minitrees. Los paquetes, las clases de análisis y selección, los ficheros de parámetros y los ejecutables ya siguen la convención de highland (paquetes y clases de análisis en minúscula, como `baseAnalysis`).
 - Factorizar el copy-paste:
