@@ -66,8 +66,7 @@ private:
 public:
 
   enum enumStandardMicroTrees_pdExampleAnalysis{
-    seltrk_csdarange_prot = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
-    enumStandardMicroTreesLast_pdExampleAnalysis
+    enumStandardMicroTreesLast_pdExampleAnalysis = standardPDTree::enumStandardMicroTreesLast_standardPDTree
   };
 
   enum enumConf_pdExampleAnalysis{

@@ -233,9 +233,9 @@ void pdExampleAnalysis::DefineMicroTrees(bool addBase){
   standardPDTree::AddStandardVariables_AllParticlesReco(output(),pdExampleAnalysisConstants::NMAXSAVEDPARTICLES);
   standardPDTree::AddStandardVariables_AllParticlesTrue(output(),pdExampleAnalysisConstants::NMAXSAVEDPARTICLES);
 
-  // Add additional variables manually, (should have been defined in pdExampleAnalysis.hxx)
+  // Additional variables can be added manually (define them in the enum of pdExampleAnalysis.hxx).
   // Have a look at highland/src/highland2/highlandTools/src/OutputManager.hxx to see all available methods.
-  AddVarF(output(), seltrk_csdarange_prot, "CSDA range proton hypothesis from beam momentum");
+  // (seltrk_csdarange_prot and seltrk_csdarange_muon are already in standardPDTree)
 
   // set counters for vector/matrix arrays
   seltrk_ndau = standardPDTree::seltrk_ndau;
@@ -274,7 +274,9 @@ void pdExampleAnalysis::FillMicroTrees(bool addBase){
   // Fill standard variables for the PD analysis
   standardPDTree::FillStandardVariables_BeamInstrumentationReco(         output(), GetSpill().Beam);
   standardPDTree::FillStandardVariables_BeamInstrumentationTrue(         output(), GetSpill().Beam);
-  standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack);
+  AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
+  AnaParticlePD* beamPart = beam ? static_cast<AnaParticlePD*>(beam->BeamParticle) : NULL;
+  standardPDTree::FillStandardVariables_BeamParticleReco(    output(), box().MainTrack, beamPart);
   standardPDTree::FillStandardVariables_BeamParticleTrue(    output(), box().MainTrack);    
   standardPDTree::FillStandardVariables_BeamParticleHitsReco(output(), box().MainTrack);
 
@@ -294,12 +296,6 @@ void pdExampleAnalysis::FillMicroTrees(bool addBase){
   // ---------- Additional candidate variables --------------
   if(box().MainTrack){        
     
-    AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
-    AnaParticlePD* beamPart = static_cast<AnaParticlePD*>(beam->BeamParticle);
-    if(beamPart){
-      output().FillVar(seltrk_csdarange_prot, pdAnaUtils::ComputeCSDARange(1000*(beamPart->Momentum), 2212));
-    }
-
     // ---------- Save information about all (max NMAXSAVEDDAUGHTERS) daughters in the candidate --------------
     Int_t ndau   = (Int_t)box().MainTrack->Daughters.size();
     Int_t maxdau = std::min((Int_t)pdExampleAnalysisConstants::NMAXSAVEDDAUGHTERS,ndau);
