@@ -8,7 +8,7 @@ Este fichero recoge la auditoría hecha el 13-nov-2026 y el plan acordado. El us
 ## Estado para retomar (23-nov-2026)
 
 - **No se lanza más producción** (`v1_01`-`v1_09`) hasta tener claro, analizando `v1_00` (workflow 23410, recogido en `pdsp/mc/20261120v100`), que los minitrees tienen toda la información necesaria (decisión del usuario, 23-nov). El prestage sigue por bloques (`v1_01` en disco; `v1_02` lanzado).
-- Tag `dunesw_v09_56_00d00`: decidido ponerlo sobre los commits del tarball (highland `50e0989`, highlandPD `ca2e848`, highlandAnalysis `bc6e41d`), no después de los arreglos de los análisis: el tag dice qué código hizo los minitrees, y todos los bloques tienen que salir con el mismo tarball.
+- Tag `dunesw_v09_56_00d00` creado (23-nov, anotado, en local; push de tags pendiente, lo hace el usuario: `git push origin dunesw_v09_56_00d00` en los tres). Decidido ponerlo sobre los commits del tarball (highland `50e0989`, highlandPD `ca2e848`, highlandAnalysis `bc6e41d`), no después de los arreglos de los análisis: el tag dice qué código hizo los minitrees, y todos los bloques tienen que salir con el mismo tarball.
 - `count_module_minitrees.C` se corre sobre la lista de **salidas** (como `mc_big19.txt`), no sobre `filelist_mc_6GeV_v1_00.txt` (entradas de SAM). Puede ir desde scratch, sin esperar a persistent.
 
 ## Estado anterior (20-nov-2026)
@@ -176,11 +176,11 @@ Hecho:
 
 Aplazado por decisión del usuario (16-nov-2026), no tocar hasta que lo pida:
 - Calibraciones: el efecto de `SCECalorimetricVariation` no llega a `dQdx_elife` (lo que rellenan las calibraciones X/YZ) porque la llamada a la lifetime está comentada; y el dE/dx que recalcula `LifetimeVariation` parte de `hit.dQdx`, que no recoge la variación. Validar cuando haya un minitree de calibración.
-- `secondaryKaonProductionXSAnalysis` no define señal (`Signal`), así que su categoría `bestcandidateparticlereduced` tampoco vale nunca 3210. Pregunta abierta: ¿usar la misma definición que `secondaryKaonAnalysis`?
+- Resuelto (23-nov): `secondaryKaonProductionXSAnalysis` define la señal de la medida A (`IsProductionSignal`: la primera K+ de la cadena, subiendo las K+ -> K+, es hija directa del haz que dispara; igual que `kaon_origin_minitrees`), decisión del usuario. Es solo producción: el canal de desintegración entra en la eficiencia. Con cadenas cortadas (minitrees antiguos) la K no es señal.
 
 Encontrado al renombrar (20-nov-2026), sin arreglar (ninguno lo causa el renombre; `ana` idéntico antes y después):
 - Resuelto (23-nov, hotfix `7cda084`, `8732278`): `secondaryProton` y `secondaryKaonProductionXS` daban un `accum_level` del árbol `truth` distinto en cada ejecución. `FinalizeConfiguration` (copiado de `secondaryKaon`, que tiene una rama por candidato) llamaba a `GetAccumCutLevel(i)` con `i` = índice del candidato, con una sola rama. Ahora usa la rama 0; `ana` idéntico. Valgrind no lo detectaba.
-- `pdExample.exe` no arranca: `seltrk_csdarange_prot` está ya en `standardPDTree` y `pdExampleAnalysis` la vuelve a añadir.
+- Resuelto (23-nov, `368313f`): `pdExample.exe` no arrancaba porque volvía a añadir `seltrk_csdarange_prot`. Ahora pasa la partícula del haz al relleno estándar. Ojo: `pdExample.exe` no sobrescribe un `-o` que ya existe.
 - `beamWeights` y `brokenTracks` solo leen el formato antiguo de pduneana (`pduneana/beamana`): no corren sobre los minitrees de highland.
 - Calibraciones (aparcadas por el usuario): con el prefijo de parámetros arreglado ya los leen, pero `dEdxCalibration` y `dQdxYZCalibration` acaban con corrupción de memoria en el bucle de eventos y `dQdxXCalibration` en `Initialize` (fichero personal `yz_corrections_mc_lifetime_mypc.root`).
 
