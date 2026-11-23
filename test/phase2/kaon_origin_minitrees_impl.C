@@ -51,12 +51,18 @@ namespace korigin {
     std::map<std::string, std::map<std::string, long>> secMotherMom;  // madre -> bin de momento -> mu (todas las especies del haz)
     std::map<std::string, std::vector<double>> beamMomA;              // haz -> momento del haz al final (A)
     long secAtMotherEnd = 0, secMidMother = 0, secZeroEndMom = 0;
+    // Opción a de la definición de A (decidida el 23-nov): subir también por la partícula del haz que sobrevive a
+    // una interacción casi elástica (misma especie que el haz). Para cada secundaria cuya cadena hasta el haz es
+    // solo de partículas de la especie del haz, la fracción mínima de momento conservada en cada paso
+    // (p inicial de la hija / p final de la madre).
+    std::map<std::string, std::vector<double>> leadingRatio;   // haz -> razones (solo cadenas de la especie del haz)
 
     void AddA(int beamPDG, const AnaTrueParticleB* beam){
       n[BeamName(beamPDG)]["A (primera interacción)"]++;
       beamMomA[BeamName(beamPDG)].push_back(beam->MomentumEnd);
     }
     void AddBeamK(int beamPDG){ n[BeamName(beamPDG)]["K+ del haz"]++; }
+    void AddLeading(int beamPDG, double ratio){ leadingRatio[BeamName(beamPDG)].push_back(ratio); }
     void AddSecondary(int beamPDG, const AnaTrueParticleB* k, const AnaTrueParticleB* mother){
       n[BeamName(beamPDG)]["K secundaria"]++;
       secMother[BeamName(beamPDG)][MotherName(mother->PDG)]++;
@@ -86,6 +92,18 @@ namespace korigin {
           for(auto& m : v)std::cout << Form(" %s %ld", m.second.c_str(), m.first);
           std::cout << std::endl;
         }
+      }
+      std::cout << "  Opción a: secundarias cuya madre desciende del haz solo por partículas de su especie (haz que sobrevive);" << std::endl
+                << "  pasarían a A si conservan en cada paso al menos una fracción r del momento:" << std::endl;
+      for(auto& kv : leadingRatio){
+        long nSec = 0; auto itn = n.find(kv.first);
+        if(itn != n.end()){ auto it = itn->second.find("K secundaria"); if(it != itn->second.end())nSec = it->second; }
+        std::cout << Form("    haz %-5s secundarias %ld, con cadena de la especie del haz %zu; pasan a A con r >=", kv.first.c_str(), nSec, kv.second.size());
+        for(double r : {0.5, 0.7, 0.8, 0.9, 0.95}){
+          long m = 0; for(double x : kv.second)if(x >= r)m++;
+          std::cout << Form("  %.2f: %ld", r, m);
+        }
+        std::cout << std::endl;
       }
       std::cout << "  Secundarias: la K nace en el final de la madre " << secAtMotherEnd << " (de ellas con MomentumEnd <= 0: " << secZeroEndMom
                 << "), a mitad de la madre " << secMidMother << " (sin momento)" << std::endl
@@ -170,7 +188,17 @@ namespace korigin {
           else if(i0 + 2 == chain.size())Add("haz que dispara: primera interacción, con K+ -> K+ intermedias", Form("%zu K+ -> K+", i0), kp);
           else Add("haz que dispara: interacción secundaria", Form("madre de la primera K %d (generación %d)", chain[i0 + 1]->PDG, chain[i0]->Generation), kp);
           if(i0 + 2 == chain.size())comp.AddA(cur->PDG, cur);
-          else comp.AddSecondary(cur->PDG, chain[i0], chain[i0 + 1]);
+          else {
+            comp.AddSecondary(cur->PDG, chain[i0], chain[i0 + 1]);
+            // opción a: ¿la cadena de la madre de la primera K hasta el haz es solo de la especie del haz?
+            bool same = true; double rmin = 1e9;
+            for(size_t j = i0 + 1; j + 1 < chain.size(); j++){
+              if(chain[j]->PDG != cur->PDG){ same = false; break; }
+              const double pEnd = chain[j + 1]->MomentumEnd;
+              rmin = std::min(rmin, pEnd > 0 ? chain[j]->Momentum/pEnd : -1.);
+            }
+            if(same)comp.AddLeading(cur->PDG, rmin);
+          }
           continue;
         }
         if(cur->Generation == 0 && cur->Origin == 4){
