@@ -173,6 +173,10 @@ namespace mucut {
   bool InGap(double z){ return GapDist(z) < kGapHalfWidth; }
   // Si es true, InSliceSteps y OutSliceSteps añaden el veto (apagado por defecto: resultados anteriores iguales)
   bool gGapVeto = false;
+  // Si es true, el corte de Michel usa los hits con CNN de Michel > 0,5 a < 10 cm de la parada (de cualquier
+  // PFParticle o no asociados; ficheros desde el 20-nov) en vez de la puntuación media de la propia partícula,
+  // que solo ve el Michel cuando Pandora lo pega al mu (23-nov). Apagado por defecto.
+  bool gMichelHits = false;
 
   // Un corte: nombre, condición, y para dibujarlo la variable, el binning y dónde se corta
   struct Step {
@@ -242,6 +246,8 @@ namespace mucut {
     if(key == "gaps")      return {"sin extremos en los huecos", [](const C& c){ return !InGap(c.startZ) && !InGap(c.stopZ); },
                                    [](const C& c){ return std::min(GapDist(c.startZ), GapDist(c.stopZ)); }, 40, 0, 40,
                                    "distancia m#acute{i}nima de un extremo a z = 230 o 462 cm", {kGapHalfWidth}, false};
+    if(key == "michelHits")return {"hits Michel a < 10 cm de la parada >= 2", [](const C& c){ return c.arNMichel[1] >= 2; }, [](const C& c){ return double(c.arNMichel[1]); },
+                                   20, 0, 20, "hits con CNN Michel > 0,5 a < 10 cm de la parada", {2}, false};
     if(key == "michel")    return {"cnnMichel > 0.02", [](const C& c){ return c.cnnMichel > 0.02; }, [](const C& c){ return c.cnnMichel; },
                                    50, 0, 0.5, "puntuación CNN Michel de la partícula", {0.02}, true};
     std::cerr << "MakeStep: corte desconocido " << key << std::endl;
@@ -256,13 +262,17 @@ namespace mucut {
   std::vector<Step> InSliceSteps(){
     // 20-nov: tras el N-1 de la cadena larga (fuera eje > 10, chi2 p, dE/dx inicio y cnnEM) y el escaneo de
     // mu_cand_scan.C (chi2 mu, Michel y ventana; superficie plana alrededor de estos valores)
-    if(gGapVeto)return Steps({"caras35", "vtx>15", "chi2mu<6", "dedxStop>3", "gaps", "ventana205", "michel"});
-    return Steps({"caras35", "vtx>15", "chi2mu<6", "dedxStop>3", "ventana205", "michel"});
+    std::vector<std::string> k = {"caras35", "vtx>15", "chi2mu<6", "dedxStop>3"};
+    if(gGapVeto)k.push_back("gaps");
+    k.push_back("ventana205"); k.push_back(gMichelHits ? "michelHits" : "michel");
+    return Steps(k);
   }
   std::vector<Step> OutSliceSteps(){
     // 20-nov: fuera caras > 20 y cnnEM (N-1); chi2 mu, Michel y ventana de mu_cand_scan.C
-    if(gGapVeto)return Steps({"noclear", "eje<60", "chi2mu<6", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "gaps", "ventana205", "michel"});
-    return Steps({"noclear", "eje<60", "chi2mu<6", "dedxStop>3", "chi2p>80", "dedxStart>1.8", "ventana205", "michel"});
+    std::vector<std::string> k = {"noclear", "eje<60", "chi2mu<6", "dedxStop>3", "chi2p>80", "dedxStart>1.8"};
+    if(gGapVeto)k.push_back("gaps");
+    k.push_back("ventana205"); k.push_back(gMichelHits ? "michelHits" : "michel");
+    return Steps(k);
   }
 
   // Pasa los pasos [0, upto] salvo skip
