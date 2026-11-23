@@ -59,6 +59,17 @@ namespace mucut {
     int tKOrigin; double tStartZ, tEndZ, tMom;
   };
 
+  // Opciones de la cadena corta (InSliceSteps, OutSliceSteps). Encendidas por defecto desde el 23-nov (revisión de
+  // la selección, mu_cand_review.C); los resultados anteriores al 23-nov se reproducen con las dos a false.
+  //  - gGapVeto: veto de los candidatos con un extremo en los huecos entre APAs (z = 230 y 462 cm).
+  //  - gMichelHits: el corte de Michel usa los hits con CNN de Michel > 0,5 a < 10 cm de la parada (de cualquier
+  //    PFParticle o no asociados) en vez de la puntuación media de la propia partícula, que solo ve el Michel cuando
+  //    Pandora lo pega al mu.
+  // Ficheros sin las ramas del 20-nov (startZ, stopZ, arNMichel): el veto no actúa y el corte de Michel vuelve al
+  // antiguo, candidato a candidato (Load avisa).
+  bool gGapVeto = true;
+  bool gMichelHits = true;
+
   constexpr int kNGroups = 6;
   const char* kGroupName[kNGroups] = {"señal", "mu cósmico", "protón", "pi+-", "EM", "resto"};
 
@@ -102,6 +113,8 @@ namespace mucut {
     MC_BR(dEdxA) MC_BR(dEdxB) MC_BR(chi2muF) MC_BR(chi2muR) MC_BR(chi2pF) MC_BR(chi2pR) MC_BR(michelOwnA) MC_BR(michelOwnB) MC_BR(intPeak) MC_BR(dirYStop) MC_BR(tKMomEnd) MC_BR(actMichelA) MC_BR(actMichelB)
 #undef MC_BR
     if(t->GetBranch("isShower")){ t->SetBranchStatus("isShower", 1); t->SetBranchAddress("isShower", &x.isShower); }
+    if((gGapVeto && !t->GetBranch("startZ")) || (gMichelHits && !t->GetBranch("arNMichel")))
+      std::cerr << "Load: " << in << " no tiene las ramas del 20-nov: el veto de los huecos no actúa y el corte de Michel es el antiguo" << std::endl;
     // ramas del 20-nov, si están (arrays sin &)
 #define MC_OPT(v)  if(t->GetBranch(#v)){ t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, &x.v); }
 #define MC_OPTA(v) if(t->GetBranch(#v)){ t->SetBranchStatus(#v, 1); t->SetBranchAddress(#v, x.v); }
@@ -171,12 +184,6 @@ namespace mucut {
   const double kGapHalfWidth = 5.;
   double GapDist(double z){ return z < -900 ? 1e9 : std::min(std::abs(z - kGapZ[0]), std::abs(z - kGapZ[1])); }
   bool InGap(double z){ return GapDist(z) < kGapHalfWidth; }
-  // Si es true, InSliceSteps y OutSliceSteps añaden el veto (apagado por defecto: resultados anteriores iguales)
-  bool gGapVeto = false;
-  // Si es true, el corte de Michel usa los hits con CNN de Michel > 0,5 a < 10 cm de la parada (de cualquier
-  // PFParticle o no asociados; ficheros desde el 20-nov) en vez de la puntuación media de la propia partícula,
-  // que solo ve el Michel cuando Pandora lo pega al mu (23-nov). Apagado por defecto.
-  bool gMichelHits = false;
 
   // Un corte: nombre, condición, y para dibujarlo la variable, el binning y dónde se corta
   struct Step {
@@ -246,7 +253,9 @@ namespace mucut {
     if(key == "gaps")      return {"sin extremos en los huecos", [](const C& c){ return !InGap(c.startZ) && !InGap(c.stopZ); },
                                    [](const C& c){ return std::min(GapDist(c.startZ), GapDist(c.stopZ)); }, 40, 0, 40,
                                    "distancia m#acute{i}nima de un extremo a z = 230 o 462 cm", {kGapHalfWidth}, false};
-    if(key == "michelHits")return {"hits Michel a < 10 cm de la parada >= 2", [](const C& c){ return c.arNMichel[1] >= 2; }, [](const C& c){ return double(c.arNMichel[1]); },
+    if(key == "michelHits")return {"hits Michel a < 10 cm de la parada >= 2",
+                                   [](const C& c){ return c.arNMichel[1] < -900 ? c.cnnMichel > 0.02 : c.arNMichel[1] >= 2; },
+                                   [](const C& c){ return double(c.arNMichel[1]); },
                                    20, 0, 20, "hits con CNN Michel > 0,5 a < 10 cm de la parada", {2}, false};
     if(key == "michel")    return {"cnnMichel > 0.02", [](const C& c){ return c.cnnMichel > 0.02; }, [](const C& c){ return c.cnnMichel; },
                                    50, 0, 0.5, "puntuación CNN Michel de la partícula", {0.02}, true};
