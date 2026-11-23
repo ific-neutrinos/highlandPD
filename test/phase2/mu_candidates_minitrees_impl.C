@@ -39,12 +39,17 @@
 // a < 2 cm, tramo vacío más largo, dE/dx en los últimos 5 cm antes del inicio, cuántos PFParticles; ver
 // VertexConnection) y tVtxErr (distancia del vértice reco al final true del haz). Conexión topológica (lk*: el
 // PFParticle que une V con el inicio o con la parada del mu; ver BestLink) y distancias de los extremos a V.
+// Longitud de los candidatos tipo shower desde sus space points (sh*: eje principal, núcleo, hasta el pico de
+// Bragg, linealidad; ver ShowerLength).
 #include "kaon_fate_minitrees_impl.C"
 #include "pdAnalysisUtils.hxx"
 #include "Parameters.hxx"
 #include "TFile.h"
 #include "TTree.h"
 #include "TVector3.h"
+#include "TMatrixDSym.h"
+#include "TMatrixDSymEigen.h"
+#include "TVectorD.h"
 #include <cmath>
 #include <iostream>
 #include <map>
@@ -307,6 +312,76 @@ namespace mucand {
     return l;
   }
 
+  // ---- Longitud de los candidatos tipo shower desde sus space points (23-nov) ----
+  // La traza forzada de los mu que Pandora llama shower no da la longitud (forzada/true 0,25-1,6). Con los space
+  // points del PFParticle (uno por hit 2D): eje principal (PCA), rehecho con los puntos a < kShCore cm del eje (el
+  // Michel no lo tuerce); longitud del núcleo entre los cuantiles 2 % y 98 % a lo largo del eje; y longitud hasta el
+  // pico de Bragg: perfil de carga del plano de colección en pasos de 1 cm, la parada es el extremo con más carga en
+  // sus últimos 5 cm, el pico el máximo de la media de 3 cm en los últimos 15 cm, y la longitud va del otro extremo
+  // al pico (sin el Michel). lin = mayor valor propio / suma (1 = recta; para separar de cascadas EM).
+  const double kShCore = 3.;
+  struct ShowerLen { int nSP = -1; double lin = -1, lenExt = -1, lenCore = -1, lenBragg = -1, braggRatio = -1; };
+  bool PCAxis(const std::vector<TVector3>& pts, TVector3& c, TVector3& u, double& lin){
+    if(pts.size() < 3)return false;
+    c = TVector3(0, 0, 0); for(const TVector3& x : pts)c += x; c *= 1./pts.size();
+    TMatrixDSym m(3);
+    for(const TVector3& x : pts){ const TVector3 d = x - c; const double v[3] = {d.X(), d.Y(), d.Z()}; for(int i = 0; i < 3; i++)for(int j = 0; j < 3; j++)m(i, j) += v[i]*v[j]; }
+    TMatrixDSymEigen e(m);
+    const TVectorD& ev = e.GetEigenValues();   // en orden decreciente
+    const TMatrixD& vec = e.GetEigenVectors();
+    u = TVector3(vec(0, 0), vec(1, 0), vec(2, 0)).Unit();
+    const double sum = ev(0) + ev(1) + ev(2);
+    lin = sum > 0 ? ev(0)/sum : -1;
+    return true;
+  }
+  double QuantileOf(std::vector<double> v, double f){ std::sort(v.begin(), v.end()); return v[std::min(v.size() - 1, size_t(f*v.size()))]; }
+  ShowerLen ShowerLength(const AnaParticlePD* p){
+    ShowerLen s;
+    s.nSP = p->SpacePoints.size();
+    if(s.nSP < 5)return s;
+    std::map<Int_t, double> q2;   // UniqueID -> carga, plano de colección
+    for(const AnaHitPD& h : p->HitsNoCalo[2])q2[h.UniqueID] = h.Integral;
+    for(const AnaHitPD& h : p->Hits[2])q2[h.UniqueID] = h.Integral;
+    std::vector<TVector3> pts; std::vector<double> q;
+    for(const AnaSpacePointPD& sp : p->SpacePoints){
+      if(!Valid(sp.Position))continue;
+      pts.push_back(V(sp.Position));
+      auto it = q2.find(sp.HitID); q.push_back(it == q2.end() ? -1. : it->second);
+    }
+    TVector3 c, u; double lin;
+    if(!PCAxis(pts, c, u, lin))return s;
+    s.lin = lin;
+    std::vector<TVector3> core;
+    for(const TVector3& x : pts){ const TVector3 d = x - c; if((d - d.Dot(u)*u).Mag() < kShCore)core.push_back(x); }
+    if(core.size() >= 5){ TVector3 c2, u2; double l2; if(PCAxis(core, c2, u2, l2)){ c = c2; u = u2; } }
+    std::vector<double> sAll, sCore; std::vector<std::pair<double, double>> prof;
+    for(size_t i = 0; i < pts.size(); i++){
+      const TVector3 d = pts[i] - c; const double t = d.Dot(u);
+      sAll.push_back(t);
+      if((d - t*u).Mag() < kShCore){ sCore.push_back(t); if(q[i] > 0)prof.push_back({t, q[i]}); }
+    }
+    if(sCore.size() < 5)return s;
+    s.lenExt = QuantileOf(sAll, 0.98) - QuantileOf(sAll, 0.02);
+    const double lo = QuantileOf(sCore, 0.02), hi = QuantileOf(sCore, 0.98);
+    s.lenCore = hi - lo;
+    if(prof.size() < 10 || s.lenCore < 6)return s;
+    const int nb = int(std::ceil(s.lenCore));
+    std::vector<double> qb(nb, 0.);
+    for(const auto& x : prof){ const int b = int(x.first - lo); if(b >= 0 && b < nb)qb[b] += x.second; }
+    auto meanBins = [&](int a, int b){ double sm = 0; int n = 0; for(int i = std::max(0, a); i < std::min(nb, b); i++){ sm += qb[i]; n++; } return n ? sm/n : 0.; };
+    const bool stopHi = meanBins(nb - 5, nb) >= meanBins(0, 5);
+    std::vector<double> nz; for(double x : qb)if(x > 0)nz.push_back(x);
+    const double med = nz.empty() ? 0. : QuantileOf(nz, 0.5);
+    int best = -1; double bq = -1;
+    const int i0 = stopHi ? std::max(1, nb - 15) : 1, i1 = stopHi ? nb - 1 : std::min(nb - 1, 15);
+    for(int i = i0; i < i1; i++){ const double m3 = (qb[i-1] + qb[i] + qb[i+1])/3.; if(m3 > bq){ bq = m3; best = i; } }
+    if(best < 0)return s;
+    const double sb = lo + best + 0.5;
+    s.lenBragg = stopHi ? sb - lo : hi - sb;
+    s.braggRatio = med > 0 ? bq/med : -1;
+    return s;
+  }
+
   // Hijas de Pandora del candidato
   struct Dau { int nTrk = 0, nShw = 0, hits = 0, nearStop = 0; double maxMichel = -1; };
   Dau Daughters(const AnaParticlePD* p, const TVector3& stop, const std::map<UInt_t, const AnaParticlePD*>& byUID){
@@ -375,6 +450,8 @@ namespace mucand {
     // del mu a V; truth: ¿el PFParticle del enlace con S es la K madre del mu? (1 sí, 0 no, -1 sin enlace o sin truth)
     Float_t lkSdV, lkSdE, lkSLen, lkSdEdx; Int_t lkSIsTrack; Float_t lkPdV, lkPdE, lkPLen, lkPdEdx; Int_t lkPIsTrack;
     Float_t dStartV, dStopV; Int_t tLkSIsK, tLkPIsK;
+    // candidatos tipo shower: longitud desde los space points (sh*; -1 en las trazas o sin space points)
+    Int_t shNSP; Float_t shLin, shLenExt, shLenCore, shLenBragg, shBraggRatio, shPRangeCore, shPRangeBragg;
   };
 
   // mu+ true de K+ de la cadena del haz: qué le pasa en la reco
@@ -426,6 +503,8 @@ namespace mucand {
       tc->Branch("lkSdV", &c.lkSdV); tc->Branch("lkSdE", &c.lkSdE); tc->Branch("lkSLen", &c.lkSLen); tc->Branch("lkSdEdx", &c.lkSdEdx); tc->Branch("lkSIsTrack", &c.lkSIsTrack);
       tc->Branch("lkPdV", &c.lkPdV); tc->Branch("lkPdE", &c.lkPdE); tc->Branch("lkPLen", &c.lkPLen); tc->Branch("lkPdEdx", &c.lkPdEdx); tc->Branch("lkPIsTrack", &c.lkPIsTrack);
       tc->Branch("dStartV", &c.dStartV); tc->Branch("dStopV", &c.dStopV); tc->Branch("tLkSIsK", &c.tLkSIsK); tc->Branch("tLkPIsK", &c.tLkPIsK);
+      tc->Branch("shNSP", &c.shNSP); tc->Branch("shLin", &c.shLin); tc->Branch("shLenExt", &c.shLenExt); tc->Branch("shLenCore", &c.shLenCore);
+      tc->Branch("shLenBragg", &c.shLenBragg); tc->Branch("shBraggRatio", &c.shBraggRatio); tc->Branch("shPRangeCore", &c.shPRangeCore); tc->Branch("shPRangeBragg", &c.shPRangeBragg);
       ts = new TTree("sig", "mu+ true de K+ de la cadena del haz");
       ts->Branch("entry", &s.entry); ts->Branch("fullDump", &s.fullDump); ts->Branch("hasSlice", &s.hasSlice); ts->Branch("matched", &s.matched);
       ts->Branch("isTrack", &s.isTrack); ts->Branch("inSlice", &s.inSlice); ts->Branch("complete", &s.complete); ts->Branch("inWindow", &s.inWindow);
@@ -553,6 +632,9 @@ namespace mucand {
             return static_cast<AnaTrueParticleB*>(iq->second->TrueObject)->ID == t->ParentID ? 1 : 0;
           };
           c.tLkSIsK = isK(ls); c.tLkPIsK = isK(lp); }
+        { ShowerLen sl; if(!isTrk)sl = ShowerLength(p);
+          c.shNSP = sl.nSP; c.shLin = sl.lin; c.shLenExt = sl.lenExt; c.shLenCore = sl.lenCore; c.shLenBragg = sl.lenBragg; c.shBraggRatio = sl.braggRatio;
+          c.shPRangeCore = sl.lenCore > 0 ? MuRangeP(sl.lenCore) : -1; c.shPRangeBragg = sl.lenBragg > 0 ? MuRangeP(sl.lenBragg) : -1; }
         tc->Fill();
       }
 
