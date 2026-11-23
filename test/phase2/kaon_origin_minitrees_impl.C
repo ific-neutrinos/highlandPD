@@ -8,6 +8,7 @@
 //   - cadena cortada: alguna madre no está guardada en el minitree (se da el PDG de la última guardada y,
 //     si la hay, ParentPDG de esa, que el módulo rellena aunque la madre no se guarde).
 // Para cada clase: PDG de la madre de la K, proceso de creación de la K y PDG de la raíz.
+// Al final, la composición para la medida A por especie del haz (Composition, 23-nov).
 #include "kaon_fate_minitrees_impl.C"
 #include <map>
 
@@ -31,7 +32,76 @@ namespace korigin {
   }
   const char* PBin(double p){ return p < 0.3 ? "< 0,3 GeV/c" : (p < 1 ? "0,3-1 GeV/c" : "> 1 GeV/c"); }
 
+  // Composición para la medida A (23-nov): por especie del haz true, cuántos mu+ de K+ en reposo son de la
+  // primera interacción (A), de K secundarias o de la K+ del haz, y de qué madre y con qué momento salen las K
+  // secundarias (para asignar una incertidumbre de modelo por componente).
+  const char* BeamName(int pdg){
+    switch(pdg){ case 211: return "pi+"; case 2212: return "p"; case 321: return "K+"; case -13: return "mu+"; case -11: return "e+"; default: return "otro"; }
+  }
+  const char* MomBin(double p){   // GeV/c
+    return p < 0 ? "sin momento" : (p < 0.5 ? "< 0,5" : (p < 1 ? "0,5-1" : (p < 2 ? "1-2" : (p < 4 ? "2-4" : "> 4"))));
+  }
+  const char* MotherName(int pdg){
+    switch(pdg){ case 211: return "pi+"; case -211: return "pi-"; case 2212: return "p"; case 2112: return "n"; case 130: return "K0L"; case 310: return "K0S";
+                 case 321: return "K+"; case -321: return "K-"; case 3122: return "Lambda"; case 3222: return "Sigma+"; case 3112: return "Sigma-"; default: return "otra"; }
+  }
+  struct Composition {
+    std::map<std::string, std::map<std::string, long>> n;             // haz -> clase -> mu
+    std::map<std::string, std::map<std::string, long>> secMother;     // haz -> madre -> mu (secundarias)
+    std::map<std::string, std::map<std::string, long>> secMotherMom;  // madre -> bin de momento -> mu (todas las especies del haz)
+    std::map<std::string, std::vector<double>> beamMomA;              // haz -> momento del haz al final (A)
+    long secAtMotherEnd = 0, secMidMother = 0, secZeroEndMom = 0;
+
+    void AddA(int beamPDG, const AnaTrueParticleB* beam){
+      n[BeamName(beamPDG)]["A (primera interacción)"]++;
+      beamMomA[BeamName(beamPDG)].push_back(beam->MomentumEnd);
+    }
+    void AddBeamK(int beamPDG){ n[BeamName(beamPDG)]["K+ del haz"]++; }
+    void AddSecondary(int beamPDG, const AnaTrueParticleB* k, const AnaTrueParticleB* mother){
+      n[BeamName(beamPDG)]["K secundaria"]++;
+      secMother[BeamName(beamPDG)][MotherName(mother->PDG)]++;
+      // ¿la K nace en el final de la madre (interacción que acaba con ella)? Entonces su momento en la
+      // interacción es MomentumEnd; si no, no lo sabemos con la truth guardada
+      double d2 = 0; for(int i = 0; i < 3; i++)d2 += std::pow(k->Position[i] - mother->PositionEnd[i], 2);
+      double pm = -1;
+      if(d2 < 1.){ secAtMotherEnd++; pm = mother->MomentumEnd; if(pm <= 0)secZeroEndMom++; }
+      else secMidMother++;
+      secMotherMom[MotherName(mother->PDG)][MomBin(pm)]++;
+    }
+    static double Median(std::vector<double> v){ if(v.empty())return -1; std::sort(v.begin(), v.end()); return v[v.size()/2]; }
+    void Print() const {
+      std::cout << std::endl << "Composición para la medida A (mu+ de K+ en reposo con la cadena hasta el haz que dispara), por especie del haz true:" << std::endl;
+      for(auto& kv : n){
+        long tot = 0; for(auto& c : kv.second)tot += c.second;
+        std::cout << Form("  haz %-5s %6ld:", kv.first.c_str(), tot);
+        for(auto& c : kv.second)std::cout << Form("  %s %ld (%.1f %%)", c.first.c_str(), c.second, 100.*c.second/tot);
+        auto itA = beamMomA.find(kv.first);
+        if(itA != beamMomA.end())std::cout << Form("  [A: p del haz al final, mediana %.2f GeV/c]", Median(itA->second));
+        std::cout << std::endl;
+        auto itS = secMother.find(kv.first);
+        if(itS != secMother.end()){
+          std::cout << "      madre de la primera K (secundarias):";
+          std::vector<std::pair<long, std::string>> v; for(auto& m : itS->second)v.push_back({m.second, m.first});
+          std::sort(v.rbegin(), v.rend());
+          for(auto& m : v)std::cout << Form(" %s %ld", m.second.c_str(), m.first);
+          std::cout << std::endl;
+        }
+      }
+      std::cout << "  Secundarias: la K nace en el final de la madre " << secAtMotherEnd << " (de ellas con MomentumEnd <= 0: " << secZeroEndMom
+                << "), a mitad de la madre " << secMidMother << " (sin momento)" << std::endl
+                << "  Momento de la madre en la interacción (GeV/c), todas las especies del haz:" << std::endl;
+      const char* bins[] = {"< 0,5", "0,5-1", "1-2", "2-4", "> 4", "sin momento"};
+      for(auto& kv : secMotherMom){
+        long tot = 0; for(auto& c : kv.second)tot += c.second;
+        std::cout << Form("    %-7s %5ld:", kv.first.c_str(), tot);
+        for(const char* b : bins){ auto it = kv.second.find(b); std::cout << Form("  %s %ld", b, it == kv.second.end() ? 0L : it->second); }
+        std::cout << std::endl;
+      }
+    }
+  };
+
   struct Origin {
+    Composition comp;
     long nEvents = 0, nNoBeamTruth = 0, nMu = 0;
     std::map<std::string, long> cls;                       // clase
     std::map<std::string, std::map<std::string, long>> detail;   // clase -> detalle
@@ -95,10 +165,12 @@ namespace korigin {
           // primera K de la cadena: se suben las K+ -> K+ (kaonplusInelastic con una K+ que sobrevive)
           size_t i0 = 0;
           while(i0 + 1 < chain.size() && chain[i0 + 1]->PDG == 321)i0++;
-          if(i0 + 1 == chain.size()){ Add("K+ del haz (tras K+ -> K+): no es producción", Form("%zu K+ -> K+", i0), kp); continue; }
+          if(i0 + 1 == chain.size()){ Add("K+ del haz (tras K+ -> K+): no es producción", Form("%zu K+ -> K+", i0), kp); comp.AddBeamK(cur->PDG); continue; }
           if(chain.size() == 2)Add("haz que dispara: primera interacción", Form("haz %d", cur->PDG), kp);
           else if(i0 + 2 == chain.size())Add("haz que dispara: primera interacción, con K+ -> K+ intermedias", Form("%zu K+ -> K+", i0), kp);
           else Add("haz que dispara: interacción secundaria", Form("madre de la primera K %d (generación %d)", chain[i0 + 1]->PDG, chain[i0]->Generation), kp);
+          if(i0 + 2 == chain.size())comp.AddA(cur->PDG, cur);
+          else comp.AddSecondary(cur->PDG, chain[i0], chain[i0 + 1]);
           continue;
         }
         if(cur->Generation == 0 && cur->Origin == 4){
@@ -126,6 +198,7 @@ namespace korigin {
         std::cout << "    detalle:" << std::endl; Top(detail.at(x.second), x.first, 8);
         std::cout << "    proceso de creación de la K:" << std::endl; Top(kProc.at(x.second), x.first, 5);
       }
+      comp.Print();
     }
   };
 }
