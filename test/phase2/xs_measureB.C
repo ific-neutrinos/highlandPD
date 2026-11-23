@@ -7,7 +7,7 @@
 // en ficheros anteriores, de beam_truepdg. Señal B: mu+ de K+ en reposo (mu+ de desintegración no cósmico, p true en
 // [230, 241] MeV/c, madre K+) cuya K viene de la cadena del haz que dispara (origen 0-3: primera interacción,
 // secundarias, K+ del haz). El pileup (otra partícula del haz, origen 6) es fondo, como lo que no es de K. Señal de
-// todos los eventos; fondo de los eventos normales, escalado.
+// todos los eventos; fondo de los eventos normales, escalado por especie.
 // Por especie y población, con la cadena entera: partículas del haz, señal y fondo seleccionados, rendimiento por
 // partícula, eficiencia (frente a los mu true del árbol truth de esa especie), pureza y error relativo de un recuento
 // con k veces la estadística del MC.
@@ -42,10 +42,16 @@ int xs_measureB(const char* in, double k = 6){
   B(t, Br(t, "cand_truepdg", "cand_tpdg"), tpdg); B(t, Br(t, "cand_trueproc", "cand_tprocstart"), tproc); B(t, Br(t, "cand_trueorigin", "cand_torigin"), torig);
   B(t, Br(t, "cand_trueparentpdg", "cand_tparentpdg"), tpar); B(t, Br(t, "cand_truekorigin", "cand_tkorigin"), tkor); B(t, Br(t, "cand_truemom", "cand_tmom"), tmom);
 
+  // Escala del fondo POR ESPECIE (el volcado completo depende de la especie: con haz de K solo ~40 % de eventos normales)
   const Long64_t n = t->GetEntries();
-  Long64_t nNormal = 0;
-  for(Long64_t i = 0; i < n; i++){ t->GetEntry(i); if(!fulldump)nNormal++; }
-  const double sc = nNormal ? double(n)/nNormal : 1.;
+  double nAllSp[3] = {0}, nNormSp[3] = {0};
+  for(Long64_t i = 0; i < n; i++){
+    t->GetEntry(i);
+    const int sp = hasSp ? beamTrueSp : SpeciesFromPDG(beamTruePDG);
+    if(sp < 0 || sp > 2)continue;
+    nAllSp[sp]++; if(!fulldump)nNormSp[sp]++;
+  }
+  double scSp[3]; for(int sp = 0; sp < 3; sp++)scSp[sp] = nNormSp[sp] ? nAllSp[sp]/nNormSp[sp] : 1.;
   const int fullLevel[2] = {8, 10};
 
   double nBeam[3] = {0}, sel[3][2][kNCls] = {{{0}}};
@@ -65,7 +71,7 @@ int xs_measureB(const char* in, double k = 6){
         const int a = std::abs(tpdg[c]);
         cls = a == 211 ? kPi : a == 2212 ? kP : (a == 13 && torig[c] == 2) ? kMuCos : (a == 11 || tpdg[c] == 22) ? kEM : kRest;
       }
-      sel[sp][p][cls] += (cls >= kPi) ? sc : 1.;
+      sel[sp][p][cls] += (cls >= kPi) ? scSp[sp] : 1.;
     }
   }
 
@@ -84,7 +90,8 @@ int xs_measureB(const char* in, double k = 6){
     }
   }
 
-  std::cout << "Eventos " << n << " (normales " << nNormal << ", fondo escalado x" << sc << "); error proyectado con " << k << " veces la estadística del MC" << std::endl;
+  std::cout << "Eventos " << n << "; fondo escalado por especie: e/mu/pi x" << scSp[0] << ", K x" << scSp[1] << ", p x" << scSp[2]
+            << "; error proyectado con " << k << " veces la estadística del MC" << std::endl;
   const char* popName[2] = {"en la beam slice", "fuera"};
   for(int sp = 0; sp < 3; sp++){
     std::cout << std::endl << Form("== Haz %s: %.0f partículas; mu de señal B true (K en reposo, todo el detector): %.0f (%.4f por partícula) ==",
