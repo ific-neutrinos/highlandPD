@@ -8,6 +8,7 @@
 #include "pdDataClasses.hxx"
 #include "kaonAnalysisUtils.hxx"
 #include "muCandidateUtils.hxx"
+#include <algorithm>
 
 #include "HighlandMiniTreeConverter.hxx"
 #include "PDSPAnalyzerTreeConverter.hxx"
@@ -79,7 +80,7 @@ bool secondaryKaonProductionXSAnalysis::Initialize(){
     int colors[]         = {2, 46, 6, 28, 30, 4, 8, 7, 5, COLOTHER, COLNOTRUTH};
     const int N = sizeof(types)/sizeof(types[0]);
     std::reverse(types, types + N); std::reverse(codes, codes + N); std::reverse(colors, colors + N);
-    anaUtils::_categ->AddObjectCategory("candmu", ncand, "ncand", N, types, codes, colors, 1, -100);
+    anaUtils::_categ->AddObjectCategory("candmu", ncand, "ncand", N, types, codes, colors, 1, -(Int_t)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
   }
 
   return true;
@@ -350,8 +351,9 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   output().FillVar(nmucand, (Int_t)b.Candidates.size());
 
   // -------- candidatos --------
-  const int nmax = std::min((int)b.Candidates.size(), (int)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
-  for(int i = 0; i < nmax; i++){
+  // Uno por posición de los vectores cand_*, en el orden de SavedCandidates (el mismo que en FillCategories). Las
+  // variables referidas a la parada (chi2, dE/dx, caras) usan el extremo de mayor dE/dx (ver muCandCuts).
+  for(int i : SavedCandidates()){
     const muCandUtils::Candidate& c = b.Candidates[i];
     output().FillVectorVar(cand_pop,           b.Population[i]);
     output().FillVectorVar(cand_level,         b.Level[i]);
@@ -564,6 +566,21 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
 }
 
 //********************************************************************
+std::vector<int> secondaryKaonProductionXSAnalysis::SavedCandidates() const{
+//********************************************************************
+
+  const ToyBoxMuCand& b = box();
+  std::vector<int> idx(b.Candidates.size());
+  for(size_t i = 0; i < idx.size(); i++)idx[i] = i;
+  // solo hace falta ordenar si hay más que el máximo: primero los que llegan más lejos en su cadena
+  if(idx.size() > secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES){
+    std::stable_sort(idx.begin(), idx.end(), [&b](int x, int y){ return b.Level[x] > b.Level[y]; });
+    idx.resize(secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
+  }
+  return idx;
+}
+
+//********************************************************************
 int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Candidate& c){
 //********************************************************************
 
@@ -603,10 +620,10 @@ void secondaryKaonProductionXSAnalysis::FillCategories(){
     }
   }
 
-  // candidatos, en el mismo orden que los vectores cand_*
+  // candidatos, en el mismo orden que los vectores cand_* (SavedCandidates). Las categorías por objeto se van
+  // añadiendo en orden: la posición k de candmu corresponde a la posición k de cand_*
   const ToyBoxMuCand& b = box();
-  const int nmax = std::min((int)b.Candidates.size(), (int)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
-  for(int i = 0; i < nmax; i++){
+  for(int i : SavedCandidates()){
     AnaParticleB* p = const_cast<AnaParticlePD*>(b.Candidates[i].part);
     anaUtils::FillObjectCategories(&GetEvent(), p, "cand", 1);
     const int code = CandidateCategory(b.Candidates[i]);

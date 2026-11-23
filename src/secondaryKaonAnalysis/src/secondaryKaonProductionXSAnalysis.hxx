@@ -24,7 +24,10 @@
 // con el origen de su K (truemu_korigin) y accum_level[rama] = 1 + nivel del mejor candidato emparejado en esa rama
 // (0 si no hay candidato emparejado).
 namespace secondaryKaonProductionXSAnalysisConstants{
-  const UInt_t NMAXMUCANDIDATES = 300;   // con 500 eventos de MC, máximo 118 y percentil 99 de 80
+  // Máximo de candidatos guardados por evento. No puede pasar de 100: las categorías por objeto de highland
+  // (AddStandardObjectCategories) tienen ese tamaño fijo. Con 500 eventos de MC, el percentil 99 es 80 y el máximo
+  // 118; si hay más, se guardan primero los que llegan más lejos en la cadena (ver SavedCandidates).
+  const UInt_t NMAXMUCANDIDATES = 100;
 }
 
 class secondaryKaonProductionXSAnalysis: public baseAnalysis {
@@ -78,6 +81,10 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
 
   /// Returns the true vertex for the ToyBoxMuCand
   virtual AnaTrueVertexB* GetTrueVertex() const {return box().TrueVertex;}
+
+  /// Índices de los candidatos que se guardan en el árbol y en las categorías, en este orden: como mucho
+  /// NMAXMUCANDIDATES, primero los de mayor nivel en la cadena (a igual nivel, en el orden original)
+  std::vector<int> SavedCandidates() const;
 
   /// Categoría true de un candidato (código de la categoría "candmu")
   static int CandidateCategory(const muCandUtils::Candidate& c);
