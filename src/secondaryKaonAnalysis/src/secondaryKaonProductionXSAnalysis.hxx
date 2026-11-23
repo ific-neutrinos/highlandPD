@@ -92,6 +92,12 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   /// Categoría true de un candidato (código de la categoría "candmu")
   static int CandidateCategory(const muCandUtils::Candidate& c);
 
+  /// Especie del haz agrupada como la separan los Cherenkov a 6 GeV: 0 e/mu/pi, 1 K, 2 p, 3 ambigua, -1 sin información.
+  /// Desde la lista de PDGs compatibles de la instrumentación (datos; en el MC no hay emulación de los Cherenkov y la
+  /// lista es siempre {2212}) o desde un PDG true
+  static int BeamSpecies(const std::vector<int>& pdgs);
+  static int BeamSpecies(int truePDG){ return BeamSpecies(std::vector<int>{truePDG}); }
+
   /// ¿Es un mu+ de K+ en reposo para el árbol truth? (mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c)
   static bool IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t);
 
@@ -139,6 +145,7 @@ public:
     // evento
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
     hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
+    beam_species, beam_truespecies,
     // candidatos (contador ncand)
     ncand,
     cand_pop, cand_level, cand_isshower, cand_complete, cand_isprimary, cand_ndau,

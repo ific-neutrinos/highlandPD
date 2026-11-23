@@ -41,7 +41,7 @@
 secondaryKaonProductionXSSelection.hxx)
 
 --- Cut levels --------
- < secondaryKaonAnalysis.xsAnalysis.MinAccumLevelToSave = 1 >   // 1: eventos con algún candidato a mu
+ < secondaryKaonAnalysis.xsAnalysis.MinAccumLevelToSave = 0 >   // 0: todos los eventos (para B, el denominador son las partículas del haz); 1: solo con algún candidato a mu
 
 --- Output tree ------------
  < secondaryKaonAnalysis.xsAnalysis.FillBeamInstrumentationInfo           = 1 >

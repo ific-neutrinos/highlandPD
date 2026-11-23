@@ -222,6 +222,8 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
   AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
+  AddVarI  (output(), beam_species,     "especie del haz según la instrumentación: 0 e/mu/pi, 1 K, 2 p, 3 ambigua, -1 sin información (en MC siempre 2: sin emulación de los Cherenkov)");
+  AddVarI  (output(), beam_truespecies, "MC: especie true del haz agrupada igual (0 e/mu/pi, 1 K, 2 p, -1 otra)");
   AddVarI  (output(), hastruevertex,  "MC: hay vértice perfecto (hits de la partícula true del haz)");
   AddVar3VF(output(), truevertex,     "MC: vértice perfecto, último hit del haz true a lo largo del eje (cm, sistema de la reco)");
 
@@ -379,6 +381,12 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
   output().FillVar(nmucand, (Int_t)b.Candidates.size());
+  {
+    const AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
+    output().FillVar(beam_species, beam ? BeamSpecies(beam->PDGs) : -1);
+    const AnaTrueParticleB* bt = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
+    output().FillVar(beam_truespecies, bt ? BeamSpecies(bt->PDG) : -1);
+  }
   output().FillVar(hastruevertex, (Int_t)b.HasTrueVertex);
   output().FillVectorVarFromArray(truevertex, b.TrueVertexPos, 3);
 
@@ -558,6 +566,23 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(){
     // Fill the tree
     output().GetTree(OutputManager::truth)->Fill();
   }
+}
+
+//********************************************************************
+int secondaryKaonProductionXSAnalysis::BeamSpecies(const std::vector<int>& pdgs){
+//********************************************************************
+
+  bool emupi = false, k = false, p = false;
+  for(int pdg : pdgs){
+    const int a = std::abs(pdg);
+    if(a == 11 || a == 13 || a == 211)emupi = true;
+    else if(a == 321)k = true;
+    else if(a == 2212)p = true;
+  }
+  const int n = emupi + k + p;
+  if(n == 0)return -1;
+  if(n > 1)return 3;
+  return emupi ? 0 : (k ? 1 : 2);
 }
 
 //********************************************************************
