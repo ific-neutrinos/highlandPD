@@ -224,7 +224,6 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
   AddVarI  (output(), hastruevertex,  "MC: hay vértice perfecto (hits de la partícula true del haz)");
   AddVar3VF(output(), truevertex,     "MC: vértice perfecto, último hit del haz true a lo largo del eje (cm, sistema de la reco)");
-  AddVar3VF(output(), tbeamend,       "MC: final true de la partícula del haz que dispara (cm, interacción)");
 
   // -------- candidatos (contador ncand) --------
   const UInt_t N = secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES;
@@ -306,20 +305,20 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_sh_lenbragg,   "shower: longitud hasta el pico de Bragg (cm)",                 ncand, N);
   AddVarMaxSizeVF (output(), cand_sh_prange_core,"shower: p de rango con la longitud del núcleo (MeV/c)",        ncand, N);
   // truth
-  AddVarMaxSizeVI (output(), cand_tpdg,          "truth: PDG",                                                   ncand, N);
-  AddVarMaxSizeVI (output(), cand_tparentpdg,    "truth: PDG de la madre (0 sin madre guardada)",                ncand, N);
-  AddVarMaxSizeVI (output(), cand_tprocstart,    "truth: proceso de creación",                                   ncand, N);
-  AddVarMaxSizeVI (output(), cand_torigin,       "truth: Origin (2 cósmico, 4 haz)",                             ncand, N);
-  AddVarMaxSizeVI (output(), cand_tfrombeam,     "truth: desciende del haz que dispara",                         ncand, N);
-  AddVarMaxSizeVI (output(), cand_tsignal,       "truth: mu+ de K+ de la cadena del haz (señal antigua)",        ncand, N);
-  AddVarMaxSizeVF (output(), cand_tkmomend,      "truth: momento final de su K (MeV/c; ~0 en reposo)",          ncand, N);
-  AddVarMaxSizeVI (output(), cand_tkorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)", ncand, N);
-  AddVarMaxSizeVF (output(), cand_tpur,          "truth: pureza",                                                ncand, N);
-  AddVarMaxSizeVF (output(), cand_teff,          "truth: completitud",                                           ncand, N);
-  AddVarMaxSizeVF (output(), cand_tlength,       "truth: distancia inicio-fin (cm)",                             ncand, N);
-  AddVarMaxSizeVF (output(), cand_tmom,          "truth: momento inicial (MeV/c)",                               ncand, N);
-  AddVarMaxSizeVF (output(), cand_tvtxerr,       "truth: distancia del vértice reco al final true del haz (cm)", ncand, N);
-  AddVarMaxSizeVI (output(), cand_tlk_s_isk,     "truth: el enlace vértice -> inicio es la K madre",             ncand, N);
+  AddVarMaxSizeVI (output(), cand_truepdg,          "truth: PDG",                                                   ncand, N);
+  AddVarMaxSizeVI (output(), cand_trueparentpdg,    "truth: PDG de la madre (0 sin madre guardada)",                ncand, N);
+  AddVarMaxSizeVI (output(), cand_trueproc,    "truth: proceso de creación",                                   ncand, N);
+  AddVarMaxSizeVI (output(), cand_trueorigin,       "truth: Origin (2 cósmico, 4 haz)",                             ncand, N);
+  AddVarMaxSizeVI (output(), cand_truefrombeam,     "truth: desciende del haz que dispara",                         ncand, N);
+  AddVarMaxSizeVI (output(), cand_truesignal,       "truth: mu+ de K+ de la cadena del haz (señal antigua)",        ncand, N);
+  AddVarMaxSizeVF (output(), cand_truekendmom,      "truth: momento final de su K (MeV/c; ~0 en reposo)",          ncand, N);
+  AddVarMaxSizeVI (output(), cand_truekorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_truepur,          "truth: pureza",                                                ncand, N);
+  AddVarMaxSizeVF (output(), cand_trueeff,          "truth: completitud",                                           ncand, N);
+  AddVarMaxSizeVF (output(), cand_truelength,       "truth: distancia inicio-fin (cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_truemom,          "truth: momento inicial (MeV/c)",                               ncand, N);
+  AddVarMaxSizeVF (output(), cand_truevtxerr,       "truth: distancia del vértice reco al final true del haz (cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truelk_s_isk,     "truth: el enlace vértice -> inicio es la K madre",             ncand, N);
 }
 
 //********************************************************************
@@ -338,7 +337,6 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
   AddVar3VF(output(), truemu_start,     "inicio del mu (cm)");
   AddVar3VF(output(), truemu_end,       "final del mu (cm)");
   AddVarI  (output(), truemu_contained, "inicio y final en el volumen activo");
-  AddVarI  (output(), truemu_beampdg,   "PDG de la partícula true del haz que dispara");
 }
 
 //********************************************************************
@@ -383,12 +381,6 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   output().FillVar(nmucand, (Int_t)b.Candidates.size());
   output().FillVar(hastruevertex, (Int_t)b.HasTrueVertex);
   output().FillVectorVarFromArray(truevertex, b.TrueVertexPos, 3);
-  {
-    const AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
-    const AnaTrueParticleB* bt = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
-    const Float_t none[3] = {-999, -999, -999};
-    output().FillVectorVarFromArray(tbeamend, bt ? bt->PositionEnd : none, 3);
-  }
 
   // -------- candidatos --------
   // Uno por posición de los vectores cand_*, en el orden de SavedCandidates (el mismo que en FillCategories). Las
@@ -473,20 +465,20 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_sh_lencore,    c.shLenCore);
     output().FillVectorVar(cand_sh_lenbragg,   c.shLenBragg);
     output().FillVectorVar(cand_sh_prange_core,c.shPRangeCore);
-    output().FillVectorVar(cand_tpdg,          c.tPDG);
-    output().FillVectorVar(cand_tparentpdg,    c.tParentPDG);
-    output().FillVectorVar(cand_tprocstart,    c.tProcStart);
-    output().FillVectorVar(cand_torigin,       c.tOrigin);
-    output().FillVectorVar(cand_tfrombeam,     c.tFromBeam);
-    output().FillVectorVar(cand_tsignal,       c.tSignal);
-    output().FillVectorVar(cand_tkmomend,      c.tKMomEnd);
-    output().FillVectorVar(cand_tkorigin,      c.tKOrigin);
-    output().FillVectorVar(cand_tpur,          c.tPur);
-    output().FillVectorVar(cand_teff,          c.tEff);
-    output().FillVectorVar(cand_tlength,       c.tLength);
-    output().FillVectorVar(cand_tmom,          c.tMom);
-    output().FillVectorVar(cand_tvtxerr,       c.tVtxErr);
-    output().FillVectorVar(cand_tlk_s_isk,     c.tLkSIsK);
+    output().FillVectorVar(cand_truepdg,          c.tPDG);
+    output().FillVectorVar(cand_trueparentpdg,    c.tParentPDG);
+    output().FillVectorVar(cand_trueproc,    c.tProcStart);
+    output().FillVectorVar(cand_trueorigin,       c.tOrigin);
+    output().FillVectorVar(cand_truefrombeam,     c.tFromBeam);
+    output().FillVectorVar(cand_truesignal,       c.tSignal);
+    output().FillVectorVar(cand_truekendmom,      c.tKMomEnd);
+    output().FillVectorVar(cand_truekorigin,      c.tKOrigin);
+    output().FillVectorVar(cand_truepur,          c.tPur);
+    output().FillVectorVar(cand_trueeff,          c.tEff);
+    output().FillVectorVar(cand_truelength,       c.tLength);
+    output().FillVectorVar(cand_truemom,          c.tMom);
+    output().FillVectorVar(cand_truevtxerr,       c.tVtxErr);
+    output().FillVectorVar(cand_truelk_s_isk,     c.tLkSIsK);
     output().IncrementCounter(ncand);
   }
 }
@@ -608,7 +600,6 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
   output().FillVectorVarFromArray(truemu_end,   part.PositionEnd, 3);
   output().FillVar(truemu_contained, (Int_t)(muCandUtils::DistToFaces(muCandUtils::V(part.Position)) > 0 &&
                                              muCandUtils::DistToFaces(muCandUtils::V(part.PositionEnd)) > 0));
-  output().FillVar(truemu_beampdg, beamTrue ? beamTrue->PDG : 0);
 }
 
 //********************************************************************

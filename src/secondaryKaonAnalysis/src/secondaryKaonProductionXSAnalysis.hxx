@@ -138,7 +138,7 @@ public:
   enum enumMicroTrees_secondaryKaonProductionXSAnalysis{
     // evento
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
-    hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex, tbeamend,
+    hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
     // candidatos (contador ncand)
     ncand,
     cand_pop, cand_level, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
@@ -157,10 +157,10 @@ public:
     cand_lkt_s_dv, cand_lkt_s_de, cand_lkt_p_dv, cand_lkt_p_de, cand_dstart_tv, cand_dstop_tv,
     cand_sh_nsp, cand_sh_lin, cand_sh_lencore, cand_sh_lenbragg, cand_sh_prange_core,
     // truth de los candidatos
-    cand_tpdg, cand_tparentpdg, cand_tprocstart, cand_torigin, cand_tfrombeam, cand_tsignal, cand_tkmomend, cand_tkorigin,
-    cand_tpur, cand_teff, cand_tlength, cand_tmom, cand_tvtxerr, cand_tlk_s_isk,
+    cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truekendmom, cand_truekorigin,
+    cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
     // árbol truth
-    truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained, truemu_beampdg,
+    truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
     // árbol config
     highlandpd_version,
     enumMicroTreesLast_secondaryKaonProductionXSAnalysis
