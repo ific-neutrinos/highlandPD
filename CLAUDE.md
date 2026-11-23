@@ -37,6 +37,12 @@ Resultados con `mu_cand_big19.root` (73.070 eventos de MC a 6 GeV):
 - Origen de los mu+ de K+ en reposo (34, 50 ficheros locales, antes del arreglo del módulo): primera interacción 24 % (la mitad con K+ -> K+), secundarias 21 %, K+ del haz 9 %, cadena cortada o sin madre 41 % (arreglado en el módulo).
 - Pico raro a ~570 MeV/c: trazas del haz cortadas en el electron diverter (z ~ 220 y 440 cm, dice el usuario).
 - Descartado: K+ del haz paradas como muestra de control (a 6 GeV casi ninguna se para: 2 en la ventana en 73.000 eventos).
+- **Variables nuevas (23-nov, `mu_cand_newvars.C` sobre `mu_cand_big19v2.root`, ~70 % de la muestra: el `nohup` de FNAL murió en el evento ~51.000 al cerrarse Apptainer, sin árbol `sig`; lanzar las macros largas dentro de tmux).** AUC tras la cadena corta (fondo restante: dentro 277 sin escalar, fuera 168; error ~0,03-0,05):
+  - Dentro: hits de Michel alrededor de la parada (`arNMichel5`/`10`/`20`, `arMichel5`) 0,72-0,73 aunque la cadena ya corta en `cnnMichel`; `trMean` 0,65 (señal menor), `kDEdx` 0,66, `asCharge5` 0,66, `cosBeam` 0,62. Hijas de Pandora: nada (~0,5).
+  - Fuera: actividad alrededor de la parada y del inicio: `arN20` 0,84, `arCharge20` 0,84, `asCharge10` 0,80, `arN10` 0,80, `asN10` 0,78.
+  - Lo que acaba en el inicio (`k*`) solo existe en el 54 % (dentro) y 24 % (fuera) de la señal: 0,55-0,66.
+  - Ninguna variable distingue la señal de la medida A (`tKOrigin` 0-1) de la de otros orígenes salvo z (0,60-0,63: las K de la primera interacción están antes). Entre los mu de K con cadena completa tras la cadena corta, solo ~45 % son de la medida A (dentro 47 de 107: secundarias 46, K+ del haz 14): **hace falta una variable de vértice de producción** para separar las K secundarias.
+  - Diverters (huecos entre APAs): extremos del fondo apilados en z ≈ 226-235 y 461-466 cm. El pico de ~570 MeV/c dentro son trazas del haz de la entrada (z ~ 30) a z ~ 230 (76 % con un extremo ahí). Veto |z - 230|, |z - 462| < 5 cm tras la cadena corta: fondo -28 % dentro y -20 % fuera, señal -6 % (geométrico).
 - Una CNN o un BDT: primero un BDT con las variables nuevas; ojo con esculpir el espectro de rango y con datos frente a MC.
 
 ## Forma de trabajar (acordada)
