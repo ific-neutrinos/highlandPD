@@ -221,7 +221,7 @@ namespace kacc {
       std::cout << "Opción a (nivel >= 1) y el resto, en el árbol kprod (level, rMin)" << std::endl;
     }
 
-    void Close(){ if(fout){ fout->cd(); tk->Write(); fout->Close(); } }
+    void Close(){ if(fout){ fout->cd(); tk->Write(); WriteCodeVersion(fout, "kaon_acceptance_minitrees"); fout->Close(); } }
   };
 }
 

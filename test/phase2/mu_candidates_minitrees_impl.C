@@ -360,7 +360,7 @@ namespace mucand {
       std::cout << std::endl << "Árboles cand y sig en " << fout->GetName() << std::endl;
     }
 
-    void Write(){ fout->cd(); tc->Write(); ts->Write(); fout->Close(); }
+    void Write(){ fout->cd(); tc->Write(); ts->Write(); WriteCodeVersion(fout, "mu_candidates_minitrees"); fout->Close(); }
   };
 }
 

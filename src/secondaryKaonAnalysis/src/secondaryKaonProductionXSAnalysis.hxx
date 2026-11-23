@@ -57,6 +57,9 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
 
   bool Initialize();
   void FillCategories();
+
+  /// Guarda en el árbol config el commit de highlandPD con el que se corre (highlandpd_version)
+  void FillConfigTree();
   void DefineInputConverters();
 
   /// Get a casted AnaSpillC to AnaSpillPD from the InputManager
@@ -158,6 +161,8 @@ public:
     cand_tpur, cand_teff, cand_tlength, cand_tmom, cand_tvtxerr, cand_tlk_s_isk,
     // árbol truth
     truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained, truemu_beampdg,
+    // árbol config
+    highlandpd_version,
     enumMicroTreesLast_secondaryKaonProductionXSAnalysis
   };
 };

@@ -8,6 +8,7 @@
 #include "pdDataClasses.hxx"
 #include "kaonAnalysisUtils.hxx"
 #include "muCandidateUtils.hxx"
+#include "TSystem.h"
 #include <algorithm>
 
 #include "HighlandMiniTreeConverter.hxx"
@@ -32,9 +33,31 @@ secondaryKaonProductionXSAnalysis::secondaryKaonProductionXSAnalysis(AnalysisAlg
 
 }
 
+namespace {
+  // Commit de highlandPD ($HIGHLANDPDPATH), con "+cambios" si hay ficheros seguidos por git modificados sin commitear
+  std::string HighlandPDVersion(){
+    const char* path = gSystem->Getenv("HIGHLANDPDPATH");
+    if(!path)return "desconocida";
+    TString hash = gSystem->GetFromPipe(Form("git -C %s rev-parse --short HEAD 2>/dev/null", path));
+    if(hash.IsNull())return "desconocida";
+    TString dirty = gSystem->GetFromPipe(Form("git -C %s status --porcelain --untracked-files=no 2>/dev/null | head -1", path));
+    return std::string(hash.Data()) + (dirty.IsNull() ? "" : "+cambios");
+  }
+}
+
+//********************************************************************
+void secondaryKaonProductionXSAnalysis::FillConfigTree(){
+//********************************************************************
+
+  output().AddVar(OutputManager::config, highlandpd_version, "highlandpd_version", "C", "commit de highlandPD con el que se corrió");
+  output().FillVar(highlandpd_version, HighlandPDVersion());
+}
+
 //********************************************************************
 bool secondaryKaonProductionXSAnalysis::Initialize(){
 //********************************************************************
+
+  std::cout << "secondaryKaonProductionXSAnalysis: highlandPD " << HighlandPDVersion() << std::endl;
 
   // Initialize the baseAnalysis (highland/src/highland2/baseAnalysis)
   if(!baseAnalysis::Initialize()) return false;
