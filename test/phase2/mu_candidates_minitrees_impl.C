@@ -35,6 +35,10 @@
 //   - Árbol sig: además de los mu+ de antes (isSignalOld), todos los mu+ de desintegración no cósmicos con
 //     p true en [230, 241] MeV/c (K en reposo), con tKOrigin; tipo del PFParticle emparejado y p de rango de
 //     la traza forzada si es un shower.
+// Añadido el 23-nov: conexión con el vértice primario (vc*: longitud V -> inicio, fracción del segmento con puntos 3D
+// a < 2 cm, tramo vacío más largo, dE/dx en los últimos 5 cm antes del inicio, cuántos PFParticles; ver
+// VertexConnection) y tVtxErr (distancia del vértice reco al final true del haz). Conexión topológica (lk*: el
+// PFParticle que une V con el inicio o con la parada del mu; ver BestLink) y distancias de los extremos a V.
 #include "kaon_fate_minitrees_impl.C"
 #include "pdAnalysisUtils.hxx"
 #include "Parameters.hxx"
@@ -235,6 +239,74 @@ namespace mucand {
     return k;
   }
 
+  // ---- Conexión con el vértice primario (23-nov) ----
+  // Si la K sale del vértice del haz V y se para en el inicio S del mu, entre V y S hay una traza (casi recta) que
+  // acaba con su pico de Bragg en S. Nube de puntos 3D del evento: hits de calorimetría del plano 2
+  // (Position_NoSCE, en el mismo sistema que los extremos de las trazas) y space points de los PFParticles sin
+  // traza. Corredor de radio kVcRadius alrededor del segmento V -> S; se ignoran los kVcSkipV cm junto a V (ahí
+  // se juntan todas las trazas del vértice).
+  const double kVcRadius = 2., kVcSkipV = 3., kVcBragg = 5.;
+  struct VcPoint { TVector3 x; Int_t owner; double dEdx; };
+  std::vector<VcPoint> VcCloud(const std::vector<AnaParticlePD*>& parts){
+    std::vector<VcPoint> cloud;
+    for(const AnaParticlePD* q : parts){
+      for(const AnaHitPD& h : q->Hits[2])
+        if(h.Position_NoSCE.X() > -900 && h.Position_NoSCE.Mag2() > 0)cloud.push_back({h.Position_NoSCE, q->UniqueID, (h.dEdx > 0 && h.dEdx < 100) ? h.dEdx : -1.});
+      for(const AnaSpacePointPD& sp : q->SpacePoints)
+        if(Valid(sp.Position))cloud.push_back({V(sp.Position), q->UniqueID, -1.});
+    }
+    return cloud;
+  }
+  struct VtxConn { double dist = -1, cover = -1, maxGap = -1, bragg = -1; int owners = -1, nPts = -1; };
+  VtxConn VertexConnection(const TVector3& vtx, const TVector3& start, Int_t self, const std::vector<VcPoint>& cloud){
+    VtxConn v;
+    const TVector3 d = start - vtx;
+    const double L = d.Mag();
+    v.dist = L;
+    if(L < kVcSkipV + 2.)return v;   // demasiado cerca: sin corredor que mirar (dist sí vale)
+    const TVector3 u = d.Unit();
+    const int nb = int(L - kVcSkipV);   // pasos de 1 cm desde kVcSkipV hasta S
+    std::vector<char> hit(nb, 0);
+    std::set<Int_t> owners;
+    double sb = 0; int nbg = 0; v.nPts = 0;
+    for(const VcPoint& p : cloud){
+      if(p.owner == self)continue;
+      const TVector3 w = p.x - vtx;
+      const double t = w.Dot(u);
+      if(t < kVcSkipV || t > L)continue;
+      if((w - t*u).Mag() > kVcRadius)continue;
+      v.nPts++;
+      hit[std::min(nb - 1, int(t - kVcSkipV))] = 1;
+      owners.insert(p.owner);
+      if(t > L - kVcBragg && p.dEdx > 0){ sb += p.dEdx; nbg++; }
+    }
+    int nOn = 0, gap = 0, maxGap = 0;
+    for(char h : hit){ if(h){ nOn++; gap = 0; } else maxGap = std::max(maxGap, ++gap); }
+    v.cover = double(nOn)/nb; v.maxGap = maxGap; v.owners = owners.size(); v.bragg = nbg ? sb/nbg : -1;
+    return v;
+  }
+
+  // Conexión topológica (23-nov): la K de 1 GeV/c recorre > 1 m y se curva, así que el corredor recto V -> S falla
+  // aunque Pandora la haya reconstruido. Se busca el PFParticle (no el candidato) con un extremo cerca de V y el
+  // otro cerca de un extremo E del mu, minimizando |extremo - V| + |otro extremo - E|. Se hace con los dos
+  // extremos del mu (las K cortas ponen su pico de Bragg en el inicio del mu y la orientación por dE/dx falla).
+  struct Link { double dV = -1, dE = -1, length = -1, dEdxE = -1; int isTrack = -1; Int_t uid = -1; };
+  Link BestLink(const TVector3& vtx, const TVector3& e, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts){
+    Link l; double best = 1e9;
+    for(const AnaParticlePD* q : parts){
+      if(q == self || !Valid(q->PositionStart) || !Valid(q->PositionEnd))continue;
+      const TVector3 qa = V(q->PositionStart), qb = V(q->PositionEnd);
+      for(int o = 0; o < 2; o++){   // o = 0: qa en V y qb en E; o = 1 al revés
+        const TVector3& nv = o ? qb : qa; const TVector3& ne = o ? qa : qb;
+        const double sc = (nv - vtx).Mag() + (ne - e).Mag();
+        if(sc >= best)continue;
+        best = sc; l.dV = (nv - vtx).Mag(); l.dE = (ne - e).Mag(); l.length = q->Length; l.isTrack = q->Type == AnaParticlePD::kTrack; l.uid = q->UniqueID;
+        double dA, dB; int nA, nB; EndsdEdx(q, dA, dB, nA, nB); l.dEdxE = o ? dA : dB;   // dE/dx en el extremo que toca al mu
+      }
+    }
+    return l;
+  }
+
   // Hijas de Pandora del candidato
   struct Dau { int nTrk = 0, nShw = 0, hits = 0, nearStop = 0; double maxMichel = -1; };
   Dau Daughters(const AnaParticlePD* p, const TVector3& stop, const std::map<UInt_t, const AnaParticlePD*>& byUID){
@@ -297,6 +369,12 @@ namespace mucand {
     Int_t kN, kIsTrack; Float_t kDEdx, kLength, kPRange;
     Int_t nDauTrk, nDauShw, dauHits, dauNearStop; Float_t dauMaxMichel;
     Int_t tKOrigin; Float_t tStartZ, tEndZ, tMom;
+    // añadidas el 23-nov: conexión con el vértice primario (vc*, -1 sin vértice) y error del vértice (truth)
+    Float_t vcDist, vcCover, vcMaxGap, vcBragg; Int_t vcOwners, vcNPts; Float_t tVtxErr;
+    // conexión topológica (lk*): con el inicio (S, orientación por dE/dx) y con la parada (P); distancia de cada extremo
+    // del mu a V; truth: ¿el PFParticle del enlace con S es la K madre del mu? (1 sí, 0 no, -1 sin enlace o sin truth)
+    Float_t lkSdV, lkSdE, lkSLen, lkSdEdx; Int_t lkSIsTrack; Float_t lkPdV, lkPdE, lkPLen, lkPdEdx; Int_t lkPIsTrack;
+    Float_t dStartV, dStopV; Int_t tLkSIsK, tLkPIsK;
   };
 
   // mu+ true de K+ de la cadena del haz: qué le pasa en la reco
@@ -343,6 +421,11 @@ namespace mucand {
       tc->Branch("nDauTrk", &c.nDauTrk); tc->Branch("nDauShw", &c.nDauShw); tc->Branch("dauHits", &c.dauHits); tc->Branch("dauNearStop", &c.dauNearStop);
       tc->Branch("dauMaxMichel", &c.dauMaxMichel);
       tc->Branch("tKOrigin", &c.tKOrigin); tc->Branch("tStartZ", &c.tStartZ); tc->Branch("tEndZ", &c.tEndZ); tc->Branch("tMom", &c.tMom);
+      tc->Branch("vcDist", &c.vcDist); tc->Branch("vcCover", &c.vcCover); tc->Branch("vcMaxGap", &c.vcMaxGap); tc->Branch("vcBragg", &c.vcBragg);
+      tc->Branch("vcOwners", &c.vcOwners); tc->Branch("vcNPts", &c.vcNPts); tc->Branch("tVtxErr", &c.tVtxErr);
+      tc->Branch("lkSdV", &c.lkSdV); tc->Branch("lkSdE", &c.lkSdE); tc->Branch("lkSLen", &c.lkSLen); tc->Branch("lkSdEdx", &c.lkSdEdx); tc->Branch("lkSIsTrack", &c.lkSIsTrack);
+      tc->Branch("lkPdV", &c.lkPdV); tc->Branch("lkPdE", &c.lkPdE); tc->Branch("lkPLen", &c.lkPLen); tc->Branch("lkPdEdx", &c.lkPdEdx); tc->Branch("lkPIsTrack", &c.lkPIsTrack);
+      tc->Branch("dStartV", &c.dStartV); tc->Branch("dStopV", &c.dStopV); tc->Branch("tLkSIsK", &c.tLkSIsK); tc->Branch("tLkPIsK", &c.tLkPIsK);
       ts = new TTree("sig", "mu+ true de K+ de la cadena del haz");
       ts->Branch("entry", &s.entry); ts->Branch("fullDump", &s.fullDump); ts->Branch("hasSlice", &s.hasSlice); ts->Branch("matched", &s.matched);
       ts->Branch("isTrack", &s.isTrack); ts->Branch("inSlice", &s.inSlice); ts->Branch("complete", &s.complete); ts->Branch("inWindow", &s.inWindow);
@@ -372,6 +455,7 @@ namespace mucand {
       nEvents[fd]++; if(hasSlice)nEventsSlice[fd]++;
       TVector3 vtx; bool hasVtx = false;
       if(hasSlice && Valid(slice[0]->PositionEnd)){ vtx = V(slice[0]->PositionEnd); hasVtx = true; }
+      const std::vector<VcPoint> cloud = hasVtx ? VcCloud(parts) : std::vector<VcPoint>();
       auto distSlice = [&slice](const TVector3& x){
         double d = 1e9;
         for(const AnaParticlePD* q : slice){
@@ -454,6 +538,21 @@ namespace mucand {
         { const Dau d = Daughters(p, stop, byUID); c.nDauTrk = d.nTrk; c.nDauShw = d.nShw; c.dauHits = d.hits; c.dauNearStop = d.nearStop; c.dauMaxMichel = d.maxMichel; }
         c.tKOrigin = KOrigin(t, beamTrue, byID);
         c.tStartZ = t ? t->Position[2] : -999; c.tEndZ = t ? t->PositionEnd[2] : -999; c.tMom = t ? 1000.*t->Momentum : -1;
+        // añadidas el 23-nov
+        { VtxConn vc; if(hasVtx)vc = VertexConnection(vtx, start, p->UniqueID, cloud);
+          c.vcDist = vc.dist; c.vcCover = vc.cover; c.vcMaxGap = vc.maxGap; c.vcBragg = vc.bragg; c.vcOwners = vc.owners; c.vcNPts = vc.nPts;
+          c.tVtxErr = (hasVtx && beamTrue) ? (vtx - V(beamTrue->PositionEnd)).Mag() : -1; }
+        { Link ls, lp; if(hasVtx){ ls = BestLink(vtx, start, p, parts); lp = BestLink(vtx, stop, p, parts); }
+          c.lkSdV = ls.dV; c.lkSdE = ls.dE; c.lkSLen = ls.length; c.lkSdEdx = ls.dEdxE; c.lkSIsTrack = ls.isTrack;
+          c.lkPdV = lp.dV; c.lkPdE = lp.dE; c.lkPLen = lp.length; c.lkPdEdx = lp.dEdxE; c.lkPIsTrack = lp.isTrack;
+          c.dStartV = hasVtx ? (start - vtx).Mag() : -1; c.dStopV = hasVtx ? (stop - vtx).Mag() : -1;
+          // truth del enlace: ¿su partícula true es la madre del mu?
+          auto isK = [&](const Link& l) -> int {
+            if(l.uid < 0 || !t)return -1;
+            auto iq = byUID.find(l.uid); if(iq == byUID.end() || !iq->second->TrueObject)return -1;
+            return static_cast<AnaTrueParticleB*>(iq->second->TrueObject)->ID == t->ParentID ? 1 : 0;
+          };
+          c.tLkSIsK = isK(ls); c.tLkPIsK = isK(lp); }
         tc->Fill();
       }
 
