@@ -7,7 +7,8 @@
 // en ficheros anteriores, de beam_truepdg. Señal B: mu+ de K+ en reposo (mu+ de desintegración no cósmico, p true en
 // [230, 241] MeV/c, madre K+) cuya K viene de la cadena del haz que dispara (origen 0-3: primera interacción,
 // secundarias, K+ del haz). El pileup (otra partícula del haz, origen 6) es fondo, como lo que no es de K. Señal de
-// todos los eventos; fondo de los eventos normales, escalado por especie.
+// todos los eventos; fondo de los eventos normales, escalado por especie. Desde la vista normal de los eventos con
+// volcado (c0c0a92; el microtree tiene cand_savemode) el fondo se cuenta en todos los eventos, sin escalar.
 // Por especie y población, con la cadena entera: partículas del haz, señal y fondo seleccionados, rendimiento por
 // partícula, eficiencia (frente a los mu true del árbol truth de esa especie), pureza y error relativo de un recuento
 // con k veces la estadística del MC.
@@ -51,8 +52,13 @@ int xs_measureB(const char* in, double k = 6){
     if(sp < 0 || sp > 2)continue;
     nAllSp[sp]++; if(!fulldump)nNormSp[sp]++;
   }
-  double scSp[3]; for(int sp = 0; sp < 3; sp++)scSp[sp] = nNormSp[sp] ? nAllSp[sp]/nNormSp[sp] : 1.;
-  const int fullLevel[2] = {8, 10};
+  // vista normal (microtrees con cand_savemode): fondo de todos los eventos, sin escalar
+  const bool normalView = t->GetBranch("cand_savemode");
+  double scSp[3]; for(int sp = 0; sp < 3; sp++)scSp[sp] = (normalView || !nNormSp[sp]) ? 1. : nAllSp[sp]/nNormSp[sp];
+  // nivel con todos los cortes (sel_countlevel en los microtrees que lo tienen; antes, 8 y 10: mismo número)
+  int fullLevel[2] = {8, 10};
+  if(t->GetBranch("sel_countlevel")){ Int_t cl[2]; t->SetBranchStatus("sel_countlevel", 1); t->SetBranchAddress("sel_countlevel", cl); t->GetEntry(0);
+    fullLevel[0] = cl[0]; fullLevel[1] = cl[1]; t->ResetBranchAddress(t->GetBranch("sel_countlevel")); }
 
   double nBeam[3] = {0}, sel[3][2][kNCls] = {{{0}}};
   for(Long64_t i = 0; i < n; i++){
@@ -67,7 +73,7 @@ int xs_measureB(const char* in, double k = 6){
       int cls;
       if(muK)cls = (tkor[c] >= 0 && tkor[c] <= 3) ? kSig : tkor[c] == 6 ? kPileup : kOtherK;
       else {
-        if(fulldump)continue;
+        if(fulldump && !normalView)continue;
         const int a = std::abs(tpdg[c]);
         cls = a == 211 ? kPi : a == 2212 ? kP : (a == 13 && torig[c] == 2) ? kMuCos : (a == 11 || tpdg[c] == 22) ? kEM : kRest;
       }

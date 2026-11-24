@@ -32,6 +32,9 @@ void secondaryKaonProductionXSSelection::DefineSteps(){
     AddStep(pop, StepBase::kCut, title, cut, true);   // true: si ningún candidato pasa, la rama se para aquí
   };
 
+  // La ventana de p de rango va la última (24-nov): en la medida B no es un corte sino el pico que se ajusta, así que
+  // la muestra del ajuste es la de todos los cortes menos ella (nivel = último - 1) y la de conteo, la de todos.
+
   // rama 0: en la beam slice (fondo: trozos de piones y protones del haz)
   add(0, "en la beam slice",                      new MuCandPopulationCut());
   add(0, "extremos a > 35 cm de las caras",       new MuCandFacesCut(muCandCuts::kFacesMin));
@@ -39,8 +42,8 @@ void secondaryKaonProductionXSSelection::DefineSteps(){
   add(0, "#chi^{2}_{#mu} < 6",                    new MuCandChi2MuCut(muCandCuts::kChi2MuMax));
   add(0, "dE/dx parada > 3",                      new MuCandStopdEdxCut(muCandCuts::kdEdxStopMin));
   add(0, "sin extremos en los huecos",            new MuCandGapsCut(muCandCuts::kGapHalfWidth));
-  add(0, "p rango en [205, 240]",                 new MuCandRangeMomCut(muCandCuts::kWindowMin, muCandCuts::kWindowMax));
   add(0, "hits Michel #geq 2",                    new MuCandMichelHitsCut(muCandCuts::kMichelHitsMin));
+  add(0, "p rango en [205, 240]",                 new MuCandRangeMomCut(muCandCuts::kWindowMin, muCandCuts::kWindowMax));
 
   // rama 1: fuera de la beam slice (fondo: mu cósmicos, trozos EM, piones y protones de interacciones secundarias)
   add(1, "fuera de la beam slice",                new MuCandPopulationCut());
@@ -51,8 +54,8 @@ void secondaryKaonProductionXSSelection::DefineSteps(){
   add(1, "#chi^{2}_{p} > 80",                     new MuCandChi2pCut(muCandCuts::kChi2pMin));
   add(1, "dE/dx inicio > 1.8",                    new MuCandStartdEdxCut(muCandCuts::kdEdxStartMin));
   add(1, "sin extremos en los huecos",            new MuCandGapsCut(muCandCuts::kGapHalfWidth));
-  add(1, "p rango en [205, 240]",                 new MuCandRangeMomCut(muCandCuts::kWindowMin, muCandCuts::kWindowMax));
   add(1, "hits Michel #geq 2",                    new MuCandMichelHitsCut(muCandCuts::kMichelHitsMin));
+  add(1, "p rango en [205, 240]",                 new MuCandRangeMomCut(muCandCuts::kWindowMin, muCandCuts::kWindowMax));
 
   SetBranchAlias(0, "en la beam slice", 0);
   SetBranchAlias(1, "fuera de la beam slice", 1);

@@ -36,9 +36,11 @@
 
   RAMAS: una por población, porque las reconstruyen pasadas distintas de Pandora y tienen fondos distintos.
     rama 0, en la beam slice: población, caras > 35, vértice > 15, chi2 mu < 6, dE/dx parada > 3, huecos,
-                              ventana [205, 240], Michel por hits
+                              Michel por hits, ventana [205, 240]
     rama 1, fuera:            población, no IsClearCosmic, eje < 60, chi2 mu < 6, dE/dx parada > 3, chi2 p > 80,
-                              dE/dx inicio > 1,8, huecos, ventana [205, 240], Michel por hits
+                              dE/dx inicio > 1,8, huecos, Michel por hits, ventana [205, 240]
+  La ventana va la última: en la medida B es el pico que se ajusta (la muestra del ajuste es la del penúltimo nivel,
+  7 dentro y 9 fuera; el rango del ajuste lo pone la macro del ajuste), y en la de conteo, el último corte.
   (la cadena corta de test/phase2/mu_cand_common.h con el veto de los huecos y el Michel por hits; los umbrales,
   abajo en muCandCuts).
 */
@@ -58,6 +60,12 @@ namespace muCandCuts {
   const double kWindowMin     = 205.;    // MeV/c, p de rango (hipótesis mu): pico del mu de K en reposo
   const double kWindowMax     = 240.;
   const int    kMichelHitsMin = 2;       // hits con CNN de Michel > 0,5 a < 10 cm de la parada
+
+  // Niveles de la cadena de cada rama (0 dentro, 1 fuera; ver DefineSteps): la ventana de p de rango es el último
+  // corte; la muestra del ajuste de la medida B es la de todos los cortes menos ella. Se guardan en el microtree
+  // (sel_fitlevel, sel_countlevel) para que las macros no dependan del orden. Si se cambia la cadena, cambiarlos.
+  const int kFitLevel[2]   = {7, 9};
+  const int kCountLevel[2] = {8, 10};
 
   // ---- Variables derivadas de un candidato, referidas al extremo de parada (el de mayor dE/dx: stopAtB) ----
   inline double dEdxStop(const muCandUtils::Candidate& c){ return c.stopAtB ? c.dEdxB : c.dEdxA; }

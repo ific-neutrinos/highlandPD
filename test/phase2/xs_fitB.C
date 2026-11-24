@@ -3,9 +3,11 @@
 //
 //   root -l -b -q 'test/phase2/xs_fitB.C+("xs_v100.root", "<directorio de figuras>")'
 //
-// Espectro: candidatos con todos los cortes de su cadena salvo la ventana de p de rango. cand_level cuenta cortes
-// seguidos y la ventana va antes del corte de Michel, así que se toma "llega hasta la ventana" (nivel >= 6 dentro,
-// >= 8 fuera) y el corte de Michel por hits se aplica aquí con sus variables (como MuCandMichelHitsCut).
+// Espectro: candidatos con todos los cortes de su cadena salvo la ventana de p de rango. Desde el 24-nov la ventana
+// es el último corte y el microtree guarda el nivel de esa muestra (sel_fitlevel). En los microtrees anteriores la
+// ventana iba antes del Michel: se toma "llega hasta la ventana" (nivel >= 6 dentro, >= 8 fuera) y el corte de
+// Michel por hits se aplica aquí con sus variables (como MuCandMichelHitsCut). Fondo: con la vista normal (microtrees
+// con cand_savemode), de todos los eventos sin escalar; antes, de los eventos normales escalado por especie.
 // Modelo y pseudoexperimentos: los de mu_cand_fit.C (gaussiana + exp(pol2), máxima verosimilitud de Poisson). El
 // "dato" es el MC: mu de K en reposo de todos los eventos más el fondo de los eventos normales, escalado por especie.
 // El pico contiene todos los mu de K en reposo, también los del pileup: el resultado se compara con dos verdades, todos
@@ -48,12 +50,17 @@ int xs_fitB(const char* in, const char* outdir, int nToys = 300){
     if(sp < 0 || sp > 2)continue;
     nAll[sp]++; if(!fulldump)nNorm[sp]++;
   }
-  double scSp[3]; for(int sp = 0; sp < 3; sp++)scSp[sp] = nNorm[sp] ? nAll[sp]/nNorm[sp] : 1.;
+  const bool normalView = t->GetBranch("cand_savemode");
+  double scSp[3]; for(int sp = 0; sp < 3; sp++)scSp[sp] = (normalView || !nNorm[sp]) ? 1. : nAll[sp]/nNorm[sp];
+  // muestra del ajuste: sel_fitlevel si existe (ventana la última, Michel ya aplicado); si no, la lógica de antes
+  const bool newOrder = t->GetBranch("sel_fitlevel");
+  int fitLevel[2] = {6, 8};
+  if(newOrder){ Int_t fl[2]; t->SetBranchStatus("sel_fitlevel", 1); t->SetBranchAddress("sel_fitlevel", fl); t->GetEntry(0);
+    fitLevel[0] = fl[0]; fitLevel[1] = fl[1]; t->ResetBranchAddress(t->GetBranch("sel_fitlevel")); }
 
   // rango del ajuste por población: dentro 150-400; fuera 150-350 (fuera, el módulo solo guarda completos los
   // candidatos en su ventana de 150-350 MeV/c)
   const double x0[2] = {150, 150}, x1[2] = {400, 350}, bw = 5;
-  const int levelToWindow[2] = {6, 8};
   const char* popName[2] = {"en la beam slice", "fuera de la beam slice"};
   // [especie][población]: mu de K (todos), señal B, fondo que no es de K
   std::map<int, TH1D*> hK, hS, hB;
@@ -70,16 +77,16 @@ int xs_fitB(const char* in, const char* outdir, int nToys = 300){
     if(sp < 0 || sp > 2)continue;
     for(int c = 0; c < ncand && c < NMAX; c++){
       const int p = pop[c];
-      if(!complete[c] || level[c] < levelToWindow[p])continue;
+      if(!complete[c] || level[c] < fitLevel[p])continue;
       const bool michel = nmich[c] < -900 ? cnnmich[c] > 0.02 : nmich[c] >= 2;
-      if(!michel)continue;
+      if(!newOrder && !michel)continue;
       if(prange[c] < x0[p] || prange[c] >= x1[p])continue;
       const bool muK = tpdg[c] == -13 && tproc[c] == 2 && torig[c] != 2 && tmom[c] > 230 && tmom[c] < 241 && (tpar[c] == 321 || tpar[c] == 0);
       if(muK){
         hK[key(sp, p)]->Fill(prange[c]);
         if(tkor[c] >= 0 && tkor[c] <= 3)hS[key(sp, p)]->Fill(prange[c]);
       }
-      else if(!fulldump)hB[key(sp, p)]->Fill(prange[c], scSp[sp]);
+      else if(normalView || !fulldump)hB[key(sp, p)]->Fill(prange[c], scSp[sp]);
     }
   }
 
@@ -89,7 +96,9 @@ int xs_fitB(const char* in, const char* outdir, int nToys = 300){
   TCanvas cv("cvB", "", 900, 650);
   cv.Print((pdf + "[").c_str());
   TRandom3 rnd(4321);
-  std::cout << "Eventos " << n << "; fondo escalado por especie: e/mu/pi x" << scSp[0] << ", K x" << scSp[1] << ", p x" << scSp[2] << std::endl;
+  std::cout << "Eventos " << n << (normalView ? "; vista normal: fondo de todos los eventos, sin escalar" : "; fondo escalado por especie:")
+            << (normalView ? "" : Form(" e/mu/pi x%.3f, K x%.3f, p x%.3f", scSp[0], scSp[1], scSp[2]))
+            << (newOrder ? "; muestra del ajuste: sel_fitlevel" : "; muestra del ajuste: nivel de la ventana + Michel (microtree anterior)") << std::endl;
   for(int sp = 0; sp < 3; sp++)for(int p = 0; p < 2; p++){
     TH1D* K = hK[key(sp, p)]; TH1D* S = hS[key(sp, p)]; TH1D* Bk = hB[key(sp, p)];
     const int nb = K->GetNbinsX();

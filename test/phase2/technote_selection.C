@@ -75,16 +75,16 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
                           "TMath::Min(abs(cand_start[][2]-230),abs(cand_start[][2]-462)))";
 
   // cadenas de secondaryKaonProductionXSSelection::DefineSteps (el corte 1 es la población: no se dibuja)
-  const std::vector<SelCut> in_ = {
+  std::vector<SelCut> in_ = {
     {2, "faces",    "TMath::Min(cand_faces_stop,cand_faces_start)", "Distance of the ends to the faces (cm)", 40, 0, 200, 35, -999, false},
     {3, "vertex",   "cand_vtx_min", "Distance of the ends to the beam vertex (cm)", 42, -5, 100, 15, -999, false},
     {4, "chi2mu",   "cand_chi2mu", "#chi^{2}_{#mu}/ndf", 40, 0, 40, -999, 6, false},
     {5, "dedxstop", "cand_dedx_stop", "dE/dx in the last 5 cm (MeV/cm)", 40, 0, 10, 3, -999, false},
     {6, "gaps",     gap, "Distance of the ends to the APA gaps in z (cm)", 40, 0, 100, 5, -999, false},
-    {7, "prange",   "cand_prange", "Momentum from range, #mu hypothesis (MeV/c)", 40, 100, 400, 205, 240, false},
-    {8, "michel",   "cand_ar_nmichel10", "Michel hits within 10 cm of the stop", 20, 0, 20, 2, -999, false},
+    {7, "michel",   "cand_ar_nmichel10", "Michel hits within 10 cm of the stop", 20, 0, 20, 2, -999, false},
+    {8, "prange",   "cand_prange", "Momentum from range, #mu hypothesis (MeV/c)", 60, 100, 400, 205, 240, false},
   };
-  const std::vector<SelCut> out_ = {
+  std::vector<SelCut> out_ = {
     {2, "clearcosmic", "cand_clearcosmic", "Pandora IsClearCosmic", 2, 0, 2, -999, 0.5, false},
     {3, "axis",     "cand_axis_min", "Distance of the closest end to the beam axis (cm)", 30, 0, 150, -999, 60, false},
     {4, "chi2mu",   "cand_chi2mu", "#chi^{2}_{#mu}/ndf", 40, 0, 40, -999, 6, false},
@@ -92,10 +92,16 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
     {6, "chi2p",    "cand_chi2p", "#chi^{2}_{p}/ndf", 40, 0, 400, 80, -999, false},
     {7, "dedxstart","cand_dedx_start", "dE/dx in the first 5 cm (MeV/cm)", 40, 0, 6, 1.8, -999, false},
     {8, "gaps",     gap, "Distance of the ends to the APA gaps in z (cm)", 40, 0, 100, 5, -999, false},
-    {9, "prange",   "cand_prange", "Momentum from range, #mu hypothesis (MeV/c)", 40, 100, 400, 205, 240, false},
-    {10, "michel",  "cand_ar_nmichel10", "Michel hits within 10 cm of the stop", 20, 0, 20, 2, -999, false},
+    {9, "michel",   "cand_ar_nmichel10", "Michel hits within 10 cm of the stop", 20, 0, 20, 2, -999, false},
+    {10, "prange",  "cand_prange", "Momentum from range, #mu hypothesis (MeV/c)", 60, 100, 400, 205, 240, false},
   };
 
+  // Orden de la cadena: desde el 24-nov la ventana de p de rango es el último corte (el microtree tiene sel_fitlevel);
+  // en los microtrees anteriores iba antes del Michel: se intercambian los índices de esos dos
+  if(!mc->GetBranch("sel_fitlevel")){
+    for(auto* v : {&in_, &out_}){ auto& c = *v; std::swap(c[c.size()-1].index, c[c.size()-2].index); }
+    std::cout << "Microtree anterior al 24-nov: ventana antes del Michel" << std::endl;
+  }
   const std::string sel1(only);
   for(int pop = 0; pop < 2; pop++){
     if(onlyPop >= 0 && pop != onlyPop)continue;
@@ -113,5 +119,9 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
   std::cout << std::endl << "== Purezas al final de la cadena (" << categ << ") ==" << std::endl;
   draw.PrintPurities(mc, categ, Form("cand_pop==0 && cand_level>=%zu", in_.size() + 1));
   draw.PrintPurities(mc, categ, Form("cand_pop==1 && cand_level>=%zu", out_.size() + 1));
+  // la muestra del ajuste de B (todos los cortes menos la ventana)
+  std::cout << "== Purezas de la muestra del ajuste (sin la ventana) ==" << std::endl;
+  draw.PrintPurities(mc, categ, Form("cand_pop==0 && cand_level>=%zu", in_.size()));
+  draw.PrintPurities(mc, categ, Form("cand_pop==1 && cand_level>=%zu", out_.size()));
   return 0;
 }

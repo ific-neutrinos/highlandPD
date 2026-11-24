@@ -160,7 +160,7 @@ public:
   enum enumMicroTrees_secondaryKaonProductionXSAnalysis{
     // evento
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
-    hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
+    sel_fitlevel, sel_countlevel, hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
     beam_species, beam_truespecies,
     // candidatos (contador ncand)
     ncand,

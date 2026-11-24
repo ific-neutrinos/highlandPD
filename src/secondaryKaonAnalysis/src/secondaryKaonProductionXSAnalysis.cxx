@@ -233,6 +233,8 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
 
   // -------- evento --------
   AddVarI  (output(), fulldump,       "MC: volcado completo (evento con un K+ secundario)");
+  AddVarFixVI(output(), sel_fitlevel,  "por rama: cand_level de la muestra del ajuste de B (todos los cortes menos la ventana)", 2);
+  AddVarFixVI(output(), sel_countlevel, "por rama: cand_level con todos los cortes (ventana incluida)", 2);
   AddVarI  (output(), hasslice,       "hay beam slice");
   AddVarI  (output(), hasvertex,      "hay vértice (final del primario de la beam slice)");
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
@@ -396,6 +398,10 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   // -------- evento --------
   const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(GetEvent().EventInfo);
   output().FillVar(fulldump, (Int_t)(info && info->FullDump));
+  for(int ib = 0; ib < 2; ib++){
+    output().FillVectorVar(sel_fitlevel,   muCandCuts::kFitLevel[ib], ib);
+    output().FillVectorVar(sel_countlevel, muCandCuts::kCountLevel[ib], ib);
+  }
   const ToyBoxMuCand& b = box();
   bool slice = false;
   for(const muCandUtils::Candidate& c : b.Candidates)if(c.hasSlice){ slice = true; break; }
