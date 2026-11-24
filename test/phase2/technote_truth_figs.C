@@ -58,7 +58,7 @@ int technote_truth_figs(const char* in, const char* outdir){
   TEfficiency eT("eT", ";T_{K} at production (MeV);fraction giving a contained #mu^{+} from K^{+} #rightarrow #mu^{+}#nu at rest", nT, Tbins);
   TEfficiency eTh("eTh", ";#theta_{K} with respect to the beam (deg);fraction giving a contained #mu^{+} from K^{+} #rightarrow #mu^{+}#nu at rest", nTh, thBins);
   TH2D hProd("hProd", "", nT, Tbins, nTh, thBins), hGood("hGood", "", nT, Tbins, nTh, thBins);
-  TH1D hR("hR", ";r_{min} (minimum momentum fraction kept by the beam #pi^{+});K^{+}", 50, 0, 1);
+  TH1D hR("hR", ";r_{min} (minimum momentum fraction kept by the beam #pi^{+});K^{+} / 0.02", 50, 0, 1);
   long nA = 0, nOptA = 0;
   for(Long64_t i = 0; i < t->GetEntries(); i++){
     t->GetEntry(i);
