@@ -364,6 +364,29 @@ namespace muCandUtils {
     return d;
   }
 
+  // Signal muon (nota técnica, sec. "The signal muon"): mu+ de K+ -> mu+ nu de una K+ en reposo. En la truth: mu+
+  // creado en una desintegración, no cósmico, cuya madre es una K+ que acaba en Decay con momento final cero
+  // (desintegración en reposo de Geant4). El canal mu nu se identifica por el momento del mu, que en reposo es
+  // 235,5 MeV/c (K -> pi0 mu nu da como mucho ~215 MeV/c): no es un corte de la definición.
+  inline bool IsSignalMuon(const AnaTrueParticleB* mu, const std::map<int, AnaTrueParticleB*>& byID){
+    if(!mu || mu->PDG != -13 || mu->ProcessStart != AnaTrueParticleB::Decay || static_cast<const AnaTrueParticlePD*>(mu)->Origin == 2)return false;
+    auto itK = byID.find(mu->ParentID);
+    if(itK == byID.end())return false;
+    const AnaTrueParticleB* k = itK->second;
+    if(k->PDG != 321 || k->ProcessEnd != AnaTrueParticleB::Decay || k->MomentumEnd > 1e-6)return false;   // en reposo
+    return mu->Momentum > 0.230 && mu->Momentum < 0.241;   // canal mu nu (GeV/c)
+  }
+
+  // Señal de cada medida, en capas sobre el signal muon: C cualquier signal muon; B la K viene de la cascada del haz
+  // que dispara (KOrigin 0-3); A la K se produce en la primera interacción (KOrigin 0-1)
+  enum Measurement { kMeasC = 0, kMeasB = 1, kMeasA = 2 };
+  inline bool IsSignalOf(int measurement, bool signalMuon, int kOrigin){
+    if(!signalMuon)return false;
+    if(measurement == kMeasB)return kOrigin >= 0 && kOrigin <= 3;
+    if(measurement == kMeasA)return kOrigin == 0 || kOrigin == 1;
+    return true;
+  }
+
   // Origen de la K de un mu+ (como kaon_origin_minitrees.C): 0 primera interacción del haz que dispara,
   // 1 primera interacción con K+ -> K+ intermedias, 2 interacción secundaria, 3 la K+ del haz tras K+ -> K+,
   // 4 cadena cortada (falta un antecesor de la K), 6 otra raíz (no el haz que dispara), -1 no es un mu+ de
@@ -413,6 +436,7 @@ namespace muCandUtils {
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, intPeakRR, dirYStop; Int_t stopAtB;
     // truth
     Int_t tPDG, tParentPDG, tProcStart, tOrigin, tFromBeam, tSignal, tGen, tFromBeamK; Float_t tKMomEnd, tPur, tEff, tLength;
+    Int_t tSignalMuon = 0;   // signal muon (IsSignalMuon)
     // añadidas el 20-nov
     Int_t isShower;
     Float_t startX, startY, startZ, stopX, stopY, stopZ, cosBeam, trMean, trMeanBody;
@@ -547,7 +571,11 @@ namespace muCandUtils {
     c.tFromBeamK = t && beamTrue && beamTrue->PDG == 321 && t->PDG == -13 && t->ParentID == beamTrue->ID; c.tProcStart = t ? int(t->ProcessStart) : -1;
     c.tOrigin = t ? t->Origin : -1; c.tGen = t ? t->Generation : -999;
     c.tFromBeam = (t && beamTrue) ? IsDescendantOf(t->ID, beamTrue->ID, byID) : 0;
-    double km; c.tSignal = IsOldSignal(t, ctx, km); c.tKMomEnd = km;
+    double km; c.tSignal = IsOldSignal(t, ctx, km);
+    // momento final de la K madre para cualquier mu cuya madre sea una K+ (no solo la señal antigua)
+    c.tKMomEnd = -1;
+    if(t){ auto ik = ctx.byID.find(t->ParentID); if(ik != ctx.byID.end() && ik->second->PDG == 321)c.tKMomEnd = 1000.*ik->second->MomentumEnd; }
+    c.tSignalMuon = IsSignalMuon(t, ctx.byID);
     c.tPur = p->TruePur; c.tEff = p->TrueEff; c.tLength = t ? (V(t->PositionEnd) - V(t->Position)).Mag() : -1;   // distancia inicio-fin
     // añadidas el 20-nov
     const TVector3 stop = c.stopAtB ? b : a, start = c.stopAtB ? a : b;

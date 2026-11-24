@@ -101,7 +101,7 @@ namespace kacc {
       if(dau.empty() && cur->ProcessEnd == AnaTrueParticleB::Decay)noDaughters++;
       if(!r.kStopInAV){ r.fate = kExits; return; }
       if(cur->ProcessEnd == AnaTrueParticleB::Decay){
-        if(cur->MomentumEnd >= 0.05){ r.fate = kFlightDecay; return; }
+        if(cur->MomentumEnd > 1e-6){ r.fate = kFlightDecay; return; }   // en reposo = momento final cero (Geant4), como IsSignalMuon
         const AnaTrueParticleB* mu = nullptr; bool pipi = false;
         for(int d : dau){
           auto it = byID.find(d); if(it == byID.end())continue;

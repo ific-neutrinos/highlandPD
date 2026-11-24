@@ -105,6 +105,20 @@ bool secondaryKaonProductionXSAnalysis::Initialize(){
     std::reverse(types, types + N); std::reverse(codes, codes + N); std::reverse(colors, colors + N);
     anaUtils::_categ->AddObjectCategory("candmu", ncand, "ncand", N, types, codes, colors, 1, -(Int_t)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
   }
+  // una categoría por medida (señal en capas: C cualquier signal muon, B de la cascada del haz que dispara, A de la
+  // primera interacción): 1 señal de la medida, 2 signal muon de otro origen, y el fondo como en candmu
+  {
+    const char* sigName[3] = {"candsigC", "candsigB", "candsigA"};
+    const char* sigLabel[3] = {"signal C", "signal B", "signal A"};   // en inglés: van a las figuras de la nota
+    for(int m = 0; m < 3; m++){
+      std::string types[] = {sigLabel[m], "#mu from K^{+} (other origin)", "#pi^{#pm}", "p", "cosmic #mu", "e, #gamma", NAMEOTHER, NAMENOTRUTH};
+      int codes[]          = {1, 2, 211, 2212, 13, 11, CATOTHER, CATNOTRUTH};
+      int colors[]         = {2, 28, 4, 8, 7, 5, COLOTHER, COLNOTRUTH};
+      const int N = sizeof(types)/sizeof(types[0]);
+      std::reverse(types, types + N); std::reverse(codes, codes + N); std::reverse(colors, colors + N);
+      anaUtils::_categ->AddObjectCategory(sigName[m], ncand, "ncand", N, types, codes, colors, 1, -(Int_t)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
+    }
+  }
 
   return true;
 }
@@ -313,7 +327,8 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVI (output(), cand_trueorigin,       "truth: Origin (2 cósmico, 4 haz)",                             ncand, N);
   AddVarMaxSizeVI (output(), cand_truefrombeam,     "truth: desciende del haz que dispara",                         ncand, N);
   AddVarMaxSizeVI (output(), cand_truesignal,       "truth: mu+ de K+ de la cadena del haz (señal antigua)",        ncand, N);
-  AddVarMaxSizeVF (output(), cand_truekendmom,      "truth: momento final de su K (MeV/c; ~0 en reposo)",          ncand, N);
+  AddVarMaxSizeVI (output(), cand_truesignalmuon,   "truth: signal muon (mu+ de K+ -> mu+ nu de una K+ en reposo)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_truekendmom,      "truth: momento final de su K madre (MeV/c; 0 en reposo; -1 si la madre no es K+)", ncand, N);
   AddVarMaxSizeVI (output(), cand_truekorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4 cadena cortada, 6 otra raíz, -1 no es mu+ de K+)", ncand, N);
   AddVarMaxSizeVF (output(), cand_truepur,          "truth: pureza",                                                ncand, N);
   AddVarMaxSizeVF (output(), cand_trueeff,          "truth: completitud",                                           ncand, N);
@@ -479,6 +494,7 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_trueorigin,       c.tOrigin);
     output().FillVectorVar(cand_truefrombeam,     c.tFromBeam);
     output().FillVectorVar(cand_truesignal,       c.tSignal);
+    output().FillVectorVar(cand_truesignalmuon,   c.tSignalMuon);
     output().FillVectorVar(cand_truekendmom,      c.tKMomEnd);
     output().FillVectorVar(cand_truekorigin,      c.tKOrigin);
     output().FillVectorVar(cand_truepur,          c.tPur);
@@ -589,8 +605,10 @@ int secondaryKaonProductionXSAnalysis::BeamSpecies(const std::vector<int>& pdgs)
 bool secondaryKaonProductionXSAnalysis::IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t){
 //********************************************************************
 
-  return t && t->PDG == -13 && t->ProcessStart == AnaTrueParticleB::Decay && static_cast<const AnaTrueParticlePD*>(t)->Origin != 2 &&
-         t->Momentum > 0.230 && t->Momentum < 0.241;   // GeV/c
+  if(!t || t->PDG != -13 || t->ProcessStart != AnaTrueParticleB::Decay)return false;   // filtro rápido antes del mapa
+  std::map<int, AnaTrueParticleB*> byID;
+  for(AnaTrueParticleB* x : GetSpill().TrueParticles)byID[x->ID] = x;
+  return muCandUtils::IsSignalMuon(t, byID);
 }
 
 //********************************************************************
@@ -647,10 +665,7 @@ int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Cand
 //********************************************************************
 
   if(c.tPDG == 0)return CATNOTRUTH;
-  // mu+ de K+ en reposo: mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c, madre K+
-  const bool muK = c.tPDG == -13 && c.tProcStart == AnaTrueParticleB::Decay && c.tOrigin != 2 && c.tMom > 230 && c.tMom < 241 &&
-                   c.tParentPDG == 321;
-  if(muK){
+  if(c.tSignalMuon){
     switch(c.tKOrigin){
       case 0: case 1: return 1;   // medida A (primera interacción del haz que dispara)
       case 2:         return 2;   // interacción secundaria
@@ -664,6 +679,15 @@ int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Cand
   if(std::abs(c.tPDG) == 13 && c.tOrigin == 2)return 13;
   if(std::abs(c.tPDG) == 11 || c.tPDG == 22)return 11;
   return CATOTHER;
+}
+
+//********************************************************************
+int secondaryKaonProductionXSAnalysis::MeasurementCategory(const muCandUtils::Candidate& c, int measurement){
+//********************************************************************
+
+  const int code = CandidateCategory(c);
+  if(c.tPDG == 0 || !c.tSignalMuon)return code;
+  return muCandUtils::IsSignalOf(measurement, true, c.tKOrigin) ? 1 : 2;
 }
 
 //********************************************************************
@@ -690,6 +714,11 @@ void secondaryKaonProductionXSAnalysis::FillCategories(){
     anaUtils::FillObjectCategories(&GetEvent(), p, "cand", 1);
     const int code = CandidateCategory(b.Candidates[i]);
     anaUtils::_categ->SetObjectCode("candmu", code, code == CATNOTRUTH ? CATNOTRUTH : CATOTHER, -1);
+    const char* sigName[3] = {"candsigC", "candsigB", "candsigA"};
+    for(int m = 0; m < 3; m++){
+      const int cm = MeasurementCategory(b.Candidates[i], m);
+      anaUtils::_categ->SetObjectCode(sigName[m], cm, cm == CATNOTRUTH ? CATNOTRUTH : CATOTHER, -1);
+    }
   }
 
   // instrumentación del haz

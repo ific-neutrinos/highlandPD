@@ -89,8 +89,12 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   /// NMAXMUCANDIDATES, primero los de mayor nivel en la cadena (a igual nivel, en el orden original)
   std::vector<int> SavedCandidates() const;
 
-  /// Categoría true de un candidato (código de la categoría "candmu")
+  /// Categoría true de un candidato (código de la categoría "candmu"): los signal muons separados por el origen de su K
   static int CandidateCategory(const muCandUtils::Candidate& c);
+
+  /// Categoría true de un candidato para una medida (muCandUtils::kMeasC, kMeasB, kMeasA; categorías "candsigC",
+  /// "candsigB", "candsigA"): 1 señal de esa medida, 2 signal muon que no es señal de esa medida, y el resto como en candmu
+  static int MeasurementCategory(const muCandUtils::Candidate& c, int measurement);
 
   /// Especie del haz agrupada como la separan los Cherenkov a 6 GeV: 0 e/mu/pi, 1 K, 2 p, 3 ambigua, -1 sin información.
   /// Desde la lista de PDGs compatibles de la instrumentación (datos; en el MC no hay emulación de los Cherenkov y la
@@ -98,8 +102,8 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   static int BeamSpecies(const std::vector<int>& pdgs);
   static int BeamSpecies(int truePDG){ return BeamSpecies(std::vector<int>{truePDG}); }
 
-  /// ¿Es un mu+ de K+ en reposo para el árbol truth? (mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c)
-  static bool IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t);
+  /// ¿Es un signal muon para el árbol truth? (muCandUtils::IsSignalMuon)
+  bool IsTrueMuFromKaonAtRest(const AnaTrueParticleB* t);
 
 private:
 
@@ -164,7 +168,7 @@ public:
     cand_lkt_s_dv, cand_lkt_s_de, cand_lkt_p_dv, cand_lkt_p_de, cand_dstart_tv, cand_dstop_tv,
     cand_sh_nsp, cand_sh_lin, cand_sh_lencore, cand_sh_lenbragg, cand_sh_prange_core,
     // truth de los candidatos
-    cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truekendmom, cand_truekorigin,
+    cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truesignalmuon, cand_truekendmom, cand_truekorigin,
     cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
     // árbol truth
     truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
