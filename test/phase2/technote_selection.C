@@ -53,6 +53,13 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
   draw.SetLegendPos("r");
   gStyle->SetOptStat(0);
 
+  // la señal abajo del todo en el stack: SetCategorySignal pasa el código al final de la lista de tipos (se dibuja
+  // abajo). Se llama de la capa más externa a la más interna, para que quede A abajo, encima B (no A) y encima
+  // C (no B); en candsigX, la señal abajo y encima los mu de K de otro origen
+  const std::string cat(categ);
+  if(cat == "candmu"){ draw.SetCategorySignal(cat, 3); draw.SetCategorySignal(cat, 2); draw.SetCategorySignal(cat, 1); }
+  else if(cat.rfind("candsig", 0) == 0){ draw.SetCategorySignal(cat, 2); draw.SetCategorySignal(cat, 1); }
+
   // distancia mínima de los dos extremos a los huecos entre APAs (z = 230 y 462 cm), como muCandCuts::GapDist
   const std::string gap = "TMath::Min(TMath::Min(abs(cand_stop[][2]-230),abs(cand_stop[][2]-462)),"
                           "TMath::Min(abs(cand_start[][2]-230),abs(cand_start[][2]-462)))";
