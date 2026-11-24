@@ -15,6 +15,9 @@
 // tocar el spill; la vista completa es la lista original. Ver NormalSaveMode.
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
+#include "pdServiceManager.hxx"
+#include "PIDTables.hxx"
+#include "TProfile.h"
 #include "TVector3.h"
 #include "TMatrixDSym.h"
 #include "TMatrixDSymEigen.h"
@@ -84,6 +87,48 @@ namespace muCandUtils {
     const std::pair<double,int> r = pdAnaUtils::Chi2PID(*q, pdg, 1e9);
     if(r.second > 0)rev = r.first/r.second;
     delete q;
+  }
+
+  // chi2/ndf de la hipótesis pdg con la parada en B (stopAtB, el final de Pandora) o en A, quitando los hits a menos
+  // de trim cm de la parada y restando trim al rango residual de los demás: la parada se mueve trim cm hacia dentro.
+  // Para trazas con hits de otra partícula pegados al final (el Michel) o que se pasan de la parada. Misma fórmula que
+  // pdAnaUtils::Chi2PID (plano 2, sin el primer ni el último hit en el orden guardado, plantilla de dE/dx frente al
+  // rango residual, resolución en dE/dx de la calorimetría); con trim = 0 da lo mismo que Chi2Both. -1 sin hits.
+  inline double Chi2Trimmed(const AnaParticlePD* p, int pdg, bool stopAtB, double trim){
+    const std::vector<AnaHitPD>& hits = p->Hits[2];
+    if(hits.size() < 3)return -1;
+    TProfile* profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
+    if(!profile)return -1;
+    double chi2 = 0; int npt = 0;
+    for(size_t i = 1; i + 1 < hits.size(); i++){
+      const AnaHitPD& h = hits[i];
+      if(h.dEdx > 1000. || h.dEdx == -999)continue;
+      double rr = h.ResidualRange;
+      if(rr >= 0 && !stopAtB)rr = std::max(0.f, Float_t(p->Length - rr));   // como Chi2Both (orientación contraria)
+      if(rr < 0)continue;
+      if(trim > 0){ if(rr < trim)continue; rr -= trim; }
+      const int bin = profile->FindBin(rr);
+      if(bin < 1 || bin > profile->GetNbinsX())continue;
+      double t = profile->GetBinContent(bin), te = profile->GetBinError(bin);
+      if(t < 1e-6)t = (profile->GetBinContent(bin - 1) + profile->GetBinContent(bin + 1))/2.;
+      if(te < 1e-6)te = (profile->GetBinError(bin - 1) + profile->GetBinError(bin + 1))/2.;
+      const double res = (0.04231 + 0.0001783*h.dEdx*h.dEdx)*h.dEdx;
+      chi2 += std::pow(h.dEdx - t, 2)/(te*te + res*res);
+      npt++;
+    }
+    return npt > 0 ? chi2/npt : -1;
+  }
+
+  // Mejor chi2/ndf (el menor) recortando trim = 0, kTrimStep, ..., kTrimMax cm de la parada (Chi2Trimmed); en bestTrim,
+  // el recorte que lo da (-1 sin chi2)
+  const double kTrimMax = 10., kTrimStep = 1.;
+  inline double Chi2BestTrim(const AnaParticlePD* p, int pdg, bool stopAtB, double& bestTrim){
+    double best = -1; bestTrim = -1;
+    for(double trim = 0; trim <= kTrimMax + 1e-6; trim += kTrimStep){
+      const double c = Chi2Trimmed(p, pdg, stopAtB, trim);
+      if(c >= 0 && (best < 0 || c < best)){ best = c; bestTrim = trim; }
+    }
+    return best;
   }
 
   // Puntuación CNN de Michel media de los hits propios (plano 2) a < kBragg cm de cada extremo
@@ -440,6 +485,9 @@ namespace muCandUtils {
     Int_t actPartsA, actPartsB, actHitsA, actHitsB; Float_t actMichelA, actMichelB;
     Int_t clearCosmic, hasT0, cosmicCriteria; Float_t beamCosmicScore;
     Float_t chi2muF, chi2muR, chi2pF, chi2pR, michelOwnA, michelOwnB, intPeak, intPeakRR, dirYStop; Int_t stopAtB;
+    // añadidas el 24-nov: chi2 de mu recortando la parada (Chi2BestTrim) con la parada elegida (trim, trimCm) y el
+    // mejor de las dos orientaciones (trimBoth); -1 sin chi2
+    Float_t chi2muTrim, chi2muTrimCm, chi2muTrimBoth;
     // truth
     Int_t tPDG, tParentPDG, tProcStart, tOrigin, tFromBeam, tSignal, tGen, tFromBeamK; Float_t tKMomEnd, tPur, tEff, tLength;
     Int_t tSignalMuon = 0;   // signal muon (IsSignalMuon)
@@ -615,6 +663,9 @@ namespace muCandUtils {
     if(c.dEdxA > 0 && c.dEdxB > 0)c.stopAtB = c.dEdxB >= c.dEdxA;
     else c.stopAtB = !(c.chi2muR >= 0 && (c.chi2muF < 0 || c.chi2muR < c.chi2muF));
     c.dirYStop = c.stopAtB ? (b - a).Unit().Y() : (a - b).Unit().Y();
+    { double cm, cmO; c.chi2muTrim = Chi2BestTrim(p, 13, c.stopAtB, cm); c.chi2muTrimCm = cm;
+      const double other = Chi2BestTrim(p, 13, !c.stopAtB, cmO);
+      c.chi2muTrimBoth = (other >= 0 && (c.chi2muTrim < 0 || other < c.chi2muTrim)) ? other : c.chi2muTrim; }
     c.clearCosmic = p->IsClearCosmic; c.hasT0 = p->T0 > -900; c.cosmicCriteria = p->CosmicCriteria; c.beamCosmicScore = p->BeamCosmicScore;
     const AnaTrueParticlePD* t = static_cast<const AnaTrueParticlePD*>(p->TrueObject);
     c.tPDG = t ? t->PDG : 0;

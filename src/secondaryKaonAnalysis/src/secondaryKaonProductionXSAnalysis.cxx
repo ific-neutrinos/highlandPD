@@ -256,6 +256,10 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_prange,        "p de rango, hipótesis mu (MeV/c)",                             ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2mu,        "chi2/ndf de mu con la parada en el extremo de mayor dE/dx",    ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2mu_other,  "chi2/ndf de mu con la orientación contraria",                  ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu_min,    "chi2/ndf de mu, el mejor de las dos orientaciones",            ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu_trim,   "chi2/ndf de mu recortando 0-10 cm de la parada, el mejor (muCandUtils::Chi2BestTrim)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu_trimcm, "recorte de cand_chi2mu_trim (cm)",                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_chi2mu_trimboth, "como cand_chi2mu_trim, el mejor de las dos orientaciones",   ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2p,         "chi2/ndf de protón, misma orientación",                        ncand, N);
   AddVarMaxSizeVF (output(), cand_dedx_stop,     "dE/dx medio en los 5 cm de la parada (MeV/cm)",                ncand, N);
   AddVarMaxSizeVF (output(), cand_dedx_start,    "dE/dx medio en los 5 cm del inicio (MeV/cm)",                  ncand, N);
@@ -425,6 +429,11 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_prange,        c.pRange);
     output().FillVectorVar(cand_chi2mu,        (Float_t)muCandCuts::Chi2MuStop(c));
     output().FillVectorVar(cand_chi2mu_other,  (Float_t)muCandCuts::Chi2MuOther(c));
+    { const double s = muCandCuts::Chi2MuStop(c), o = muCandCuts::Chi2MuOther(c);
+      output().FillVectorVar(cand_chi2mu_min, (Float_t)((o >= 0 && (s < 0 || o < s)) ? o : s)); }
+    output().FillVectorVar(cand_chi2mu_trim,   c.chi2muTrim);
+    output().FillVectorVar(cand_chi2mu_trimcm, c.chi2muTrimCm);
+    output().FillVectorVar(cand_chi2mu_trimboth, c.chi2muTrimBoth);
     output().FillVectorVar(cand_chi2p,         (Float_t)muCandCuts::Chi2pStop(c));
     output().FillVectorVar(cand_dedx_stop,     (Float_t)muCandCuts::dEdxStop(c));
     output().FillVectorVar(cand_dedx_start,    (Float_t)muCandCuts::dEdxStart(c));

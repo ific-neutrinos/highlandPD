@@ -165,7 +165,7 @@ public:
     // candidatos (contador ncand)
     ncand,
     cand_pop, cand_level, cand_savemode, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
-    cand_length, cand_prange, cand_chi2mu, cand_chi2mu_other, cand_chi2p, cand_dedx_stop, cand_dedx_start,
+    cand_length, cand_prange, cand_chi2mu, cand_chi2mu_other, cand_chi2mu_min, cand_chi2mu_trim, cand_chi2mu_trimcm, cand_chi2mu_trimboth, cand_chi2p, cand_dedx_stop, cand_dedx_start,
     cand_faces_stop, cand_faces_start, cand_axis_min, cand_vtx_min, cand_slice_min,
     cand_cnn_trk, cand_cnn_em, cand_cnn_michel, cand_clearcosmic, cand_cosmiccrit,
     cand_start, cand_stop, cand_cosbeam, cand_diry_stop, cand_trmean, cand_trmean_body, cand_intpeak, cand_intpeak_rr,
