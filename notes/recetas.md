@@ -59,11 +59,31 @@ LIST=retry_<wf>.txt FILES_PER_JOB=1 SITES=US_FNAL-FermiGrid ./submit.sh mc <N> $
 ## 4. Lista de las salidas y validación
 
 Las macros se corren sobre la lista de **salidas** (minitrees), no sobre `filelist_*.txt` (que son las entradas de
-SAM). Comprobar cómo se hizo `mc_big19.txt` (rutas `/pnfs` o URLs xrootd) y hacerla igual, p. ej.:
+SAM). **Siempre con URLs xrootd**, no con rutas `/pnfs`: las macros leen lo que diga la lista, y con rutas `/pnfs`
+leerían por el montaje NFS de dCache. Por xrootd, ~7 eventos/s por macro (una pasada entera, 1,5-2 h):
 
 ```bash
-ls /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha>/minitree_*.root > mc_<nombre>.txt
+ls /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha>/minitree_*.root \
+  | sed 's|^/pnfs/|root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr/|' > mc_<nombre>.txt
+head -1 mc_<nombre>.txt; wc -l mc_<nombre>.txt   # root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr/dune/...; nº de ficheros
 ```
+
+Se puede correr sobre scratch sin esperar a persistent. Cuando ya esté en persistent, rehacer la lista con
+`persistent` en lugar de `scratch` (el scratch se purga). El aviso `Plugin version SecClnt ... secztn` de xrootd es
+inofensivo.
+
+Macros que se corren sobre cada muestra nueva (dentro de tmux; las de una sola pasada, con `&` y su log):
+
+```bash
+root -l -b -q 'test/phase2/count_module_minitrees.C("mc_<nombre>.txt")' > count_<nombre>.log 2>&1 &
+root -l -b -q 'test/phase2/kaon_origin_minitrees.C("mc_<nombre>.txt")' > kaon_origin_<nombre>.log 2>&1 &
+root -l -b -q 'test/phase2/kaon_acceptance_minitrees.C("mc_<nombre>.txt","kaon_acceptance_<nombre>.root")' > kaon_acceptance_<nombre>.log 2>&1 &
+root -l -b -q 'test/phase2/pimu_endcharge.C("mc_<nombre>.txt")' > pimu_endcharge_<nombre>.log 2>&1 &
+test/phase2/run_xs_parallel.sh mc_<nombre>.txt xs_<nombre>.root 8              # análisis (paso 6)
+test/phase2/run_skim_parallel.sh mc_<nombre>.txt truth_skim_<nombre>.root 8    # truth skim, ~40 kB/evento
+```
+
+Traer a local los `.root` (salvo los trozos) y los `.log`. Si la máquina va justa, menos trozos (4).
 
 Validación (en highlandPD, con su entorno):
 
