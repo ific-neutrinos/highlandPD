@@ -15,7 +15,7 @@
 // seguidos; el primero es el de la población) permiten dibujar cualquier variable en cualquier etapa:
 //   ana->Draw("cand_prange", "cand_pop==0 && cand_level>=6")
 // accum_level[rama]: el del mejor candidato de cada población (+1 por el corte "hay algún candidato").
-// Categorías por candidato: "candmu" (mu de K por origen de la K, pi, p, mu cósmico, EM) y las estándar con prefijo
+// Categorías por candidato: "candmu" (signal muons en capas A / B no A / C no B, pi, p, mu cósmico, EM) y las estándar con prefijo
 // "cand" (candparticle, ...).
 // MC: los eventos con un K+ secundario tienen volcado completo (fulldump = 1: todos los PFParticles completos). El fondo
 // debe tomarse de los eventos normales (fulldump == 0), escalado por (eventos totales)/(normales); la señal, de todos.
@@ -89,7 +89,8 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   /// NMAXMUCANDIDATES, primero los de mayor nivel en la cadena (a igual nivel, en el orden original)
   std::vector<int> SavedCandidates() const;
 
-  /// Categoría true de un candidato (código de la categoría "candmu"): los signal muons separados por el origen de su K
+  /// Categoría true de un candidato (código de la categoría "candmu"): los signal muons en capas excluyentes, 1 señal A,
+  /// 2 señal B que no es A, 3 señal C que no es B; el fondo con su PDG
   static int CandidateCategory(const muCandUtils::Candidate& c);
 
   /// Categoría true de un candidato para una medida (muCandUtils::kMeasC, kMeasB, kMeasA; categorías "candsigC",

@@ -97,10 +97,12 @@ bool secondaryKaonProductionXSAnalysis::Initialize(){
   // candidatos a mu: categorías estándar (candparticle, ...) y la propia (candmu)
   anaUtils::AddStandardObjectCategories("cand", ncand, "ncand", 1);
   {
-    std::string types[] = {"#mu de K (A)", "#mu de K (secundaria)", "#mu de K (K^{+} del haz)", "#mu de K (pileup)", "#mu de K (cadena cortada)",
-                           "#pi^{#pm}", "p", "#mu c#acute{o}smico", "e, #gamma", NAMEOTHER, NAMENOTRUTH};
-    int codes[]          = {1, 2, 3, 4, 5, 211, 2212, 13, 11, CATOTHER, CATNOTRUTH};
-    int colors[]         = {2, 46, 6, 28, 30, 4, 8, 7, 5, COLOTHER, COLNOTRUTH};
+    // signal muons en capas excluyentes (cada candidato un solo código): A; B que no es A; C que no es B.
+    // La señal de cada medida es una unión de capas: A = {1}, B = {1, 2}, C = {1, 2, 3}
+    std::string types[] = {"signal A", "signal B (not A)", "signal C (not B)",
+                           "#pi^{#pm}", "p", "cosmic #mu", "e, #gamma", NAMEOTHER, NAMENOTRUTH};
+    int codes[]          = {1, 2, 3, 211, 2212, 13, 11, CATOTHER, CATNOTRUTH};
+    int colors[]         = {2, 46, 28, 4, 8, 7, 5, COLOTHER, COLNOTRUTH};
     const int N = sizeof(types)/sizeof(types[0]);
     std::reverse(types, types + N); std::reverse(codes, codes + N); std::reverse(colors, colors + N);
     anaUtils::_categ->AddObjectCategory("candmu", ncand, "ncand", N, types, codes, colors, 1, -(Int_t)secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES);
@@ -666,13 +668,9 @@ int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Cand
 
   if(c.tPDG == 0)return CATNOTRUTH;
   if(c.tSignalMuon){
-    switch(c.tKOrigin){
-      case 0: case 1: return 1;   // medida A (primera interacción del haz que dispara)
-      case 2:         return 2;   // interacción secundaria
-      case 3:         return 3;   // K+ del haz
-      case 6:         return 4;   // otra raíz: pileup del haz
-      default:        return 5;   // cadena cortada
-    }
+    if(muCandUtils::IsSignalOf(muCandUtils::kMeasA, true, c.tKOrigin))return 1;   // A
+    if(muCandUtils::IsSignalOf(muCandUtils::kMeasB, true, c.tKOrigin))return 2;   // B que no es A (secundaria, K del haz)
+    return 3;                                                                      // C que no es B (pileup, cadena cortada)
   }
   if(std::abs(c.tPDG) == 211)return 211;
   if(std::abs(c.tPDG) == 2212)return 2212;

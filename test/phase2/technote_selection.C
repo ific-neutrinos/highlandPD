@@ -3,10 +3,16 @@
 // todos los cortes anteriores (cand_level >= índice del corte - 1), apilada por la categoría true, con la línea del
 // corte. Sobre el microtree "ana" del análisis secondaryKaonProductionXS, con las DrawingTools de highland.
 //
-//   root -l -b -q 'test/phase2/technote_selection.C("xs_v100.root", "<technote>/4_selection/figs", "candsigB")'
+//   root -l 'test/phase2/technote_selection.C("xs_v100.root", "<technote>/4_selection/figs")'
 //
-// categ: candsigC, candsigB o candsigA (señal de cada medida; microtrees desde 0e2fef3), o candmu (signal muons por
-// origen; en microtrees anteriores es la definición antigua). Imprime las purezas al final de cada cadena.
+// Con waitplots = true (abajo) se para en cada figura: mirarla y hacer doble clic en el canvas (o pulsar una tecla con
+// el canvas activo) para pasar a la siguiente. Para generarlas todas sin parar, waitplots = false o root -b.
+//
+// categ: candmu por defecto (signal muons en capas excluyentes: A, B que no es A, C que no es B; microtrees desde
+// el commit de las capas), o candsigC/B/A (señal de una sola medida). En microtrees anteriores candmu es la
+// clasificación antigua por origen. Imprime las purezas al final de cada cadena.
+
+bool waitplots = true;
 
 struct SelCut {
   int index;              // posición del corte en la cadena de su población (1 = el corte de población)
@@ -31,10 +37,11 @@ static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int
   TLatex tt; tt.SetNDC(); tt.SetTextSize(0.04);
   tt.DrawLatex(0.15, 0.94, Form("#bf{DUNE:ProtoDUNE-SP} simulation, %s the beam slice", pop == 0 ? "in" : "out of"));
   gPad->RedrawAxis(); gPad->Update();
+  if(waitplots && !gROOT->IsBatch()){ gPad->Update(); gPad->WaitPrimitive(); }
   gPad->Print(Form("%s/sel_%s_%02d_%s.pdf", outdir.c_str(), popTag.c_str(), c.index, c.name.c_str()));
 }
 
-int technote_selection(const char* in, const char* outdir, const char* categ = "candsigB"){
+int technote_selection(const char* in, const char* outdir, const char* categ = "candmu"){
   TFile* f = TFile::Open(in);
   if(!f || f->IsZombie()){ std::cerr << "No se puede abrir " << in << std::endl; return -1; }
   TTree* mc = (TTree*)f->Get("ana");
