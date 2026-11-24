@@ -153,6 +153,18 @@ namespace muCandUtils {
     mA = nA ? sA/nA : -1; mB = nB ? sB/nB : -1;
   }
 
+  // Hits propios (plano 2) con CNN de Michel > 0,5 a < kBragg cm del extremo atB (B = final de Pandora, RR pequeño;
+  // A = inicio, RR cerca de RRMax): el Michel que Pandora mete en la traza del mu no aparece en los hits de alrededor
+  inline int OwnMichelHits(const AnaParticlePD* p, bool atB){
+    const double L = RRMax(p);
+    int n = 0;
+    for(const AnaHitPD& h : p->Hits[2]){
+      if(h.ResidualRange < 0 || h.CNN[2] <= 0.5)continue;
+      if(atB ? h.ResidualRange < kBragg : h.ResidualRange > L - kBragg)n++;
+    }
+    return n;
+  }
+
   // Pico de Bragg interior: máximo de la media de 5 hits consecutivos (plano 2, por residual range)
   // con todos a > kBragg cm de los dos extremos. Trazas K+mu fundidas: el pico de la K a ~54 cm del
   // final del mu
@@ -501,6 +513,8 @@ namespace muCandUtils {
     // añadidas el 24-nov: chi2 de mu recortando la parada (Chi2BestTrim) con la parada elegida (trim, trimCm) y el
     // mejor de las dos orientaciones (trimBoth); -1 sin chi2
     Float_t chi2muTrim, chi2muTrimCm, chi2muTrimBoth;
+    // añadidas el 24-nov: Michel en los hits propios de la parada (CNN media y hits con CNN > 0,5 a < kBragg cm)
+    Float_t michelOwnStop; Int_t nMichelOwnStop;
     // truth
     Int_t tPDG, tParentPDG, tProcStart, tOrigin, tFromBeam, tSignal, tGen, tFromBeamK; Float_t tKMomEnd, tPur, tEff, tLength;
     Int_t tSignalMuon = 0;   // signal muon (IsSignalMuon)
@@ -679,6 +693,8 @@ namespace muCandUtils {
     { double cm, cmO; c.chi2muTrim = Chi2BestTrim(p, 13, c.stopAtB, cm); c.chi2muTrimCm = cm;
       const double other = Chi2BestTrim(p, 13, !c.stopAtB, cmO);
       c.chi2muTrimBoth = (other >= 0 && (c.chi2muTrim < 0 || other < c.chi2muTrim)) ? other : c.chi2muTrim; }
+    c.michelOwnStop = c.stopAtB ? c.michelOwnB : c.michelOwnA;
+    c.nMichelOwnStop = OwnMichelHits(p, c.stopAtB);
     c.clearCosmic = p->IsClearCosmic; c.hasT0 = p->T0 > -900; c.cosmicCriteria = p->CosmicCriteria; c.beamCosmicScore = p->BeamCosmicScore;
     const AnaTrueParticlePD* t = static_cast<const AnaTrueParticlePD*>(p->TrueObject);
     c.tPDG = t ? t->PDG : 0;

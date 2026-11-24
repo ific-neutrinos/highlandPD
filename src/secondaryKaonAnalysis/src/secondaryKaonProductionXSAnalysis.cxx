@@ -262,6 +262,8 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_chi2mu_trim,   "chi2/ndf de mu recortando 0-10 cm de la parada, el mejor (muCandUtils::Chi2BestTrim)", ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2mu_trimcm, "recorte de cand_chi2mu_trim (cm)",                             ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2mu_trimboth, "como cand_chi2mu_trim, el mejor de las dos orientaciones",   ncand, N);
+  AddVarMaxSizeVF (output(), cand_michel_own,    "CNN Michel media de los hits propios a < 5 cm de la parada",  ncand, N);
+  AddVarMaxSizeVI (output(), cand_nmichel_own,   "hits propios con CNN Michel > 0,5 a < 5 cm de la parada",     ncand, N);
   AddVarMaxSizeVF (output(), cand_chi2p,         "chi2/ndf de protón, misma orientación",                        ncand, N);
   AddVarMaxSizeVF (output(), cand_dedx_stop,     "dE/dx medio en los 5 cm de la parada (MeV/cm)",                ncand, N);
   AddVarMaxSizeVF (output(), cand_dedx_start,    "dE/dx medio en los 5 cm del inicio (MeV/cm)",                  ncand, N);
@@ -440,6 +442,8 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_chi2mu_trim,   c.chi2muTrim);
     output().FillVectorVar(cand_chi2mu_trimcm, c.chi2muTrimCm);
     output().FillVectorVar(cand_chi2mu_trimboth, c.chi2muTrimBoth);
+    output().FillVectorVar(cand_michel_own,    c.michelOwnStop);
+    output().FillVectorVar(cand_nmichel_own,   c.nMichelOwnStop);
     output().FillVectorVar(cand_chi2p,         (Float_t)muCandCuts::Chi2pStop(c));
     output().FillVectorVar(cand_dedx_stop,     (Float_t)muCandCuts::dEdxStop(c));
     output().FillVectorVar(cand_dedx_start,    (Float_t)muCandCuts::dEdxStart(c));

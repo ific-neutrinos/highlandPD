@@ -251,7 +251,9 @@ class MuCandRangeMomCut: public MuCandidateCutBase{
 class MuCandMichelHitsCut: public MuCandidateCutBase{
  public:
   MuCandMichelHitsCut(int min = muCandCuts::kMichelHitsMin, int pop = 0, int index = 0): MuCandidateCutBase(pop, index), _min(min){}
-  bool PassCandidate(const muCandUtils::Candidate& c) const { return c.arNMichel[1] < -900 ? c.cnnMichel > 0.02 : c.arNMichel[1] >= _min; }
+  // Sin hit de calorimetría en la parada (arNMichel = -1: showers, partículas en resumen) no se pueden contar los hits
+  // de alrededor: se usa la CNN de Michel media de la partícula (hasta el 24-nov solo con -999, que no se daba)
+  bool PassCandidate(const muCandUtils::Candidate& c) const { return c.arNMichel[1] < 0 ? c.cnnMichel > 0.02 : c.arNMichel[1] >= _min; }
   StepBase* MakeClone(){ return new MuCandMichelHitsCut(_min, _pop, _index); }
  private:
   int _min;

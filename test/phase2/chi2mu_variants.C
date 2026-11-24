@@ -42,15 +42,18 @@ int chi2mu_variants(const char* input, int pop = 0){
   B("cand_cnn_michel", cnnMichel); B("cand_start", start); B("cand_stop", stop);
   for(size_t k = 0; k < have.size(); k++)B(have[k].c_str(), var[k].data());
 
+  // Corte de Michel sin hit en la parada (arNMichel -1): desde el 24-nov se usa la CNN media de la partícula (microtrees
+  // con cand_nmichel_own); antes solo con -999, que no se daba
+  const double noHit = t.GetBranch("cand_nmichel_own") ? 0. : -900.;
   // Cortes de después del chi2 de mu, en el orden de secondaryKaonProductionXSSelection
-  auto after = [pop](int i, const Float_t* ds, const Float_t* dst, const Float_t* c2p, const Float_t* pr, const Int_t* nm,
+  auto after = [pop, noHit](int i, const Float_t* ds, const Float_t* dst, const Float_t* c2p, const Float_t* pr, const Int_t* nm,
                      const Float_t* cm, const Float_t (*st)[3], const Float_t (*sp)[3]) -> bool {
     if(!(ds[i] > 3.))return false;
     if(pop == 1 && !(c2p[i] > 80.))return false;
     if(pop == 1 && !(dst[i] > 1.8))return false;
     if(GapDist(st[i][2]) < 5. || GapDist(sp[i][2]) < 5.)return false;
     if(pr[i] < 205. || pr[i] > 240.)return false;
-    if(nm[i] < -900 ? !(cm[i] > 0.02) : !(nm[i] >= 2))return false;
+    if(nm[i] < noHit ? !(cm[i] > 0.02) : !(nm[i] >= 2))return false;
     return true;
   };
   const int lastLevel = pop == 0 ? 8 : 10;
