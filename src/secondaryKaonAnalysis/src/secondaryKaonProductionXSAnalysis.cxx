@@ -248,6 +248,7 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVI (output(), cand_pop,           "población: 0 en la beam slice, 1 fuera",                       ncand, N);
   AddVarMaxSizeVI (output(), cand_level,         "cortes de la cadena de su población que pasa seguidos",        ncand, N);
   AddVarMaxSizeVI (output(), cand_isshower,      "sin traza (longitud de la traza forzada)",                     ncand, N);
+  AddVarMaxSizeVI (output(), cand_savemode,      "cómo lo guardaría el módulo en un evento normal (2 completo, 1 resumen; en los eventos con volcado, emulado)", ncand, N);
   AddVarMaxSizeVI (output(), cand_complete,      "con hits (no en resumen)",                                     ncand, N);
   AddVarMaxSizeVI (output(), cand_isprimary,     "es el primario de Pandora",                                    ncand, N);
   AddVarMaxSizeVI (output(), cand_ndau,          "hijas de Pandora",                                             ncand, N);
@@ -351,6 +352,7 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
     standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
 
   AddVarI  (output(), truemu_korigin,   "origen de la K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4 cadena cortada, 6 otra raíz, -1 no es mu+ de K+)");
+  AddVarFixVI(output(), truemu_level_full, "como accum_level[rama], con toda la información guardada (vista completa de los eventos con volcado)", 2);
   AddVarF  (output(), truemu_mom,       "momento del mu (MeV/c)");
   AddVarF  (output(), truemu_kmomend,   "momento final de la K madre (MeV/c; -1 sin madre K guardada)");
   AddVar3VF(output(), truemu_start,     "inicio del mu (cm)");
@@ -397,7 +399,7 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   output().FillVar(hasvertex, (Int_t)b.HasVertex);
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
-  output().FillVar(nmucand, (Int_t)b.Candidates.size());
+  { Int_t n = 0; for(size_t i = 0; i < b.Candidates.size(); i++)if(b.View[i] == 0)n++; output().FillVar(nmucand, n); }
   {
     const AnaBeamPD* beam = static_cast<AnaBeamPD*>(GetSpill().Beam);
     output().FillVar(beam_species, beam ? BeamSpecies(beam->PDGs) : -1);
@@ -414,6 +416,7 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     const muCandUtils::Candidate& c = b.Candidates[i];
     output().FillVectorVar(cand_pop,           b.Population[i]);
     output().FillVectorVar(cand_level,         b.Level[i]);
+    output().FillVectorVar(cand_savemode,      b.SaveMode[i]);
     output().FillVectorVar(cand_isshower,      c.isShower);
     output().FillVectorVar(cand_complete,      c.complete);
     output().FillVectorVar(cand_isprimary,     c.isPrimary);
@@ -584,6 +587,7 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(){
     // Fill the tree
     output().GetTree(OutputManager::truth)->Fill();
   }
+  _fullLevel.clear();   // es de este spill
 }
 
 //********************************************************************
@@ -638,6 +642,8 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
   const AnaTrueParticleB* beamTrue = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
 
   output().FillVar(truemu_korigin, muCandUtils::KOrigin(&part, beamTrue, byID));
+  { auto it = _fullLevel.find(part.ID);
+    for(int ib = 0; ib < 2; ib++)output().FillVectorVar(truemu_level_full, it == _fullLevel.end() ? 0 : it->second[ib], ib); }
   output().FillVar(truemu_mom, (Float_t)(1000.*part.Momentum));
   auto ik = byID.find(part.ParentID);
   output().FillVar(truemu_kmomend, (Float_t)((ik != byID.end() && ik->second->PDG == 321) ? 1000.*ik->second->MomentumEnd : -1.));
@@ -651,9 +657,10 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
 std::vector<int> secondaryKaonProductionXSAnalysis::SavedCandidates() const{
 //********************************************************************
 
+  // solo la vista normal (la de la selección; ver ToyBoxMuCand::View)
   const ToyBoxMuCand& b = box();
-  std::vector<int> idx(b.Candidates.size());
-  for(size_t i = 0; i < idx.size(); i++)idx[i] = i;
+  std::vector<int> idx;
+  for(size_t i = 0; i < b.Candidates.size(); i++)if(b.View[i] == 0)idx.push_back(i);
   // solo hace falta ordenar si hay más que el máximo: primero los que llegan más lejos en su cadena
   if(idx.size() > secondaryKaonProductionXSAnalysisConstants::NMAXMUCANDIDATES){
     std::stable_sort(idx.begin(), idx.end(), [&b](int x, int y){ return b.Level[x] > b.Level[y]; });
@@ -737,17 +744,24 @@ bool secondaryKaonProductionXSAnalysis::FinalizeConfiguration(){
   if(conf().GetCurrentConfigurationIndex() != ConfigurationManager::default_conf)
     return true;
 
+  // best[vista][rama]: vista 0 la normal (la de la selección), 1 la completa (en los eventos normales, la misma)
   const ToyBoxMuCand& b = box();
+  _fullLevel.clear();
   for(AnaTrueParticleB* t : GetSpill().TrueParticles){
     if(!IsTrueMuFromKaonAtRest(t))continue;
-    int best[2] = {-1, -1};
+    int bestv[2][2] = {{-1, -1}, {-1, -1}};
     for(size_t i = 0; i < b.Candidates.size(); i++){
       const AnaParticlePD* p = b.Candidates[i].part;
       if(!p || !p->TrueObject || p->TrueObject->ID != t->ID)continue;
       const int pop = b.Population[i];
-      best[pop] = std::max(best[pop], b.Level[i]);
-      best[1 - pop] = std::max(best[1 - pop], 0);
+      for(int v = 0; v < 2; v++){
+        if(b.View[i] != v && !(v == 1 && !b.FullDump))continue;
+        bestv[v][pop] = std::max(bestv[v][pop], b.Level[i]);
+        bestv[v][1 - pop] = std::max(bestv[v][1 - pop], 0);
+      }
     }
+    const int* best = bestv[0];
+    for(int ib = 0; ib < 2; ib++)_fullLevel[t->ID][ib] = bestv[1][ib] >= 0 ? 1 + bestv[1][ib] : 0;
     if(t->AccumLevel.size() == 0)t->AccumLevel.resize(sel().GetNEnabledSelections());
     for(std::vector<SelectionBase*>::iterator it = sel().GetSelections().begin(); it != sel().GetSelections().end(); it++){
       if(!(*it)->IsEnabled())continue;

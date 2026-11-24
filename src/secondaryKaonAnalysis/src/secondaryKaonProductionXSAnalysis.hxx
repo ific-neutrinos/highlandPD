@@ -1,6 +1,8 @@
 #ifndef secondaryKaonProductionXSAnalysis_h
 #define secondaryKaonProductionXSAnalysis_h
 
+#include <array>
+#include <map>
 #include "baseAnalysis.hxx"
 #include "ToyBoxMuCand.hxx"
 #include "standardPDTree.hxx"
@@ -17,12 +19,17 @@
 // accum_level[rama]: el del mejor candidato de cada población (+1 por el corte "hay algún candidato").
 // Categorías por candidato: "candmu" (signal muons en capas A / B no A / C no B, pi, p, mu cósmico, EM) y las estándar con prefijo
 // "cand" (candparticle, ...).
-// MC: los eventos con un K+ secundario tienen volcado completo (fulldump = 1: todos los PFParticles completos). El fondo
-// debe tomarse de los eventos normales (fulldump == 0), escalado por (eventos totales)/(normales); la señal, de todos.
+// MC: los eventos con un K+ en la cadena del haz tienen volcado completo (fulldump = 1: todos los PFParticles
+// completos, más de lo que el módulo guarda en un evento normal y en datos). La selección se hace sobre la vista normal
+// de esos eventos (muCandUtils::MakeNormalView: lo que el módulo habría guardado), así que la señal y el fondo se cuentan
+// en todos los eventos, sin escalar, como en datos. cand_savemode dice cómo guardaría el módulo cada candidato en un
+// evento normal (2 completo, 1 resumen). La vista completa no se guarda en cand_* (ver truemu_level_full).
 //
 // Árbol "truth": una entrada por mu+ de desintegración no cósmico con p true en [230, 241] MeV/c (de K+ en reposo),
 // con el origen de su K (truemu_korigin) y accum_level[rama] = 1 + nivel del mejor candidato emparejado en esa rama
-// (0 si no hay candidato emparejado).
+// (0 si no hay candidato emparejado), en la vista normal: la eficiencia que se tendría en datos. truemu_level_full[rama]
+// es lo mismo con toda la información guardada (vista completa de los eventos con volcado; en los demás, igual que
+// accum_level): la diferencia es lo que se pierde porque el módulo guarda en resumen o no guarda.
 namespace secondaryKaonProductionXSAnalysisConstants{
   // Máximo de candidatos guardados por evento. No puede pasar de 100: las categorías por objeto de highland
   // (AddStandardObjectCategories) tienen ese tamaño fijo. Con 500 eventos de MC, el percentil 99 es 80 y el máximo
@@ -89,6 +96,10 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   /// NMAXMUCANDIDATES, primero los de mayor nivel en la cadena (a igual nivel, en el orden original)
   std::vector<int> SavedCandidates() const;
 
+  /// Para el árbol truth: 1 + nivel del mejor candidato emparejado en cada rama, en la vista completa, por ID de la
+  /// partícula true (lo rellena FinalizeConfiguration y lo vacía FillTruthTree)
+  std::map<int, std::array<int, 2>> _fullLevel;
+
   /// Categoría true de un candidato (código de la categoría "candmu"): los signal muons en capas excluyentes, 1 señal A,
   /// 2 señal B que no es A, 3 señal C que no es B; el fondo con su PDG
   static int CandidateCategory(const muCandUtils::Candidate& c);
@@ -153,7 +164,7 @@ public:
     beam_species, beam_truespecies,
     // candidatos (contador ncand)
     ncand,
-    cand_pop, cand_level, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
+    cand_pop, cand_level, cand_savemode, cand_isshower, cand_complete, cand_isprimary, cand_ndau,
     cand_length, cand_prange, cand_chi2mu, cand_chi2mu_other, cand_chi2p, cand_dedx_stop, cand_dedx_start,
     cand_faces_stop, cand_faces_start, cand_axis_min, cand_vtx_min, cand_slice_min,
     cand_cnn_trk, cand_cnn_em, cand_cnn_michel, cand_clearcosmic, cand_cosmiccrit,
@@ -172,7 +183,7 @@ public:
     cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truesignalmuon, cand_truekendmom, cand_truekorigin,
     cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
     // árbol truth
-    truemu_korigin, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
+    truemu_korigin, truemu_level_full, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
     // árbol config
     highlandpd_version,
     enumMicroTreesLast_secondaryKaonProductionXSAnalysis

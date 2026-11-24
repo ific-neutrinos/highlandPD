@@ -8,6 +8,10 @@ ToyBoxMuCand::ToyBoxMuCand():ToyBoxPD(){
   Candidates.clear();
   Population.clear();
   Level.clear();
+  View.clear();
+  SaveMode.clear();
+  FullDump = false;
+  SummaryCopies.clear();
   NPreselected = 0;
   HasVertex = false;
   for(int i = 0; i < 3; i++)VertexPos[i] = -999;
@@ -39,6 +43,10 @@ void ToyBoxMuCand::ResetBase(){
   Candidates.clear();
   Population.clear();
   Level.clear();
+  View.clear();
+  SaveMode.clear();
+  FullDump = false;
+  SummaryCopies.clear();
   NPreselected = 0;
   HasVertex = false;
   for(int i = 0; i < 3; i++)VertexPos[i] = -999;

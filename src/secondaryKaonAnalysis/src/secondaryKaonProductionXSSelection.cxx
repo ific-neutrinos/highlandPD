@@ -77,25 +77,43 @@ bool GetMuCandidatesAction::Apply(AnaEventC& eventC, ToyBoxB& boxB) const{
   const AnaTrueParticleB* beamTrue = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
   const int isMC = event.GetIsMC() ? 1 : 0;
 
-  // Lo que se calcula una vez por evento (beam slice, vértice, nube de puntos 3D, mapas de partículas)
-  muCandUtils::EventContext ctx;
-  muCandUtils::MakeContext(ctx, parts, event.UnassociatedHits, trueParts, beamTrue, isMC);
-  box.HasVertex = ctx.hasVtx;
-  if(ctx.hasVtx){ box.VertexPos[0] = ctx.vtx.X(); box.VertexPos[1] = ctx.vtx.Y(); box.VertexPos[2] = ctx.vtx.Z(); }
-  box.HasTrueVertex = ctx.hasTVtx;
-  if(ctx.hasTVtx){ box.TrueVertexPos[0] = ctx.tvtx.X(); box.TrueVertexPos[1] = ctx.tvtx.Y(); box.TrueVertexPos[2] = ctx.tvtx.Z(); }
+  // Eventos con volcado completo (MC con un K+ en la cadena del haz): la selección se hace sobre la vista normal (lo
+  // que el módulo guardaría en un evento normal, como en datos; muCandUtils::MakeNormalView) y la vista completa se
+  // pasa por los mismos cortes para la eficiencia con toda la información (ToyBoxMuCand::View). Nada se borra del
+  // evento.
+  const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(event.EventInfo);
+  box.FullDump = info && info->FullDump;
+  std::vector<AnaParticlePD*> normal;
+  muCandUtils::MakeNormalView(parts, box.FullDump, normal, box.SummaryCopies);
+  bool hasSlice = false;
+  for(const AnaParticlePD* p : parts)if(p->BeamOrigin){ hasSlice = true; break; }
 
-  // Cada partícula: Compute dice si es candidato (longitud y extremos válidos, p de rango de mu en [100, 600] MeV/c)
-  // y calcula sus variables; después, la preselección geométrica del módulo
-  for(const AnaParticlePD* p : parts){
-    muCandUtils::Candidate c;
-    if(!muCandUtils::Compute(p, ctx, c))continue;
-    box.NPreselected++;
-    // un extremo a >= 10 cm de las caras y uno a <= 150 cm del eje (lo que el módulo guarda completo)
-    if(std::max(c.facesA, c.facesB) < 10 || muCandCuts::AxisMin(c) > 150)continue;
-    box.Candidates.push_back(c);
-    box.Population.push_back(c.inSlice ? 0 : 1);   // a qué rama pertenece
-    box.Level.push_back(0);                          // todavía no ha pasado ningún corte de su rama
+  for(int view = 0; view < (box.FullDump ? 2 : 1); view++){
+    const std::vector<AnaParticlePD*>& vparts = view == 0 ? normal : parts;
+    // Lo que se calcula una vez por evento (beam slice, vértice, nube de puntos 3D, mapas de partículas)
+    muCandUtils::EventContext ctx;
+    muCandUtils::MakeContext(ctx, vparts, event.UnassociatedHits, trueParts, beamTrue, isMC);
+    if(view == 0){
+      box.HasVertex = ctx.hasVtx;
+      if(ctx.hasVtx){ box.VertexPos[0] = ctx.vtx.X(); box.VertexPos[1] = ctx.vtx.Y(); box.VertexPos[2] = ctx.vtx.Z(); }
+      box.HasTrueVertex = ctx.hasTVtx;
+      if(ctx.hasTVtx){ box.TrueVertexPos[0] = ctx.tvtx.X(); box.TrueVertexPos[1] = ctx.tvtx.Y(); box.TrueVertexPos[2] = ctx.tvtx.Z(); }
+    }
+
+    // Cada partícula: Compute dice si es candidato (longitud y extremos válidos, p de rango de mu en [100, 600] MeV/c)
+    // y calcula sus variables; después, la preselección geométrica del módulo
+    for(const AnaParticlePD* p : vparts){
+      muCandUtils::Candidate c;
+      if(!muCandUtils::Compute(p, ctx, c))continue;
+      if(view == 0)box.NPreselected++;
+      // un extremo a >= 10 cm de las caras y uno a <= 150 cm del eje (lo que el módulo guarda completo)
+      if(std::max(c.facesA, c.facesB) < 10 || muCandCuts::AxisMin(c) > 150)continue;
+      box.Candidates.push_back(c);
+      box.Population.push_back(c.inSlice ? 0 : 1);   // a qué rama pertenece
+      box.Level.push_back(0);                          // todavía no ha pasado ningún corte de su rama
+      box.View.push_back(view);
+      box.SaveMode.push_back(muCandUtils::NormalSaveMode(p, hasSlice));
+    }
   }
   return true;
 }
@@ -104,8 +122,11 @@ bool GetMuCandidatesAction::Apply(AnaEventC& eventC, ToyBoxB& boxB) const{
 bool MuCandidateExistsCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
 //**************************************************
 
+  // solo la vista normal (la vista completa de los eventos con volcado no cuenta para el evento)
   (void)event;
-  return !static_cast<ToyBoxMuCand*>(&boxB)->Candidates.empty();
+  const ToyBoxMuCand& box = *static_cast<ToyBoxMuCand*>(&boxB);
+  for(size_t i = 0; i < box.Candidates.size(); i++)if(box.View[i] == 0)return true;
+  return false;
 }
 
 //**************************************************
@@ -116,7 +137,8 @@ bool MuCandidateCutBase::Apply(AnaEventC& event, ToyBoxB& boxB) const{
   // rama _pop. Un candidato "llega" a este corte si es de esa rama y ha pasado todos los anteriores, es decir, si su
   // nivel es _index - 1. Si además pasa este corte, su nivel sube a _index. El evento pasa el corte si al menos un
   // candidato llega a _index. (Los candidatos que se quedaron atrás conservan su nivel: es lo que se guarda en
-  // cand_level.)
+  // cand_level.) Los candidatos de la vista completa de los eventos con volcado (View 1) suben de nivel igual, pero
+  // no cuentan para que el evento pase.
   (void)event;
   ToyBoxMuCand& box = *static_cast<ToyBoxMuCand*>(&boxB);
   bool anyPasses = false;
@@ -125,7 +147,7 @@ bool MuCandidateCutBase::Apply(AnaEventC& event, ToyBoxB& boxB) const{
     if(box.Level[i] != _index - 1)continue;          // no pasó algún corte anterior de esta rama
     if(PassCandidate(box.Candidates[i])){            // el corte concreto (clase derivada)
       box.Level[i] = _index;
-      anyPasses = true;
+      if(box.View[i] == 0)anyPasses = true;
     }
   }
   return anyPasses;

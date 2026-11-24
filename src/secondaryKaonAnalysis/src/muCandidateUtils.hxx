@@ -8,6 +8,11 @@
 // Uso: MakeContext una vez por evento (partículas del bunch, hits no asociados, truth, haz) y Compute para cada
 // partícula; Compute devuelve false si la partícula no es candidato (preselección: longitud y extremos válidos, p de
 // rango de mu en [kPMin, kPMax] MeV/c). Las variables y su significado, en Candidate.
+//
+// Eventos con volcado completo (AnaEventInfoPD::FullDump, MC con un K+ en la cadena del haz): el módulo guarda
+// completos todos los PFParticles, más de lo que guardaría en un evento normal (y en datos). Para tratarlos como uno
+// normal sin perder nada, MakeNormalView da la "vista normal" del evento (lo que el módulo habría guardado), sin
+// tocar el spill; la vista completa es la lista original. Ver NormalSaveMode.
 #include "pdDataClasses.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "TVector3.h"
@@ -17,6 +22,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -474,6 +480,51 @@ namespace muCandUtils {
     // mismas distorsiones (SCE) que las trazas: sirve para saber qué daría un buscador de vértice perfecto.
     TVector3 tvtx; bool hasTVtx = false;
   };
+
+  // ---- Vista normal de los eventos con volcado completo ----
+  //
+  // Cómo guardaría el módulo el PFParticle p en un evento normal, con la configuración de la producción (CosmicsMode
+  // 2, MuCandidates, MuCandidatesWithoutBeamSlice; CreateHighlandMiniTree.fcl): la beam slice, completa; con beam
+  // slice en el evento, las jerarquías de cósmicos completas si están cerca de la beam slice (bit 1 de CosmicCriteria)
+  // o tienen un candidato a mu (bit 4), y en resumen las demás; sin beam slice, solo las jerarquías con un candidato a
+  // mu, completas. CosmicCriteria es de la jerarquía entera (las hijas lo heredan) y el módulo lo rellena también en
+  // los eventos con volcado. Sin CosmicCriteria (-999 fuera de la beam slice: minitrees anteriores o CosmicsMode < 2)
+  // no se sabe: se deja completa.
+  enum NormalSave { kNotSaved = 0, kSummary = 1, kComplete = 2 };
+  inline int NormalSaveMode(const AnaParticlePD* p, bool hasSlice){
+    if(p->BeamOrigin)return kComplete;
+    const int crit = p->CosmicCriteria;
+    if(crit < 0)return kComplete;
+    if(hasSlice)return (crit & (AnaParticlePD::kCosmicNearBeamSlice | AnaParticlePD::kCosmicMuCandidate)) ? kComplete : kSummary;
+    return (crit & AnaParticlePD::kCosmicMuCandidate) ? kComplete : kNotSaved;
+  }
+
+  // Copia de p como la guarda el módulo en resumen (fFillDetail = false en CreateHighlandMiniTree): sin hits (ni
+  // HitsNoCalo), puntos de trayectoria, space points ni traza forzada, y sin pureza ni completitud. Conserva el resto
+  // (NHits, extremos, longitud, chi2, CNN, TrueObject...).
+  inline std::shared_ptr<AnaParticlePD> SummaryCopy(const AnaParticlePD* p){
+    std::shared_ptr<AnaParticlePD> s(const_cast<AnaParticlePD*>(p)->Clone());
+    for(int i = 0; i < 3; i++){ s->Hits[i].clear(); s->HitsNoCalo[i].clear(); }
+    s->TrjPoints.clear(); s->SpacePoints.clear(); s->ForcedTrack.clear();
+    s->TruePur = -999; s->TrueEff = -999;   // kFloatUnassigned (no está en ninguna cabecera)
+    return s;
+  }
+
+  // Vista normal de un evento con volcado completo: las partículas que el módulo guardaría completas, tal cual; las
+  // que guardaría en resumen, sustituidas por su SummaryCopy (que se guardan en copies, para que vivan lo que la
+  // vista); las que no guardaría, fuera. El orden es el de parts. En un evento normal, la vista es parts.
+  inline void MakeNormalView(const std::vector<AnaParticlePD*>& parts, bool fullDump, std::vector<AnaParticlePD*>& view,
+                             std::vector<std::shared_ptr<AnaParticlePD>>& copies){
+    view.clear();
+    if(!fullDump){ view = parts; return; }
+    bool hasSlice = false;
+    for(const AnaParticlePD* p : parts)if(p->BeamOrigin){ hasSlice = true; break; }
+    for(AnaParticlePD* p : parts){
+      const int mode = NormalSaveMode(p, hasSlice);
+      if(mode == kComplete)view.push_back(p);
+      else if(mode == kSummary){ copies.push_back(SummaryCopy(p)); view.push_back(copies.back().get()); }
+    }
+  }
 
   inline void MakeContext(EventContext& ctx, const std::vector<AnaParticlePD*>& parts, const std::vector<AnaHitPD>& unassoc,
                           const std::vector<AnaTrueParticleB*>& trueParts, const AnaTrueParticleB* beamTrue, int isMC){
