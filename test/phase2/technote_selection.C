@@ -30,8 +30,9 @@ static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int
   const std::string sel = Form("cand_pop==%d && cand_level>=%d", pop, c.index - 1);
   draw.SetTitleX(c.title);
   const bool logy = logplots || c.logy;
-  draw.SetLogY(logy);
-  draw.SetMinY(logy ? 0.5 : 0);
+  // el orden importa: SetLogY(true) no hace nada si el mínimo es <= 0, y SetMinY(0) no hace nada en escala log
+  if(logy){ draw.SetMinY(0.5); draw.SetLogY(true); }
+  else    { draw.SetLogY(false); draw.SetMinY(0); }
   draw.Draw(mc, c.var, c.nbins, c.xmin, c.xmax, categ, sel, "", "UNDER OVER");
   if(c.lo > -998 && c.hi > -998)draw.DrawCutLinesVertical(c.lo, c.hi, true);
   else if(c.lo > -998)draw.DrawCutLineVertical(c.lo, true, "r");
