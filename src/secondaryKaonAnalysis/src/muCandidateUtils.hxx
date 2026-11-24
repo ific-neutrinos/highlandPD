@@ -62,50 +62,60 @@ namespace muCandUtils {
   }
   inline bool HasHits(const AnaParticlePD* p){ return !p->Hits[2].empty() || p->NHits > 0; }
 
+  // Los dos extremos en la escala del rango residual (RR) de la calorimetría (plano 2): B, el final de Pandora, en
+  // RR = 0; A, el inicio, en RRMax, el RR del hit más lejano. No se usa p->Length: es la longitud reconstruida sin
+  // corregir de SCE, y el RR de los hits está corregido (y la calorimetría puede no tener hits en los primeros cm de
+  // la traza): RRMax - Length va de -14 a +14 cm (percentiles 5 y 95, trazas de 30-90 cm), y con Length la ventana
+  // del extremo A quedaba vacía en el 14 % de las trazas (corregido el 24-nov). -1 sin hits con RR.
+  inline double RRMax(const AnaParticlePD* p){
+    double m = -1;
+    for(const AnaHitPD& h : p->Hits[2])if(h.ResidualRange >= 0 && h.ResidualRange > m)m = h.ResidualRange;
+    return m;
+  }
+
+  // Hits con dE/dx utilizable (los demás se ignoran en todas las variables de dE/dx y chi2)
+  inline bool GooddEdx(const AnaHitPD& h){ return h.dEdx > 0 && h.dEdx <= 100 && h.ResidualRange >= 0; }
+
   // dE/dx medio de los hits del plano 2 a < kBragg cm de cada extremo (por residual range: RR
-  // pequeño = cerca de PositionEnd, en la convención de la calorimetría de Pandora). -1 sin hits
+  // pequeño = cerca de PositionEnd, en la convención de la calorimetría de Pandora; el extremo A, en RRMax). -1 sin hits
   inline void EndsdEdx(const AnaParticlePD* p, double& dEdxA, double& dEdxB, int& nA, int& nB){
     double sA = 0, sB = 0; nA = nB = 0;
-    const double L = p->Length;
+    const double L = RRMax(p);
     for(const AnaHitPD& h : p->Hits[2]){
-      if(h.dEdx <= 0 || h.dEdx > 100 || h.ResidualRange < 0)continue;
+      if(!GooddEdx(h))continue;
       if(h.ResidualRange < kBragg){ sB += h.dEdx; nB++; }
       if(h.ResidualRange > L - kBragg){ sA += h.dEdx; nA++; }
     }
     dEdxA = nA ? sA/nA : -1; dEdxB = nB ? sB/nB : -1;
   }
 
-  // chi2 de una hipótesis con la orientación de Pandora (fwd: se para en PositionEnd) y al revés
-  // (rev: residual range RR' = L - RR, se para en PositionStart). first = chi2/ndf (-1 si no hay)
+  inline double Chi2Trimmed(const AnaParticlePD* p, int pdg, bool stopAtB, double trim);
+
+  // chi2/ndf de una hipótesis con la orientación de Pandora (fwd: se para en PositionEnd) y al revés
+  // (rev: RR' = RRMax - RR, se para en PositionStart). -1 si no hay. Con Chi2Trimmed (sin recorte), no con
+  // pdAnaUtils::Chi2PID: mismo filtro de hits (GooddEdx) y misma referencia del extremo A que el resto de variables
   inline void Chi2Both(const AnaParticlePD* p, int pdg, double& fwd, double& rev){
-    fwd = rev = -1;
-    if(p->Hits[2].size() < 3)return;
-    const std::pair<double,int> f = pdAnaUtils::Chi2PID(*p, pdg, 1e9);
-    if(f.second > 0)fwd = f.first/f.second;
-    AnaParticlePD* q = static_cast<AnaParticlePD*>(const_cast<AnaParticlePD*>(p)->Clone());
-    for(AnaHitPD& h : q->Hits[2])if(h.ResidualRange >= 0)h.ResidualRange = std::max(0.f, Float_t(p->Length - h.ResidualRange));
-    const std::pair<double,int> r = pdAnaUtils::Chi2PID(*q, pdg, 1e9);
-    if(r.second > 0)rev = r.first/r.second;
-    delete q;
+    fwd = Chi2Trimmed(p, pdg, true, 0);
+    rev = Chi2Trimmed(p, pdg, false, 0);
   }
 
   // chi2/ndf de la hipótesis pdg con la parada en B (stopAtB, el final de Pandora) o en A, quitando los hits a menos
   // de trim cm de la parada y restando trim al rango residual de los demás: la parada se mueve trim cm hacia dentro.
-  // Para trazas con hits de otra partícula pegados al final (el Michel) o que se pasan de la parada. Misma fórmula que
+  // Para trazas con hits de otra partícula pegados al final (el Michel) o que se pasan de la parada. Fórmula de
   // pdAnaUtils::Chi2PID (plano 2, sin el primer ni el último hit en el orden guardado, plantilla de dE/dx frente al
-  // rango residual, resolución en dE/dx de la calorimetría); con trim = 0 da lo mismo que Chi2Both. -1 sin hits.
+  // rango residual, resolución en dE/dx de la calorimetría), pero solo con hits GooddEdx (Chi2PID solo quita dE/dx >
+  // 1000 y -999) y la orientación contraria referida a RRMax. Con trim = 0, el chi2 de Chi2Both. -1 sin hits.
   inline double Chi2Trimmed(const AnaParticlePD* p, int pdg, bool stopAtB, double trim){
     const std::vector<AnaHitPD>& hits = p->Hits[2];
     if(hits.size() < 3)return -1;
     TProfile* profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
     if(!profile)return -1;
+    const double L = stopAtB ? 0 : RRMax(p);
     double chi2 = 0; int npt = 0;
     for(size_t i = 1; i + 1 < hits.size(); i++){
       const AnaHitPD& h = hits[i];
-      if(h.dEdx > 1000. || h.dEdx == -999)continue;
-      double rr = h.ResidualRange;
-      if(rr >= 0 && !stopAtB)rr = std::max(0.f, Float_t(p->Length - rr));   // como Chi2Both (orientación contraria)
-      if(rr < 0)continue;
+      if(!GooddEdx(h))continue;
+      double rr = stopAtB ? h.ResidualRange : std::max(0., L - h.ResidualRange);
       if(trim > 0){ if(rr < trim)continue; rr -= trim; }
       const int bin = profile->FindBin(rr);
       if(bin < 1 || bin > profile->GetNbinsX())continue;
@@ -134,10 +144,11 @@ namespace muCandUtils {
   // Puntuación CNN de Michel media de los hits propios (plano 2) a < kBragg cm de cada extremo
   inline void OwnMichel(const AnaParticlePD* p, double& mA, double& mB){
     double sA = 0, sB = 0; int nA = 0, nB = 0;
+    const double L = RRMax(p);
     for(const AnaHitPD& h : p->Hits[2]){
       if(h.ResidualRange < 0 || h.CNN[2] < 0)continue;
       if(h.ResidualRange < kBragg){ sB += h.CNN[2]; nB++; }
-      if(h.ResidualRange > p->Length - kBragg){ sA += h.CNN[2]; nA++; }
+      if(h.ResidualRange > L - kBragg){ sA += h.CNN[2]; nA++; }
     }
     mA = nA ? sA/nA : -1; mB = nB ? sB/nB : -1;
   }
@@ -148,11 +159,12 @@ namespace muCandUtils {
   inline void InteriorPeak(const AnaParticlePD* p, double& peak, double& rrPeak){
     peak = -1; rrPeak = -1;
     std::vector<std::pair<double,double>> h;   // (RR, dE/dx)
-    for(const AnaHitPD& x : p->Hits[2])if(x.ResidualRange >= 0 && x.dEdx > 0 && x.dEdx < 100)h.push_back({x.ResidualRange, x.dEdx});
+    for(const AnaHitPD& x : p->Hits[2])if(GooddEdx(x))h.push_back({x.ResidualRange, x.dEdx});
     std::sort(h.begin(), h.end());
     const int w = 5;
+    const double L = RRMax(p);
     for(int i = 0; i + w <= int(h.size()); i++){
-      if(h[i].first < kBragg || h[i+w-1].first > p->Length - kBragg)continue;
+      if(h[i].first < kBragg || h[i+w-1].first > L - kBragg)continue;
       double m = 0; for(int k = 0; k < w; k++)m += h[i+k].second; m /= w;
       if(m > peak){ peak = m; rrPeak = h[i+w/2].first; }
     }
@@ -223,9 +235,10 @@ namespace muCandUtils {
   // body: sin los kBragg cm de cada extremo. -1 con menos de 5 hits
   inline double TruncMean(const AnaParticlePD* p, bool body){
     std::vector<double> v;
+    const double L = RRMax(p);
     for(const AnaHitPD& h : p->Hits[2]){
-      if(h.dEdx <= 0 || h.dEdx > 100 || h.ResidualRange < 0)continue;
-      if(body && (h.ResidualRange < kBragg || h.ResidualRange > p->Length - kBragg))continue;
+      if(!GooddEdx(h))continue;
+      if(body && (h.ResidualRange < kBragg || h.ResidualRange > L - kBragg))continue;
       v.push_back(h.dEdx);
     }
     if(v.size() < 5)return -1;
