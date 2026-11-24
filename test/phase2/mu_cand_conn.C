@@ -25,7 +25,7 @@ namespace mconn {
                                  "pi", "p", "mu cósmico", "EM", "resto"};
 
   bool IsMuK(const C& c){
-    return c.tPDG == -13 && c.tProcStart == 2 && c.tOrigin != 2 && c.tMom > 230 && c.tMom < 241 && (c.tParentPDG == 321 || c.tParentPDG == 0);
+    return c.tPDG == -13 && c.tProcStart == 2 && c.tOrigin != 2 && c.tMom > 230 && c.tMom < 241 && c.tParentPDG == 321;
   }
   // clase; -1 si no se usa (fondo de eventos con volcado)
   int Class(const C& c){

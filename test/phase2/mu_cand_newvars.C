@@ -138,7 +138,7 @@ int mu_cand_newvars(const char* in, const char* outdir = ".", long nEvents = 0, 
     std::cout << std::endl;
   }
   std::cout << "  tKOrigin: 0 primera interacción, 1 primera con K+ -> K+, 2 secundaria, 3 K+ del haz, 4 cadena cortada," << std::endl
-            << "            5 madre del mu no guardada, 6 otra raíz, -999 rama ausente" << std::endl;
+            << "            6 otra raíz, -999 rama ausente" << std::endl;
 
   // AUCs
   std::cout << std::endl << "Separación (max(AUC, 1 - AUC) y sentido de la señal; 0,5 = nada). S/B: señal frente a todo el fondo;"

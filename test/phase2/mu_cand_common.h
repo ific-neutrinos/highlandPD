@@ -81,11 +81,11 @@ namespace mucut {
   const char* kGroupName[kNGroups] = {"señal", "mu cósmico", "protón", "pi+-", "EM", "resto"};
 
   // Señal ampliada: además de los mu+ de K+ de la cadena del haz (tSignal), cualquier mu+ no cósmico creado
-  // en una desintegración cuya madre es un K+ o no está guardada (K de interacciones secundarias cuya
-  // cadena no se guarda en la truth). Para estos no se sabe si la K estaba en reposo.
+  // en una desintegración cuya madre es un K+ (sin la ventana de momento: no se sabe si la K estaba en
+  // reposo). Una madre no guardada no cuenta: la señal exige madre K+.
   bool gBroadSignal = false;
   bool BroadSignal(const In& x){
-    return x.tPDG == -13 && x.tOrigin != 2 && x.tProcStart == 2 && (x.tParentPDG == 321 || x.tParentPDG == 0);
+    return x.tPDG == -13 && x.tOrigin != 2 && x.tProcStart == 2 && x.tParentPDG == 321;
   }
 
   // Si es true, Load no descarta el fondo de los eventos con volcado (grupo -2): para estudiar los mu+ de K que no son

@@ -314,7 +314,7 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVI (output(), cand_truefrombeam,     "truth: desciende del haz que dispara",                         ncand, N);
   AddVarMaxSizeVI (output(), cand_truesignal,       "truth: mu+ de K+ de la cadena del haz (señal antigua)",        ncand, N);
   AddVarMaxSizeVF (output(), cand_truekendmom,      "truth: momento final de su K (MeV/c; ~0 en reposo)",          ncand, N);
-  AddVarMaxSizeVI (output(), cand_truekorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truekorigin,      "truth: origen de su K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4 cadena cortada, 6 otra raíz, -1 no es mu+ de K+)", ncand, N);
   AddVarMaxSizeVF (output(), cand_truepur,          "truth: pureza",                                                ncand, N);
   AddVarMaxSizeVF (output(), cand_trueeff,          "truth: completitud",                                           ncand, N);
   AddVarMaxSizeVF (output(), cand_truelength,       "truth: distancia inicio-fin (cm)",                             ncand, N);
@@ -333,7 +333,7 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
   if(_FillBeamInstrumentationInfo)
     standardPDTree::AddStandardVariables_BeamInstrumentationTrue(output());
 
-  AddVarI  (output(), truemu_korigin,   "origen de la K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4/5 cadena cortada, 6 otra raíz)");
+  AddVarI  (output(), truemu_korigin,   "origen de la K (0 1a interacción, 1 con K->K, 2 secundaria, 3 K del haz, 4 cadena cortada, 6 otra raíz, -1 no es mu+ de K+)");
   AddVarF  (output(), truemu_mom,       "momento del mu (MeV/c)");
   AddVarF  (output(), truemu_kmomend,   "momento final de la K madre (MeV/c; -1 sin madre K guardada)");
   AddVar3VF(output(), truemu_start,     "inicio del mu (cm)");
@@ -647,16 +647,16 @@ int secondaryKaonProductionXSAnalysis::CandidateCategory(const muCandUtils::Cand
 //********************************************************************
 
   if(c.tPDG == 0)return CATNOTRUTH;
-  // mu+ de K+ en reposo: mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c, madre K+ (o no guardada)
+  // mu+ de K+ en reposo: mu+ de desintegración, no cósmico, p true en [230, 241] MeV/c, madre K+
   const bool muK = c.tPDG == -13 && c.tProcStart == AnaTrueParticleB::Decay && c.tOrigin != 2 && c.tMom > 230 && c.tMom < 241 &&
-                   (c.tParentPDG == 321 || c.tParentPDG == 0);
+                   c.tParentPDG == 321;
   if(muK){
     switch(c.tKOrigin){
       case 0: case 1: return 1;   // medida A (primera interacción del haz que dispara)
       case 2:         return 2;   // interacción secundaria
       case 3:         return 3;   // K+ del haz
       case 6:         return 4;   // otra raíz: pileup del haz
-      default:        return 5;   // cadena cortada o madre no guardada
+      default:        return 5;   // cadena cortada
     }
   }
   if(std::abs(c.tPDG) == 211)return 211;

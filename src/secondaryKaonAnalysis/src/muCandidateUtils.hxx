@@ -366,12 +366,12 @@ namespace muCandUtils {
 
   // Origen de la K de un mu+ (como kaon_origin_minitrees.C): 0 primera interacción del haz que dispara,
   // 1 primera interacción con K+ -> K+ intermedias, 2 interacción secundaria, 3 la K+ del haz tras K+ -> K+,
-  // 4 cadena cortada (falta un antecesor de la K), 5 madre del mu no guardada, 6 otra raíz (no el haz que
-  // dispara), -1 no es un mu+ de desintegración no cósmico con madre K+ (o madre no guardada)
+  // 4 cadena cortada (falta un antecesor de la K), 6 otra raíz (no el haz que dispara), -1 no es un mu+ de
+  // desintegración no cósmico con madre K+ (si la madre no está guardada no es señal: -1)
   inline int KOrigin(const AnaTrueParticleB* mu, const AnaTrueParticleB* beamTrue, const std::map<int, AnaTrueParticleB*>& byID){
     if(!mu || mu->PDG != -13 || mu->ProcessStart != AnaTrueParticleB::Decay || static_cast<const AnaTrueParticlePD*>(mu)->Origin == 2)return -1;
     auto itK = byID.find(mu->ParentID);
-    if(itK == byID.end())return 5;
+    if(itK == byID.end())return -1;
     if(itK->second->PDG != 321)return -1;
     std::vector<const AnaTrueParticleB*> chain{itK->second};
     const AnaTrueParticleB* cur = itK->second;
