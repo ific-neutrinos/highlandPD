@@ -30,9 +30,10 @@ namespace kacc {
   using kfate::InputFiles; using kfate::TreeName;
 
   const double kActive[6] = {-360., 360., 0., 607.5, 0., 695.};   // como el módulo
-  // Volumen fiducial del vértice de la interacción: a > 20 cm de las caras en x e y, y 30 < z < 600 cm (la traza del
-  // haz reconstruida empieza a z ~ 30 cm)
-  const double kFV[6] = {-340., 340., 20., 587.5, 30., 600.};
+  // Volumen fiducial del vértice de la interacción: a > 20 cm de las caras en x e y, y 0 < z < 600 cm. Sin corte
+  // en z > 30 cm (donde empieza la traza del haz reconstruida) hasta evaluar el efecto del SCE con datos
+  // (decisión del usuario, 24-nov-2026; antes era 30 < z < 600).
+  const double kFV[6] = {-340., 340., 20., 587.5, 0., 600.};
   const double kMuMargin = 20.;          // cm, mu+ contenido con su Michel
   const double kKaonMass = 0.493677;     // GeV
   const TVector3 kAxisDir = TVector3(-0.18, -0.20, 0.96).Unit();   // dirección del haz si falta la true
