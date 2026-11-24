@@ -13,6 +13,7 @@
 // clasificación antigua por origen. Imprime las purezas al final de cada cadena.
 
 bool waitplots = true;
+bool logplots  = true;   // eje y logarítmico en todas las figuras (si no, el de cada corte: SelCut::logy)
 
 struct SelCut {
   int index;              // posición del corte en la cadena de su población (1 = el corte de población)
@@ -28,8 +29,9 @@ static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int
   const std::string popTag = pop == 0 ? "in" : "out";
   const std::string sel = Form("cand_pop==%d && cand_level>=%d", pop, c.index - 1);
   draw.SetTitleX(c.title);
-  draw.SetLogY(c.logy);
-  draw.SetMinY(c.logy ? 1 : 0);
+  const bool logy = logplots || c.logy;
+  draw.SetLogY(logy);
+  draw.SetMinY(logy ? 0.5 : 0);
   draw.Draw(mc, c.var, c.nbins, c.xmin, c.xmax, categ, sel, "", "UNDER OVER");
   if(c.lo > -998 && c.hi > -998)draw.DrawCutLinesVertical(c.lo, c.hi, true);
   else if(c.lo > -998)draw.DrawCutLineVertical(c.lo, true, "r");
