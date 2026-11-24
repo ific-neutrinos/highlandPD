@@ -72,6 +72,8 @@ int technote_truth_figs(const char* in, const char* outdir){
   }
   std::cout << "K+ de la primera interacción (pi+, FV): " << nA << "; de la opción a (nivel >= 1): " << nOptA << std::endl;
 
+  // el PDF de ROOT sale en una página vertical con la figura en una esquina: se recorta (pdfcrop, de TeX Live)
+  auto Save = [](TCanvas& cv, const char* pdf){ cv.Print(pdf); gSystem->Exec(Form("pdfcrop --margins 2 %s %s > /dev/null 2>&1", pdf, pdf)); };
   TCanvas c("c", "", 800, 600);
   c.SetLeftMargin(0.12); c.SetBottomMargin(0.12);
   auto stack = [&](TH1D** h, const char* name, const char* file){
@@ -83,7 +85,7 @@ int technote_truth_figs(const char* in, const char* outdir){
     l.Draw();
     TLatex tx; tx.SetNDC(); tx.SetTextSize(0.035); tx.SetTextFont(42);
     tx.DrawLatex(0.14, 0.93, "MC 6 GeV, #pi^{+} beam: K^{+} from the first inelastic interaction (vertex in FV)");
-    c.Print(Form("%s/%s", outdir, file));
+    Save(c, Form("%s/%s", outdir, file));
   };
   stack(hT, "sT", "kprod_T_fate.pdf");
   stack(hTh, "sTh", "kprod_theta_fate.pdf");
@@ -96,7 +98,7 @@ int technote_truth_figs(const char* in, const char* outdir){
     bl.DrawLine(x0, 0.6356, x1, 0.6356);
     TLatex tx; tx.SetTextSize(0.03); tx.SetTextFont(42); tx.SetTextColor(kGray + 2);
     tx.DrawLatex(x0 + 0.03*(x1 - x0), 0.655, "BR(K^{+} #rightarrow #mu^{+}#nu) = 0.636");
-    c.Print(Form("%s/%s", outdir, file));
+    Save(c, Form("%s/%s", outdir, file));
   };
   effplot(eT, "acc_T.pdf");
   effplot(eTh, "acc_theta.pdf");
@@ -106,14 +108,14 @@ int technote_truth_figs(const char* in, const char* outdir){
   hAcc.SetTitle(";T_{K} at production (MeV);#theta_{K} (deg)");
   c.Clear(); c.SetRightMargin(0.14); gStyle->SetPaintTextFormat(".2f");
   hAcc.SetMinimum(0); hAcc.SetMaximum(0.8); hAcc.Draw("COLZ TEXT");
-  c.Print(Form("%s/acc_map.pdf", outdir));
+  Save(c, Form("%s/acc_map.pdf", outdir));
   c.Clear(); hProd.SetTitle(";T_{K} at production (MeV);#theta_{K} (deg)"); gStyle->SetPaintTextFormat(".0f");
-  hProd.Draw("COLZ TEXT"); c.Print(Form("%s/prod_map.pdf", outdir));
+  hProd.Draw("COLZ TEXT"); Save(c, Form("%s/prod_map.pdf", outdir));
   c.SetRightMargin(0.05);
 
   c.Clear(); hR.SetLineWidth(2); hR.SetLineColor(kBlack); hR.Draw("hist");
   TLine l; l.SetLineStyle(2); l.SetLineColor(kRed + 1);
   for(double r : {0.9, 0.95})l.DrawLine(r, 0, r, hR.GetMaximum());
-  c.Print(Form("%s/rmin.pdf", outdir));
+  Save(c, Form("%s/rmin.pdf", outdir));
   return 0;
 }

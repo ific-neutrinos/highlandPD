@@ -48,7 +48,11 @@ static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int
   tt.DrawLatex(0.15, 0.94, Form("#bf{DUNE:ProtoDUNE-SP} simulation, %s the beam slice%s", pop == 0 ? "in" : "out of", tag.empty() ? "" : (", " + tag).c_str()));
   gPad->RedrawAxis(); gPad->Update();
   if(waitplots && !gROOT->IsBatch()){ gPad->Update(); gPad->WaitPrimitive(); }
-  gPad->Print(Form("%s/sel_%s_%02d_%s%s.pdf", outdir.c_str(), popTag.c_str(), c.index, c.name.c_str(), tag.empty() ? "" : ("_" + tag).c_str()));
+  // el nombre no lleva el índice del corte (cambia con el orden de la cadena): la nota técnica los incluye por nombre
+  const TString pdf = Form("%s/sel_%s_%s%s.pdf", outdir.c_str(), popTag.c_str(), c.name.c_str(), tag.empty() ? "" : ("_" + tag).c_str());
+  gPad->GetCanvas()->Print(pdf);
+  // el PDF de ROOT sale en una página vertical con la figura en una esquina: se recorta (pdfcrop, de TeX Live)
+  gSystem->Exec(Form("pdfcrop --margins 2 %s %s > /dev/null 2>&1", pdf.Data(), pdf.Data()));
 }
 
 int technote_selection(const char* in, const char* outdir, const char* categ = "candmu", const char* only = "", int onlyPop = -1){
@@ -62,6 +66,8 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
   draw.SetStackFillStyle(1001);
   draw.SetLegendPos("r");
   gStyle->SetOptStat(0);
+  TCanvas* cv = new TCanvas("cv_sel", "", 900, 650);
+  cv->cd();
 
   // la señal abajo del todo en el stack: SetCategorySignal pasa el código al final de la lista de tipos (se dibuja
   // abajo). Se llama de la capa más externa a la más interna, para que quede A abajo, encima B (no A) y encima
