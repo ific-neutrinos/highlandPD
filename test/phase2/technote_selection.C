@@ -4,6 +4,12 @@
 // corte. Sobre el microtree "ana" del análisis secondaryKaonProductionXS, con las DrawingTools de highland.
 //
 //   root -l 'test/phase2/technote_selection.C("xs_v100.root", "<technote>/4_selection/figs")'
+//   root -l 'test/phase2/technote_selection.C("xs_v100.root", "figs", "candmu", "chi2mu", 0)'   // solo un corte
+//
+// only: nombre de un corte (el "name" de las tablas de abajo: faces, vertex, chi2mu, dedxstop, gaps, prange, michel,
+// clearcosmic, axis, chi2p, dedxstart) para dibujar solo ese; vacío, todos. pop: 0 solo dentro de la beam slice, 1
+// solo fuera, -1 las dos. Con un solo corte se dibujan dos figuras más: la variable solo para trazas y solo para
+// showers (cand_isshower), porque algunas variables (chi2, dE/dx) no existen en los showers y valen -1.
 //
 // Con waitplots = true (abajo) se para en cada figura: mirarla y hacer doble clic en el canvas (o pulsar una tecla con
 // el canvas activo) para pasar a la siguiente. Para generarlas todas sin parar, waitplots = false o root -b.
@@ -25,9 +31,10 @@ struct SelCut {
   bool logy;
 };
 
-static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int pop, const SelCut& c, const std::string& outdir){
+static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int pop, const SelCut& c, const std::string& outdir,
+                    const std::string& extra = "", const std::string& tag = ""){
   const std::string popTag = pop == 0 ? "in" : "out";
-  const std::string sel = Form("cand_pop==%d && cand_level>=%d", pop, c.index - 1);
+  const std::string sel = Form("cand_pop==%d && cand_level>=%d", pop, c.index - 1) + (extra.empty() ? "" : " && " + extra);
   draw.SetTitleX(c.title);
   const bool logy = logplots || c.logy;
   // el orden importa: SetLogY(true) no hace nada si el mínimo es <= 0, y SetMinY(0) no hace nada en escala log
@@ -38,13 +45,13 @@ static void DrawCut(DrawingTools& draw, TTree* mc, const std::string& categ, int
   else if(c.lo > -998)draw.DrawCutLineVertical(c.lo, true, "r");
   else if(c.hi > -998)draw.DrawCutLineVertical(c.hi, true, "l");
   TLatex tt; tt.SetNDC(); tt.SetTextSize(0.04);
-  tt.DrawLatex(0.15, 0.94, Form("#bf{DUNE:ProtoDUNE-SP} simulation, %s the beam slice", pop == 0 ? "in" : "out of"));
+  tt.DrawLatex(0.15, 0.94, Form("#bf{DUNE:ProtoDUNE-SP} simulation, %s the beam slice%s", pop == 0 ? "in" : "out of", tag.empty() ? "" : (", " + tag).c_str()));
   gPad->RedrawAxis(); gPad->Update();
   if(waitplots && !gROOT->IsBatch()){ gPad->Update(); gPad->WaitPrimitive(); }
-  gPad->Print(Form("%s/sel_%s_%02d_%s.pdf", outdir.c_str(), popTag.c_str(), c.index, c.name.c_str()));
+  gPad->Print(Form("%s/sel_%s_%02d_%s%s.pdf", outdir.c_str(), popTag.c_str(), c.index, c.name.c_str(), tag.empty() ? "" : ("_" + tag).c_str()));
 }
 
-int technote_selection(const char* in, const char* outdir, const char* categ = "candmu"){
+int technote_selection(const char* in, const char* outdir, const char* categ = "candmu", const char* only = "", int onlyPop = -1){
   TFile* f = TFile::Open(in);
   if(!f || f->IsZombie()){ std::cerr << "No se puede abrir " << in << std::endl; return -1; }
   TTree* mc = (TTree*)f->Get("ana");
@@ -89,8 +96,19 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
     {10, "michel",  "cand_ar_nmichel10", "Michel hits within 10 cm of the stop", 20, 0, 20, 2, -999, false},
   };
 
-  for(const auto& c : in_)DrawCut(draw, mc, categ, 0, c, outdir);
-  for(const auto& c : out_)DrawCut(draw, mc, categ, 1, c, outdir);
+  const std::string sel1(only);
+  for(int pop = 0; pop < 2; pop++){
+    if(onlyPop >= 0 && pop != onlyPop)continue;
+    for(const auto& c : (pop == 0 ? in_ : out_)){
+      if(!sel1.empty() && c.name != sel1)continue;
+      DrawCut(draw, mc, categ, pop, c, outdir);
+      if(!sel1.empty()){   // un solo corte: también trazas y showers por separado
+        DrawCut(draw, mc, categ, pop, c, outdir, "!cand_isshower", "tracks");
+        DrawCut(draw, mc, categ, pop, c, outdir, "cand_isshower", "showers");
+      }
+    }
+  }
+  if(!sel1.empty())return 0;
 
   std::cout << std::endl << "== Purezas al final de la cadena (" << categ << ") ==" << std::endl;
   draw.PrintPurities(mc, categ, Form("cand_pop==0 && cand_level>=%zu", in_.size() + 1));
