@@ -140,7 +140,10 @@ c4d6cd1 el 25-nov-2026 para compararla con secondaryKaonProductionXS sobre los m
 ###############################################################################
 
 --- Cut levels --------
- < secondaryKaonAnalysis.pairXSAnalysis.MinAccumLevelToSave = 3 >   // minimum accum level to save the event
+ < secondaryKaonAnalysis.pairXSAnalysis.MinAccumLevelToSave = 3 >   // minimum accum level to save the event (3: con algún candidato a K)
+
+--- Selección --------
+ < secondaryKaonAnalysis.pairXSAnalysis.BeamPDG = 0 >   // especie true del haz en MC (BeamPDGCut); 0: todas, como secondaryKaonProductionXS (hasta el 25-nov, 211)
 
 --- Output tree ------------
  < secondaryKaonAnalysis.pairXSAnalysis.FillBeamInstrumentationInfo           = 1 >
@@ -154,9 +157,9 @@ c4d6cd1 el 25-nov-2026 para compararla con secondaryKaonProductionXS sobre los m
  < secondaryKaonAnalysis.pairXSAnalysis.FillToyVariablesInfo                  = 0 >
 
 --- Corrections ------------
- < secondaryKaonAnalysis.pairXSAnalysis.ApplySCECorrection                    = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplySCECorrection                    = 0 >   // 0 como secondaryKaonProductionXS (hasta el 25-nov, 1)
  < secondaryKaonAnalysis.pairXSAnalysis.ApplydEdxCorrection                   = 0 >
- < secondaryKaonAnalysis.pairXSAnalysis.ApplyRecombinationCorrection          = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyRecombinationCorrection          = 0 >   // 0 como secondaryKaonProductionXS (hasta el 25-nov, 1)
 
 --- Systematics ------------
  < secondaryKaonAnalysis.pairXSAnalysis.ApplydQdxSystematic                   = 0 >

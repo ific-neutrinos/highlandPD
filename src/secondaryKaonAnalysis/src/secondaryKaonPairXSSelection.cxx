@@ -6,6 +6,7 @@
 #include "Parameters.hxx"
 #include "pdAnalysisUtils.hxx"
 #include "pdBaseSelection.hxx"
+#include "muCandidateUtils.hxx"
 
 //********************************************************************
 secondaryKaonPairXSSelection::secondaryKaonPairXSSelection(bool forceBreak): SelectionBase(forceBreak,EventBoxId::kEventBoxKaon) {
@@ -20,7 +21,10 @@ void secondaryKaonPairXSSelection::DefineSteps(){
   //copy steps from pdBaseSelection
   AddStep(StepBase::kAction,   "find beam track",            new FindBeamTrackAction(), true   );// in pdBaseAnalysis/src/pdBaseSelection  
   AddStep(StepBase::kCut,      "Pandora track exists",       new BeamTrackExistsCut(), true    );// in pdBaseAnalysis/src/pdBaseSelection  
-  AddStep(StepBase::kCut,    "beam particle is pion-like",   new BeamPDGCut(211));
+  // Hasta el 25-nov exigía un haz tipo pion (BeamPDGCut(211)); para compararla con secondaryKaonProductionXS, que no
+  // corta en la especie del haz (B se mide por especie después), es configurable y por defecto no corta
+  const int beamPDG = ND::params().GetParameterI("secondaryKaonAnalysis.pairXSAnalysis.BeamPDG");
+  AddStep(StepBase::kCut,    beamPDG ? Form("beam particle PDG %d", beamPDG) : "beam particle (any species)", new PairXSBeamPDGCut(beamPDG));
   //select events using beam instrumentation
 
   AddStep(StepBase::kAction,   "get a vector of kaon candidates",      new GetKaonsForPairXSAction(),true   );
@@ -84,6 +88,13 @@ bool GetForcedDaughterPairXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const
   AnaParticleB** parts = static_cast<AnaEventB*>(&event)->Particles;
   int nParts           = static_cast<AnaEventB*>(&event)->nParticles;
 
+  // vista normal: fuera los PFParticles que el módulo no guardaría en un evento normal
+  const AnaEventInfoPD* info = static_cast<AnaEventInfoPD*>(static_cast<AnaEventB*>(&event)->EventInfo);
+  const bool fullDump = info && info->FullDump;
+  bool hasSlice = false;
+  for(int ipart = 0; ipart < nParts; ipart++)if(static_cast<AnaParticlePD*>(parts[ipart])->BeamOrigin){ hasSlice = true; break; }
+  auto inNormalView = [&](const AnaParticlePD* p){ return !fullDump || muCandUtils::NormalSaveMode(p, hasSlice) != muCandUtils::kNotSaved; };
+
   // loop over candidates
   for(int ican = 0; ican < (int)box.Candidates.size(); ican++){
     AnaParticlePD* candidate = box.Candidates[ican];
@@ -96,6 +107,7 @@ bool GetForcedDaughterPairXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const
       AnaParticlePD* part = static_cast<AnaParticlePD*>(parts[ipart]);
       if(candidate->UniqueID == part->UniqueID)continue; //skip itself
       if(part->isPandora)continue; //skip beam particle
+      if(!inNormalView(part))continue;
       if(part->Type!=2)continue; //skip showers maybe not needed?
       double mom = pdAnaUtils::ComputeRangeMomentum(part->Length,13);
       if(mom < 0.2 || mom > 0.3)continue;
@@ -132,6 +144,15 @@ bool GetForcedDaughterPairXSAction::Apply(AnaEventC& event, ToyBoxB& boxB) const
   }
     
   return true;  
+}
+
+//**************************************************
+bool PairXSBeamPDGCut::Apply(AnaEventC& event, ToyBoxB& boxB) const{
+//**************************************************
+
+  if(_pdg == 0)return true;
+  BeamPDGCut cut(_pdg);
+  return cut.Apply(event, boxB);
 }
 
 //**************************************************

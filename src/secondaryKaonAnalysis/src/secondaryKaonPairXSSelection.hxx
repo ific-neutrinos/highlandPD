@@ -43,7 +43,7 @@ class GetKaonsForPairXSAction: public StepBase{
  public:
   using StepBase::Apply;
   bool Apply(AnaEventC& event, ToyBoxB& box) const;
-  StepBase* MakeClone(){return new GetKaonsAction();}
+  StepBase* MakeClone(){return new GetKaonsForPairXSAction();}   // devolvía GetKaonsAction (la de la tesis): corregido el 25-nov
 };
 
 // class KaonChi2Cut: public StepBase{
@@ -51,6 +51,22 @@ class GetKaonsForPairXSAction: public StepBase{
 //   StepBase* MakeClone(){return new KaonChi2Cut();}
 // };
 
+/// Corte de especie del haz (BeamPDGCut de pdBaseSelection) configurable: pdg = 0 deja pasar todo. El paso está siempre,
+/// para que los niveles de accum_level no cambien con el parámetro.
+class PairXSBeamPDGCut: public StepBase{
+ public:
+  PairXSBeamPDGCut(int pdg = 0): _pdg(pdg){}
+  using StepBase::Apply;
+  bool Apply(AnaEventC& event, ToyBoxB& box) const;
+  StepBase* MakeClone(){return new PairXSBeamPDGCut(_pdg);}
+ private:
+  int _pdg;
+};
+
+/// Busca la forced daughter entre lo que el módulo guardaría en un evento normal (muCandUtils::NormalSaveMode), como
+/// secondaryKaonProductionXS: en los eventos con volcado completo (MC con un K+ en la cadena del haz) no se usan los
+/// PFParticles que un evento normal no tendría (25-nov). La selección solo usa tipo, longitud e inicio, que las copias
+/// en resumen conservan, así que se usa la partícula original.
 class GetForcedDaughterPairXSAction: public StepBase{
  public:
   using StepBase::Apply;
