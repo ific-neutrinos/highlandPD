@@ -62,6 +62,14 @@ namespace muCandUtils {
   }
   inline bool HasHits(const AnaParticlePD* p){ return !p->Hits[2].empty() || p->NHits > 0; }
 
+  // Hits de calorimetría del plano 2 del candidato: los de la traza o, en un PFParticle sin traza (tipo shower), los de su
+  // traza forzada, que el módulo guarda solo con SaveForcedTrackHits (25-nov). En las trazas no cambia nada (no tienen
+  // traza forzada). Todas las variables de dE/dx, chi2 y Michel propio del candidato salen de aquí.
+  inline const std::vector<AnaHitPD>& CaloHits(const AnaParticlePD* p){
+    if(p->Hits[2].empty() && !p->ForcedTrack.empty())return p->ForcedTrack[0].Hits[2];
+    return p->Hits[2];
+  }
+
   // Los dos extremos en la escala del rango residual (RR) de la calorimetría (plano 2): B, el final de Pandora, en
   // RR = 0; A, el inicio, en RRMax, el RR del hit más lejano. No se usa p->Length: es la longitud reconstruida sin
   // corregir de SCE, y el RR de los hits está corregido (y la calorimetría puede no tener hits en los primeros cm de
@@ -69,7 +77,7 @@ namespace muCandUtils {
   // del extremo A quedaba vacía en el 14 % de las trazas (corregido el 24-nov). -1 sin hits con RR.
   inline double RRMax(const AnaParticlePD* p){
     double m = -1;
-    for(const AnaHitPD& h : p->Hits[2])if(h.ResidualRange >= 0 && h.ResidualRange > m)m = h.ResidualRange;
+    for(const AnaHitPD& h : CaloHits(p))if(h.ResidualRange >= 0 && h.ResidualRange > m)m = h.ResidualRange;
     return m;
   }
 
@@ -81,7 +89,7 @@ namespace muCandUtils {
   inline void EndsdEdx(const AnaParticlePD* p, double& dEdxA, double& dEdxB, int& nA, int& nB){
     double sA = 0, sB = 0; nA = nB = 0;
     const double L = RRMax(p);
-    for(const AnaHitPD& h : p->Hits[2]){
+    for(const AnaHitPD& h : CaloHits(p)){
       if(!GooddEdx(h))continue;
       if(h.ResidualRange < kBragg){ sB += h.dEdx; nB++; }
       if(h.ResidualRange > L - kBragg){ sA += h.dEdx; nA++; }
@@ -106,7 +114,7 @@ namespace muCandUtils {
   // rango residual, resolución en dE/dx de la calorimetría), pero solo con hits GooddEdx (Chi2PID solo quita dE/dx >
   // 1000 y -999) y la orientación contraria referida a RRMax. Con trim = 0, el chi2 de Chi2Both. -1 sin hits.
   inline double Chi2Trimmed(const AnaParticlePD* p, int pdg, bool stopAtB, double trim){
-    const std::vector<AnaHitPD>& hits = p->Hits[2];
+    const std::vector<AnaHitPD>& hits = CaloHits(p);
     if(hits.size() < 3)return -1;
     TProfile* profile = const_cast<TProfile*>(pd::services().PID().GetdEdxTemplate(pdg));
     if(!profile)return -1;
@@ -145,7 +153,7 @@ namespace muCandUtils {
   inline void OwnMichel(const AnaParticlePD* p, double& mA, double& mB){
     double sA = 0, sB = 0; int nA = 0, nB = 0;
     const double L = RRMax(p);
-    for(const AnaHitPD& h : p->Hits[2]){
+    for(const AnaHitPD& h : CaloHits(p)){
       if(h.ResidualRange < 0 || h.CNN[2] < 0)continue;
       if(h.ResidualRange < kBragg){ sB += h.CNN[2]; nB++; }
       if(h.ResidualRange > L - kBragg){ sA += h.CNN[2]; nA++; }
@@ -158,7 +166,7 @@ namespace muCandUtils {
   inline int OwnMichelHits(const AnaParticlePD* p, bool atB){
     const double L = RRMax(p);
     int n = 0;
-    for(const AnaHitPD& h : p->Hits[2]){
+    for(const AnaHitPD& h : CaloHits(p)){
       if(h.ResidualRange < 0 || h.CNN[2] <= 0.5)continue;
       if(atB ? h.ResidualRange < kBragg : h.ResidualRange > L - kBragg)n++;
     }
@@ -171,7 +179,7 @@ namespace muCandUtils {
   inline void InteriorPeak(const AnaParticlePD* p, double& peak, double& rrPeak){
     peak = -1; rrPeak = -1;
     std::vector<std::pair<double,double>> h;   // (RR, dE/dx)
-    for(const AnaHitPD& x : p->Hits[2])if(GooddEdx(x))h.push_back({x.ResidualRange, x.dEdx});
+    for(const AnaHitPD& x : CaloHits(p))if(GooddEdx(x))h.push_back({x.ResidualRange, x.dEdx});
     std::sort(h.begin(), h.end());
     const int w = 5;
     const double L = RRMax(p);
@@ -209,7 +217,7 @@ namespace muCandUtils {
   // Hit de calorimetría del plano 2 más cercano a un extremo (por residual range): atB = PositionEnd
   inline const AnaHitPD* EndHit(const AnaParticlePD* p, bool atB){
     const AnaHitPD* best = nullptr;
-    for(const AnaHitPD& h : p->Hits[2]){
+    for(const AnaHitPD& h : CaloHits(p)){
       if(h.ResidualRange < 0)continue;
       if(!best || (atB ? h.ResidualRange < best->ResidualRange : h.ResidualRange > best->ResidualRange))best = &h;
     }
@@ -234,9 +242,13 @@ namespace muCandUtils {
         if(h.CNN[2] >= 0){ sm[r] += h.CNN[2]; nm[r]++; if(h.CNN[2] > 0.5)a.nMichel[r]++; }
       }
     };
+    // en un candidato tipo shower con los hits de la traza forzada, sus HitsNoCalo incluyen esos mismos hits: se quitan,
+    // como los hits de calorimetría de una traza (el resto de sus HitsNoCalo, p. ej. un Michel pegado, sí cuenta)
+    std::set<Int_t> own;
+    if(self && self->Hits[2].empty())for(const AnaHitPD& h : CaloHits(self))own.insert(h.UniqueID);
     for(const AnaParticlePD* q : parts){
       if(q != self)for(const AnaHitPD& h : q->Hits[2])add(h);
-      for(const AnaHitPD& h : q->HitsNoCalo[2])add(h);
+      for(const AnaHitPD& h : q->HitsNoCalo[2])if(q != self || !own.count(h.UniqueID))add(h);
     }
     for(const AnaHitPD& h : unassoc)add(h);
     for(int r = 0; r < 3; r++)if(nm[r])a.michel[r] = sm[r]/nm[r];
@@ -248,7 +260,7 @@ namespace muCandUtils {
   inline double TruncMean(const AnaParticlePD* p, bool body){
     std::vector<double> v;
     const double L = RRMax(p);
-    for(const AnaHitPD& h : p->Hits[2]){
+    for(const AnaHitPD& h : CaloHits(p)){
       if(!GooddEdx(h))continue;
       if(body && (h.ResidualRange < kBragg || h.ResidualRange > L - kBragg))continue;
       v.push_back(h.dEdx);
@@ -678,7 +690,7 @@ namespace muCandUtils {
     c.sliceA = p->BeamOrigin ? 0 : DistToSlice(a, ctx); c.sliceB = p->BeamOrigin ? 0 : DistToSlice(b, ctx);
     c.vtxA = hasVtx ? (a - vtx).Mag() : -1; c.vtxB = hasVtx ? (b - vtx).Mag() : -1;
     double dA, dB; EndsdEdx(p, dA, dB, c.nHitsA, c.nHitsB); c.dEdxA = dA; c.dEdxB = dB;
-    c.nHits2 = p->Hits[2].size();
+    c.nHits2 = CaloHits(p).size();
     const Activity actA = ActivityAt(a, p, parts), actB = ActivityAt(b, p, parts);
     c.actPartsA = actA.nParts; c.actPartsB = actB.nParts; c.actHitsA = actA.nHits; c.actHitsB = actB.nHits;
     c.actMichelA = actA.michel; c.actMichelB = actB.michel;
