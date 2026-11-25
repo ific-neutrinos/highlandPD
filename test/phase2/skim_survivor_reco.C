@@ -83,6 +83,7 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
   long nInt[5] = {0}, nCont[5] = {0}, nKinkOK[5] = {0}, nCtrlOK[5] = {0};
   long passT[5][6] = {{0}}, passCtrl[5][6] = {{0}}, maxNearT[5][6] = {{0}};
   long midAny[5] = {0}, midTrue[5] = {0};
+  long muA[5][5] = {{0}}, muSurv[5][5] = {{0}}, muMulti[5][5] = {{0}}, muSec[5][5] = {{0}};
   long cat[5][4] = {{0}}, leadSlice[5] = {0}, leadOut[5] = {0}; std::map<int, std::vector<double>> vAfter;
   long cFound[5][3][4] = {{{0}}}, cFake[5][3][4] = {{{0}}}, nCtrlTrk[5] = {0}; double ctrlLen[5] = {0};
   std::map<int, std::vector<double>> vKinkT, vKinkCtrl, vdT, vdC, vAng;
@@ -101,9 +102,27 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
     rr = (lead >= 0 && pB > 0) ? (*v.t_p)[lead]/pB : -1;
     rcls = RClass(rr);
     nInt[rcls]++;
-    if(lead < 0)continue;
-    if(s_uid->empty() || bh_rr->empty()){ cat[rcls][0]++; continue; }
-    const int lid = (*v.t_id)[lead];
+    // signal muons del evento según el origen de su K y si la interacción del haz se ve (visCat: 0 sin primario,
+    // 1 el primario no es el haz, 2 acaba en la interacción, 3 sigue y la búsqueda combinada la encuentra, 4 sigue y no)
+    auto countMu = [&](int visCat){
+      for(size_t i = 0; i < v.t_id->size(); i++){
+        if((*v.t_sigMu)[i] != 1)continue;
+        const int ko = (*v.t_kOrigin)[i];
+        if(ko == 0 || ko == 1){ muA[rcls][visCat]++; continue; }
+        if(ko != 2)continue;
+        int k = r.Parent(i);
+        while(k >= 0){ const int m = r.Parent(k); if(m < 0 || (*v.t_pdg)[m] != 321)break; k = m; }
+        const int m = k >= 0 ? r.Parent(k) : -1;
+        if(m < 0)continue;
+        if(m == lead){ muSurv[rcls][visCat]++; continue; }
+        // madre que desciende del haz solo por pi+ (superviviente de varios pasos)
+        bool onlyPi = (*v.t_pdg)[m] == 211; int q = m;
+        while(onlyPi){ const int pq = r.Parent(q); if(pq < 0){ onlyPi = false; break; } if((*v.t_id)[pq] == bid)break; if((*v.t_pdg)[pq] != 211)onlyPi = false; q = pq; }
+        if(onlyPi)muMulti[rcls][visCat]++; else muSec[rcls][visCat]++;
+      }
+    };
+    if(s_uid->empty() || bh_rr->empty()){ cat[rcls][0]++; countMu(0); continue; }
+    const int lid = lead >= 0 ? (*v.t_id)[lead] : -12345;
     // hits del primario, ordenados a lo largo de la traza
     std::vector<Hit> h;
     double rrMax = -1; for(float x : *bh_rr)rrMax = std::max(rrMax, (double)x);
@@ -117,9 +136,10 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
     // qué hace el primario con la interacción: 1 no es el haz (< kMinHits del haz), 2 acaba en ella (haz sí, superviviente
     // no), 3 sigue con el superviviente. En 2: cuánta traza queda después del último hit del haz, y si el superviviente
     // está reconstruido aparte (otra partícula de la beam slice o fuera)
-    if(nBeamHits < kMinHits){ cat[rcls][1]++; continue; }
+    if(nBeamHits < kMinHits){ cat[rcls][1]++; countMu(1); continue; }
     if(nLeadHits < kMinHits){
-      cat[rcls][2]++;
+      cat[rcls][2]++; countMu(2);
+      if(lead < 0)continue;
       vAfter[rcls].push_back(h.back().s - sLastBeam);
       if((*v.t_recoN)[lead] > 0){ if((*v.t_recoInSlice)[lead])leadSlice[rcls]++; else leadOut[rcls]++; }
       continue;
@@ -160,6 +180,7 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
         for(int a = 0; a < 3; a++)for(int q = 0; q < 4; q++)if(k > kCK[a] && d > kCD[q]){ if(nearT)found[a][q] = true; if(inCtrl)fake[a][q] = true; }
       }
       for(int a = 0; a < 3; a++)for(int q = 0; q < 4; q++){ if(found[a][q])cFound[rcls][a][q]++; if(hasCtrl && fake[a][q])cFake[rcls][a][q]++; }
+      countMu(found[0][2] ? 3 : 4);   // criterio de referencia: codo > 1° y pico > 15 MeV/cm
       if(hasCtrl){ nCtrlTrk[rcls]++; ctrlLen[rcls] += c1 - c0; } }
     // 2. dE/dx en la transición y 30 cm antes
     dEdxT = MaxdEdx(h, sT); dEdxCtrl = sT > 30 + kVtxWin ? MaxdEdx(h, sT - 30) : -1;
@@ -225,6 +246,27 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
       printf("\n");
     }
   }
+  printf("\n5. Signal muons (haz pi+, interacción en el FV) por origen de la K y visibilidad de la interacción del haz\n");
+  printf("   (sin primario / el primario no es el haz / acaba en ella / sigue y se encuentra / sigue y no; criterio: codo > 1° y pico > 15 MeV/cm)\n");
+  const char* vn[5] = {"sin prim.", "no haz", "acaba", "encontrada", "invisible"};
+  auto row = [&](const char* name, long x[5]){
+    long t = 0; for(int k = 0; k < 5; k++)t += x[k];
+    const long use = x[2] + x[3] + x[4];
+    printf("    %-34s %5ld:", name, t); for(int k = 0; k < 5; k++)printf("  %s %4ld", vn[k], x[k]);
+    printf("   | invisible entre los usables %4.1f %%\n", use ? 100.*x[4]/use : 0.);
+  };
+  long totA[5] = {0}, totS[5] = {0}, totM[5] = {0}, totSec[5] = {0};
+  for(int c = 0; c < 5; c++){
+    printf("  clase %s:\n", kRName[c]);
+    row("A estricta (KOrigin 0-1)", muA[c]); row("K del superviviente directo", muSurv[c]);
+    row("K de un superviviente de varios pasos", muMulti[c]); row("otra secundaria", muSec[c]);
+    for(int k = 0; k < 5; k++){ totA[k] += muA[c][k]; totS[k] += muSurv[c][k]; totM[k] += muMulti[c][k]; totSec[k] += muSec[c][k]; }
+  }
+  printf("  todas las clases:\n"); row("A estricta (KOrigin 0-1)", totA); row("K del superviviente directo", totS); row("K de un superviviente de varios pasos", totM); row("otra secundaria", totSec);
+  { long aU = totA[2] + totA[3] + totA[4], sInv = totS[4];
+    long sInv9 = muSurv[3][4] + muSurv[4][4], sInv5 = muSurv[2][4];
+    printf("  Irreducible (K del superviviente directo con la interacción invisible) frente a A estricta, en eventos usables:\n");
+    printf("    %ld / %ld = %.1f %% (r > 0,9: %ld; 0,5-0,9: %ld; r < 0,5: %ld)\n", sInv, aU, aU ? 100.*sInv/aU : 0., sInv9, sInv5, muSurv[1][4]); }
   fout.cd(); tsv.Write(); fout.Close();
   printf("\nÁrbol sv en %s\n", output);
   return 0;
