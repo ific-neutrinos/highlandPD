@@ -74,16 +74,31 @@ inofensivo.
 
 Macros que se corren sobre cada muestra nueva (dentro de tmux; las de una sola pasada, con `&` y su log):
 
+Orden (25-nov; como mucho 3-4 procesos de ROOT a la vez, cada `run_*_parallel.sh` son 3):
+
+1. Validación del contenido: `count_module` (eventos marcados, beam slice, primario = haz; igual que la muestra
+   anterior si la reco no cambió) y, con un módulo nuevo, `check_production_minitree` (hits de la traza forzada solo
+   dentro de la ventana, tiempo true). Si fallan, se paran los workflows de las demás versiones.
+2. Truth skim y `skim_compare.C` en local frente al skim de la producción anterior de los mismos eventos (truth
+   idéntica: los resultados de truth anteriores siguen valiendo).
+3. Análisis: `secondaryKaonProductionXS` (microtree de referencia) y `secondaryKaonPairXS` (comparación con la tesis).
+4. Figuras de la nota: `kaon_acceptance` (y `kaon_origin`, `pimu_endcharge` si hacen falta).
+
 ```bash
 root -l -b -q 'test/phase2/count_module_minitrees.C("mc_<nombre>.txt")' > count_<nombre>.log 2>&1 &
-root -l -b -q 'test/phase2/kaon_origin_minitrees.C("mc_<nombre>.txt")' > kaon_origin_<nombre>.log 2>&1 &
+root -l -b -q 'test/phase2/check_production_minitree.C("mc_<nombre>.txt")' > check_<nombre>.log 2>&1 &
+test/phase2/run_skim_parallel.sh mc_<nombre>.txt truth_skim_<nombre>.root      # truth skim, ~40 kB/evento (3 trozos)
+test/phase2/run_xs_parallel.sh mc_<nombre>.txt xs_<nombre>.root                # análisis (3 trozos)
+EXE=secondaryKaonPairXS.exe test/phase2/run_xs_parallel.sh mc_<nombre>.txt pair_<nombre>.root
 root -l -b -q 'test/phase2/kaon_acceptance_minitrees.C("mc_<nombre>.txt","kaon_acceptance_<nombre>.root")' > kaon_acceptance_<nombre>.log 2>&1 &
+root -l -b -q 'test/phase2/kaon_origin_minitrees.C("mc_<nombre>.txt")' > kaon_origin_<nombre>.log 2>&1 &
 root -l -b -q 'test/phase2/pimu_endcharge.C("mc_<nombre>.txt")' > pimu_endcharge_<nombre>.log 2>&1 &
-test/phase2/run_xs_parallel.sh mc_<nombre>.txt xs_<nombre>.root 8              # análisis (paso 6)
-test/phase2/run_skim_parallel.sh mc_<nombre>.txt truth_skim_<nombre>.root 8    # truth skim, ~40 kB/evento
 ```
 
-Traer a local los `.root` (salvo los trozos) y los `.log`. Si la máquina va justa, menos trozos (4).
+En local, con los microtrees: `skim_compare.C`, `xs_viewloss`, `xs_showers`, `xs_nminus1`, `technote_effpur`,
+`technote_cutflow`, `technote_selection`, figuras de truth (`technote_truth_figs.C`) y `compare_pair_xs.C`.
+
+Traer a local los `.root` (salvo los trozos) y los `.log`.
 
 Validación (en highlandPD, con su entorno):
 
