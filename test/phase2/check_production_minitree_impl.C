@@ -3,10 +3,18 @@
 #include "minitree_loop.h"
 #include <map>
 #include <cmath>
+#include <fstream>
+#include <string>
 
 int check_production_minitree_impl(const char* pattern, double lmin, double lmax){
   TChain chain("highlandana/MiniTree");
-  const int nFiles = chain.Add(pattern);
+  // lista .txt (una URL xrootd por línea, como en la receta 4) o patrón de ficheros
+  int nFiles = 0;
+  if(TString(pattern).EndsWith(".txt")){
+    std::ifstream in(pattern); std::string l;
+    while(std::getline(in, l))if(!l.empty() && l[0] != '#')nFiles += chain.Add(l.c_str());
+  }
+  else nFiles = chain.Add(pattern);
   AnaSpillPD* spill = nullptr;
   chain.SetBranchAddress("Spill", &spill);
   long nFT = 0, nFTin = 0, nFTinHits = 0, nFToutHits = 0, nFTinNoHits = 0, nFTplane[3] = {0, 0, 0}, nFTtrj = 0, nFTchi2 = 0;
