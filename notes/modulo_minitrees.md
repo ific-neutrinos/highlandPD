@@ -30,3 +30,23 @@ Plan en `phase2.md` (raíz del repo, sin seguir por git a propósito). Ramas `ph
 - `Clone()` de un spill **no clona la truth**: el clon comparte `TrueParticles` y `TrueVertices` con el original (`isClone = true`) y solo el original la borra. Hay que borrar el clon antes que el original. Antes el módulo nunca borraba el original y perdía la truth en cada evento.
 - Las clases de `pdDataClasses` no tienen `ClassDef`: ROOT las versiona por checksum, así que añadir o quitar miembros no rompe la lectura de ficheros antiguos.
 
+
+## Pendiente para la próxima versión del módulo (después de `d01`; lista abierta, 25-nov-2026)
+
+Decisión del usuario (25-nov): no se para más la producción de MC. Se corre con `d01` una buena parte (al menos
+`v1_00`, quizá la mitad de los bloques) para avanzar en la selección, y lo que salga de la revisión de la nota se
+acumula aquí para una versión siguiente (`d02`) antes de los bloques que queden y de los datos.
+
+- **Truth del pileup del haz completa (MC).** `FillBeamTrueInfo` solo guarda la good particle de `(*mcTruths)[0]` y su
+  cadena; las demás partículas del haz del mismo `MCTruth` entran solo como ancestros de algo emparejado a un
+  PFParticle guardado (`SaveTrueAncestors`). Falta: recorrer las primarias del `ParticleList` (madre 0) de ese
+  `MCTruth` y guardarlas sin recursión si no están (Generation -999, Origin 4, como los ancestros; `KOrigin` no
+  cambia). Flag propuesto `SaveBeamPileupPrimaries`. Coste estimado ~1 % (350 B por partícula). Da la tasa de pileup
+  por trigger, cuántas entran en el TPC, su composición, momento y tiempo: el modelo del fondo de pileup de la medida B.
+- **Instrumentación del haz con varias partículas (datos).** `FillBeamInfo` guarda `nTracks`, `nMomenta`, `nFibers[3]`,
+  un TOF (`GetTOF`), los PDG compatibles y solo la traza 0 y el momento 0. Falta: todas las trazas del haz (inicio,
+  final, dirección), todos los momentos, todos los TOF (y canales) y los tiempos de los Cherenkov si hay varios, para
+  estudiar en datos los triggers con más de una partícula en la BI. Comprobar antes la ventana de lectura de la BI
+  frente a la del TPC (el pileup del TPC está a -1/+3 ms del trigger; la BI, probablemente mucho más corta: por
+  confirmar en la documentación de ProtoDUNE). En MC la BI se emula solo de la partícula que dispara: no hay
+  equivalente.
