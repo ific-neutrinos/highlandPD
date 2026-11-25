@@ -97,13 +97,30 @@ Mirar que no haya incoherencias entre flags y contenido, y que los números sean
 
 ## 5. Copiar a persistent (el scratch se purga)
 
+**Organización (decidida con el usuario el 25-nov-2026, desde el tag `d01`):** un proyecto por tag del código, y
+dentro, separados minitrees y microtrees, MC y datos, momento del haz y dataset:
+
+```
+/pnfs/dune/persistent/users/miagarc/pdsp/<proyecto>/
+    README.txt                                  # commits del tag, workflows, definiciones de SAM
+    minitrees/<mc|data>/<momento>/<dataset>/minitrees/   # minitree_*.root
+    minitrees/<mc|data>/<momento>/<dataset>/stats/       # stats_*.txt
+    microtrees/<análisis>/<mc|data>/<momento>/<dataset>/ # salidas de highland (xs_*.root, ...)
+```
+
+`<proyecto>` = `dunesw_v09_56_00d01_claude` (tag + sufijo); `<momento>` = `6GeV`; `<dataset>` = el bloque de SAM
+abreviado (`v1_00` ... `v1_09` para `PDSPProd4a_MC_6GeV_gen_datadriven_reco1_sce_datadriven_v1_XX`; en datos, el
+runset). Las carpetas antiguas (`pdsp/mc/20261119big`, `20261120v100`, `20261124v100s`) se quedan como están hasta
+borrarlas. El scratch sigue por fecha (`collect.sh`).
+
 En una dunegpvm con el token interactivo:
 
 ```bash
 PD_TOKEN=interactive source setup_larsoft.sh
 cd <highlandAnalysis>/justin
-./to_persistent.sh /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha> /pnfs/dune/persistent/users/miagarc/pdsp/mc/<fecha>
-./to_persistent.sh /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha> /pnfs/dune/persistent/users/miagarc/pdsp/mc/<fecha> 'stats_*.txt'
+P=/pnfs/dune/persistent/users/miagarc/pdsp/dunesw_v09_56_00d01_claude/minitrees/mc/6GeV/v1_00
+./to_persistent.sh /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha> $P/minitrees
+./to_persistent.sh /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha> $P/stats 'stats_*.txt'
 ```
 
 Se puede relanzar tal cual si se corta (salta lo ya copiado). Los fallos van a `to_persistent_failed.txt`.
