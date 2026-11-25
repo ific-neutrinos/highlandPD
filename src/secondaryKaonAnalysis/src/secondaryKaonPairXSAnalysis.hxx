@@ -108,6 +108,15 @@ public:
     enumConfLast_secondaryKaonPairXSAnalysis
   };
 
+  /// Variables añadidas el 25-nov-2026 para comparar con secondaryKaonProductionXS (misma definición de señal): para la
+  /// hija de cada candidato a K (la de Pandora o la forced daughter), si es signal muon (muCandUtils::IsSignalMuon) y
+  /// el origen de su K (muCandUtils::KOrigin; -1 si no es mu+ de K+)
+  enum enumMicroTrees_secondaryKaonPairXSAnalysis{
+    candidatedau_truesignalmuon = kaonTree::enumKaonMicroTreesLast + 1,
+    candidatedau_truekorigin,
+    enumMicroTreesLast_secondaryKaonPairXSAnalysis
+  };
+
   enum enumSyst_secondaryKaonPairXSAnalysis{
     kdEdxVariation=0,
     kRecombination,

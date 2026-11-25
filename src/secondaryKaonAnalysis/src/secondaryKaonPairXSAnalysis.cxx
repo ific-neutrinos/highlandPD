@@ -7,6 +7,7 @@
 #include "pdDataClasses.hxx"
 
 #include "secondaryKaonPairXSSelection.hxx"
+#include "muCandidateUtils.hxx"
 #include "secondaryKaonSelectionNoBranches.hxx"
 #include "kaonAnalysisUtils.hxx"
 
@@ -205,6 +206,10 @@ void secondaryKaonPairXSAnalysis::DefineMicroTrees(bool addBase){
       kaonTree::AddKaonVariables_KaonCandidatesHitsReco(output(),secondaryKaonPairXSAnalysisConstants::NMAXSAVEDCANDIDATES);
     if(_FillKaonCandidatesPIDInfo)
       kaonTree::AddKaonVariables_KaonCandidatesRecoPID (output(),secondaryKaonPairXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+    // el contador se pasa por su nombre corto (las macros AddVar* lo convierten en texto y tiene que coincidir con el de kaonTree)
+    using kaonTree::ncandidates;
+    AddVarMaxSizeVI(output(), candidatedau_truesignalmuon, "hija del candidato: signal muon (mu+ de K+ -> mu+ nu de una K+ en reposo)", ncandidates, secondaryKaonPairXSAnalysisConstants::NMAXSAVEDCANDIDATES);
+    AddVarMaxSizeVI(output(), candidatedau_truekorigin,   "hija del candidato: origen de su K (muCandUtils::KOrigin; -1 no es mu+ de K+)", ncandidates, secondaryKaonPairXSAnalysisConstants::NMAXSAVEDCANDIDATES);
   }
 
   // -------- Add best candidate variables ----------------------
@@ -259,8 +264,16 @@ void secondaryKaonPairXSAnalysis::FillMicroTrees(bool addBase){
   
   // ---------- kaon candidates variables --------------
   if(_FillKaonCandidatesInfo){
+    std::map<int, AnaTrueParticleB*> byID;
+    for(AnaTrueParticleB* t : GetSpill().TrueParticles)byID[t->ID] = t;
+    const AnaBeamPD* beam = static_cast<const AnaBeamPD*>(GetSpill().Beam);
+    const AnaTrueParticleB* beamTrue = (beam && beam->BeamParticle) ? static_cast<AnaTrueParticleB*>(beam->BeamParticle->TrueObject) : nullptr;
     if(box().Candidates.size()>0){
       for(int i = 0; i < std::min((int)box().Candidates.size(),(int)secondaryKaonAnalysisConstants::NMAXSAVEDCANDIDATES); i++){
+        { const AnaParticlePD* dau = box().Candidates[i]->Daughters.empty() ? nullptr : static_cast<AnaParticlePD*>(box().Candidates[i]->Daughters[0]);
+          const AnaTrueParticleB* td = dau ? static_cast<const AnaTrueParticleB*>(dau->TrueObject) : nullptr;
+          output().FillVectorVar(candidatedau_truesignalmuon, (Int_t)(td ? muCandUtils::IsSignalMuon(td, byID) : 0));
+          output().FillVectorVar(candidatedau_truekorigin,    (Int_t)(td ? muCandUtils::KOrigin(td, beamTrue, byID) : -1)); }
 	AnaParticlePD* parent = static_cast<AnaParticlePD*>(anaUtils::GetParticleByID(GetBunch(), box().Candidates[i]->ParentID));
 	kaonTree::FillKaonVariables_KaonCandidatesReco    (output(), box().Candidates[i] ,parent);
 	kaonTree::FillKaonVariables_KaonCandidatesTrue    (output(), box().Candidates[i]);
