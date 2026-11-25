@@ -83,6 +83,7 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
   long nInt[5] = {0}, nCont[5] = {0}, nKinkOK[5] = {0}, nCtrlOK[5] = {0};
   long passT[5][6] = {{0}}, passCtrl[5][6] = {{0}}, maxNearT[5][6] = {{0}};
   long midAny[5] = {0}, midTrue[5] = {0};
+  long cat[5][4] = {{0}}, leadSlice[5] = {0}, leadOut[5] = {0}; std::map<int, std::vector<double>> vAfter;
   long cFound[5][3][4] = {{{0}}}, cFake[5][3][4] = {{{0}}}, nCtrlTrk[5] = {0}; double ctrlLen[5] = {0};
   std::map<int, std::vector<double>> vKinkT, vKinkCtrl, vdT, vdC, vAng;
   // codo reco frente al ángulo true (superviviente que continúa, todas las clases con r >= 0,5)
@@ -100,7 +101,8 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
     rr = (lead >= 0 && pB > 0) ? (*v.t_p)[lead]/pB : -1;
     rcls = RClass(rr);
     nInt[rcls]++;
-    if(lead < 0 || s_uid->empty() || bh_rr->empty())continue;
+    if(lead < 0)continue;
+    if(s_uid->empty() || bh_rr->empty()){ cat[rcls][0]++; continue; }
     const int lid = (*v.t_id)[lead];
     // hits del primario, ordenados a lo largo de la traza
     std::vector<Hit> h;
@@ -112,7 +114,17 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
     std::sort(h.begin(), h.end(), [](const Hit& a, const Hit& c){ return a.s < c.s; });
     nBeamHits = nLeadHits = 0; double sLastBeam = -1;
     for(const Hit& x : h){ if(x.tid == bid){ nBeamHits++; sLastBeam = std::max(sLastBeam, x.s); } if(x.tid == lid)nLeadHits++; }
-    if(nBeamHits < kMinHits || nLeadHits < kMinHits)continue;
+    // qué hace el primario con la interacción: 1 no es el haz (< kMinHits del haz), 2 acaba en ella (haz sí, superviviente
+    // no), 3 sigue con el superviviente. En 2: cuánta traza queda después del último hit del haz, y si el superviviente
+    // está reconstruido aparte (otra partícula de la beam slice o fuera)
+    if(nBeamHits < kMinHits){ cat[rcls][1]++; continue; }
+    if(nLeadHits < kMinHits){
+      cat[rcls][2]++;
+      vAfter[rcls].push_back(h.back().s - sLastBeam);
+      if((*v.t_recoN)[lead] > 0){ if((*v.t_recoInSlice)[lead])leadSlice[rcls]++; else leadOut[rcls]++; }
+      continue;
+    }
+    cat[rcls][3]++;
     nCont[rcls]++;
     sT = sLastBeam; len = h.empty() ? 0 : h.back().s;
     angle = -1;
@@ -170,6 +182,15 @@ int skim_survivor_reco(const char* input, const char* output = "skim_survivor_re
     tsv.Fill();
   }
 
+  printf("\n0. Qué hace el primario de la beam slice con la interacción (hits del plano de colección, por bh_trueID):\n");
+  printf("  clase       interacc.  sin primario   primario no es el haz   acaba en la interacción   sigue con el superviviente\n");
+  for(int c = 1; c < 5; c++){
+    const double t = nInt[c];
+    printf("  %-10s %8ld   %5.1f %%        %5.1f %%                %5.1f %%                   %5.1f %%\n", kRName[c], nInt[c],
+           100.*cat[c][0]/t, 100.*cat[c][1]/t, 100.*cat[c][2]/t, 100.*cat[c][3]/t);
+  }
+  printf("  Cuando acaba en la interacción: traza después del último hit del haz (mediana, cm) y superviviente reconstruido aparte (en la beam slice / fuera):\n");
+  for(int c = 1; c < 5; c++)printf("  %-10s %6.1f cm   %5.1f %% / %5.1f %%\n", kRName[c], Med(vAfter[c]), cat[c][2] ? 100.*leadSlice[c]/cat[c][2] : 0., cat[c][2] ? 100.*leadOut[c]/cat[c][2] : 0.);
   printf("\nInteracciones inelásticas del pi+ del haz en el FV, por clase de r; el primario sigue con el superviviente (>= %d hits del haz y del superviviente):\n", kMinHits);
   for(int c = 1; c < 5; c++)printf("  %-10s %6ld interacciones, continúa %5ld (%4.1f %%)\n", kRName[c], nInt[c], nCont[c], nInt[c] ? 100.*nCont[c]/nInt[c] : 0.);
   printf("\n1. Codo (ángulo entre las direcciones de %.0f cm de hits a cada lado, grados), en las que continúan:\n", kL);
