@@ -132,3 +132,38 @@ Enable/disable the configuration with all systematics (or the ones selected abov
 
  < baseAnalysis.Configurations.EnableAllSystematics = 0 >
  
+
+###############################################################################
+--- SECONDARY KAON PAIR XS ANALYSIS (secondaryKaonPairXS) ---
+(selección de parejas K -> mu con forced daughter del primer intento de la medida de producción, recuperada de
+c4d6cd1 el 25-nov-2026 para compararla con secondaryKaonProductionXS sobre los mismos minitrees)
+###############################################################################
+
+--- Cut levels --------
+ < secondaryKaonAnalysis.pairXSAnalysis.MinAccumLevelToSave = 3 >   // minimum accum level to save the event
+
+--- Output tree ------------
+ < secondaryKaonAnalysis.pairXSAnalysis.FillBeamInstrumentationInfo           = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillBeamParticleInfo                  = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillBeamParticleHitsInfo              = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillBeamParticleDaughtersInfo         = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillKaonCandidatesInfo                = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillKaonCandidatesHitInfo             = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillKaonCandidatePIDInfo              = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillBestKaonCandidateInfo             = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.FillToyVariablesInfo                  = 0 >
+
+--- Corrections ------------
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplySCECorrection                    = 1 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplydEdxCorrection                   = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyRecombinationCorrection          = 1 >
+
+--- Systematics ------------
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplydQdxSystematic                   = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyRecombinationSystematic          = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplySCESystematic                    = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyBrokenTracksSystematic           = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyBeamPIDEfficiencySystematic      = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyBeamPartWeightSystematic         = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyBeamMomWeightSystematic          = 0 >
+ < secondaryKaonAnalysis.pairXSAnalysis.ApplyProtonBackgroundWeightSystematic = 0 >
