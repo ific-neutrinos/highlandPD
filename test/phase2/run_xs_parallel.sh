@@ -1,5 +1,5 @@
 #!/bin/bash
-# Corre secondaryKaonProductionXS.exe sobre una lista de minitrees partida en N trozos en paralelo y junta las salidas.
+# Corre secondaryKaonProductionXS.exe (u otro análisis: EXE=secondaryKaonPairXS.exe) sobre una lista de minitrees partida en N trozos en paralelo y junta las salidas.
 #
 #   test/phase2/run_xs_parallel.sh <lista.txt> <salida.root> [N trozos, por defecto 10]
 #
@@ -9,7 +9,8 @@
 set -u
 LIST=${1:?uso: run_xs_parallel.sh <lista.txt> <salida.root> [N]}
 OUT=${2:?uso: run_xs_parallel.sh <lista.txt> <salida.root> [N]}
-N=${3:-10}
+N=${3:-3}   # no más de 3-4 procesos de ROOT por dunegpvm (el 24-nov se colapsó la 05)
+EXE=${EXE:-secondaryKaonProductionXS.exe}
 [[ -n "${HIGHLANDPDPATH:-}" ]] || { echo "Carga antes el entorno de highland y highlandPD"; exit 1; }
 DIR=${OUT%.root}_trozos
 mkdir -p "$DIR"
@@ -18,7 +19,7 @@ split -n l/$N -d -a 2 "$DIR/lista_entera.txt" "$DIR/lista_"
 for l in "$DIR"/lista_[0-9][0-9]; do
   k=${l##*_}
   rm -f "$DIR/xs_$k.root"
-  "$HIGHLANDPDPATH/bin/secondaryKaonProductionXS.exe" -o "$DIR/xs_$k.root" "$l" > "$DIR/xs_$k.log" 2>&1 &
+  "$HIGHLANDPDPATH/bin/$EXE" -o "$DIR/xs_$k.root" "$l" > "$DIR/xs_$k.log" 2>&1 &
 done
 echo "$N trozos lanzados (logs en $DIR); esperando..."
 wait

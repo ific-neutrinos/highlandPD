@@ -10,7 +10,7 @@
 set -u
 LIST=${1:?uso: run_skim_parallel.sh <lista.txt> <salida.root> [N]}
 OUT=${2:?uso: run_skim_parallel.sh <lista.txt> <salida.root> [N]}
-N=${3:-10}
+N=${3:-3}   # no más de 3-4 procesos de ROOT por dunegpvm
 [[ -n "${HIGHLANDPDPATH:-}" ]] || { echo "Carga antes el entorno de highland y highlandPD"; exit 1; }
 MACRO=$(cd "$(dirname "$0")" && pwd)/truth_skim_minitrees.C
 DIR=${OUT%.root}_trozos
