@@ -159,6 +159,24 @@ scp miagarc@dunegpvmXX.fnal.gov:<ruta>/xs_<nombre>.root ~/Documents/Work/DUNE/an
 
 ## 8. Lanzar una producción nueva (bloque de MC o datos)
 
+Varias versiones a la vez con el mismo tarball (25-nov, `v1_01`-`v1_09`): las listas ya están dentro del tarball, así que
+no hace falta rehacerlo; lanzar solo las que `check_locality.sh` da en disco (si están en cinta los trabajos esperan y
+acaban por wall time). Bucle con `DRYRUN=1` primero:
+
+```bash
+source tardir.sh
+for v in 01 02 03; do
+  L=filelist_mc_6GeV_v1_$v.txt; N=$(( ($(wc -l < lists/$L) + 4) / 5 ))
+  DRYRUN=1 LIST=$L FILES_PER_JOB=5 SITES=US_FNAL-FermiGrid ./submit.sh mc $N $INPUT_TAR_DIR_LOCAL
+done
+```
+
+`workflows.txt` no guarda la versión: apuntarla a mano. Recoger cada una en su carpeta (`collect.sh <wf> mc <fecha>v1<v>`)
+y a persistent en `.../6GeV/v1_<v>/{minitrees,stats}`. En dunegpvm, con el entorno de dunesw, `sed` avisa de
+`libselinux.so.1: no version information available` (por `dune_oslibs` en `LD_LIBRARY_PATH`): inofensivo
+(`env -u LD_LIBRARY_PATH` lo quita). Las tmux no se cierran solas: una por tarea con nombre y `tmux kill-session -t <n>`
+al acabar (mirar antes con `tmux capture-pane -pt <n> -S -30` que no sigue corriendo, sobre todo los prestage).
+
 1. Lista de entrada: `./make_filelist.sh <definición SAM> <N> lists/filelist_<algo>.txt` (en tmux: una llamada a
    samweb por fichero; `SAMWEB_OPTS=--no-cert-auth`).
 2. Sacar de cinta: `samweb --no-cert-auth prestage-dataset --defname=<definición>` (en tmux; los errores de DNS del
