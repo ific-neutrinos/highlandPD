@@ -161,6 +161,7 @@ public:
     // evento
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
     sel_fitlevel, sel_countlevel, hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
+    beam_quality_sce, beam_start_sce, beam_cos_bi,
     beam_species, beam_truespecies,
     // candidatos (contador ncand)
     ncand,

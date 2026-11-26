@@ -24,6 +24,8 @@
 #include "ProtonBackgroundWeight.hxx"
 
 #include "ParticlePositionSCECorrection.hxx"
+#include "pdServiceManager.hxx"
+#include "SpaceCharge.hxx"
 #include "dEdxMCCorrection.hxx"
 #include "RecombinationDataCorrection.hxx"
 
@@ -237,6 +239,11 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarFixVI(output(), sel_countlevel, "por rama: cand_level con todos los cortes (ventana incluida)", 2);
   AddVarI  (output(), hasslice,       "hay beam slice");
   AddVarI  (output(), hasvertex,      "hay vértice (final del primario de la beam slice)");
+  // calidad del haz con el inicio del primario corregido por SCE (26-nov): la selección sigue sin correcciones, así que
+  // se corrige solo una copia del primario para este corte (pdAnaUtils::GetBeamQuality, con los parámetros de pdUtils)
+  AddVarI  (output(), beam_quality_sce, "calidad del haz con el inicio del primario corregido por SCE (1 pasa, 0 no, -1 sin primario o sin BI)");
+  AddVar3VF(output(), beam_start_sce,   "inicio del primario de la beam slice corregido por SCE (cm)");
+  AddVarF  (output(), beam_cos_bi,      "cos entre la dirección inicial del primario corregida por SCE y la del BI");
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
   AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
@@ -421,6 +428,25 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   for(const muCandUtils::Candidate& c : b.Candidates)if(c.hasSlice){ slice = true; break; }
   output().FillVar(hasslice, (Int_t)slice);
   output().FillVar(hasvertex, (Int_t)b.HasVertex);
+  { Int_t q = -1; Float_t st[3] = {-999, -999, -999}; Float_t cosbi = -999;
+    AnaEventPD* ev = static_cast<AnaEventPD*>(&GetEvent());
+    AnaParticlePD* prim = pdAnaUtils::GetBeamParticleInTPC(ev);
+    const AnaBeamPD* beam = static_cast<const AnaBeamPD*>(ev->Beam);
+    const AnaParticlePD* bi = (beam && beam->BeamParticle) ? static_cast<const AnaParticlePD*>(beam->BeamParticle) : nullptr;
+    if(prim && bi){
+      AnaParticlePD* cp = prim->Clone();
+      const SpaceCharge& sce = pd::services().SCE();
+      if(cp->TrjPoints.empty())sce.ApplyParticlePositionCorrection(cp);
+      else{ sce.ApplyTrjPointPositionCorrection(cp); sce.ApplyTrjPointDirectionCorrection(cp); pdAnaUtils::ComputeParticlePositionAndDirection(cp); }
+      double mx, my, mz, sx, sy, sz, mincos;
+      pdAnaUtils::GetBeamQualityCuts(ev, mx, my, mz, sx, sy, sz, mincos);
+      double c = 0; for(int i = 0; i < 3; i++)c += cp->DirectionStart[i]*bi->DirectionEnd[i];
+      for(int i = 0; i < 3; i++)st[i] = cp->PositionStart[i];
+      cosbi = c;
+      q = std::abs(st[0] - mx)/sx < 3 && std::abs(st[1] - my)/sy < 3 && std::abs(st[2] - mz)/sz < 3 && c > mincos;
+      delete cp;
+    }
+    output().FillVar(beam_quality_sce, q); output().FillVectorVarFromArray(beam_start_sce, st, 3); output().FillVar(beam_cos_bi, cosbi); }
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
   { Int_t n = 0; for(size_t i = 0; i < b.Candidates.size(); i++)if(b.View[i] == 0)n++; output().FillVar(nmucand, n); }
