@@ -49,8 +49,8 @@ int compare_pair_xs(const char* xsFile, const char* pairFile,
   if(!fx || fx->IsZombie() || !fp || fp->IsZombie())return -1;
   TTree* tru = (TTree*)fx->Get("truth"); TTree* ax = (TTree*)fx->Get("ana"); TTree* ap = (TTree*)fp->Get("ana");
   if(!tru || !ax || !ap)return -1;
-  // niveles de nuestra cadena (secondaryKaonProductionXSSelection): dentro 7 cortes, fuera 9; el último es la ventana de p
-  const int nCut[2] = {7, 9};
+  // niveles de nuestra cadena (secondaryKaonProductionXSSelection): dentro 7 cortes y fuera 9 más el de población; el último es la ventana de p
+  const int nCut[2] = {8, 10};   // cortes de cada cadena contando el de población (cand_level de la cadena entera; technote_cutflow)
 
   // ---- signal muons true (denominador) y los que selecciona nuestra cadena
   std::map<Key, std::vector<Mu>> truth;
