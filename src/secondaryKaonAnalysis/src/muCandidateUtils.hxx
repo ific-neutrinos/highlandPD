@@ -274,7 +274,7 @@ namespace muCandUtils {
 
   // Lo que acaba en el inicio del mu (la K): otros PFParticles con un extremo a < kNear cm de x; el de mayor
   // dE/dx (kBragg cm) en ese extremo
-  struct KAtStart { int n = 0, isTrack = -1; double dEdx = -1, length = -1, pRangeK = -1; };
+  struct KAtStart { int n = 0, isTrack = -1; double dEdx = -1, length = -1, pRangeK = -1; const AnaParticlePD* best = nullptr; };
   inline KAtStart KAt(const TVector3& x, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts){
     KAtStart k;
     for(const AnaParticlePD* q : parts){
@@ -285,8 +285,8 @@ namespace muCandUtils {
       k.n++;
       double dA, dB; int nA, nB; EndsdEdx(q, dA, dB, nA, nB);
       const double d = std::max(nearA ? dA : -1., nearB ? dB : -1.);
-      if(d > k.dEdx){
-        k.dEdx = d; k.length = q->Length; k.isTrack = q->Type == AnaParticlePD::kTrack;
+      if(d > k.dEdx || !k.best){   // sin dE/dx en ninguno, el primero (26-nov: para la truth de la medida C; k.dEdx sigue a -1)
+        k.dEdx = d; k.length = q->Length; k.isTrack = q->Type == AnaParticlePD::kTrack; k.best = q;
         // ComputeRangeMomentum solo tiene mu y p: escalado con la masa (mismo beta*gamma), R_K(p) = (mK/mmu) R_mu(p mmu/mK)
         const double r = pdAnaUtils::kKaonMass/pdAnaUtils::kMuonMass;
         k.pRangeK = q->Length > 0 ? 1000.*r*pdAnaUtils::ComputeRangeMomentum(q->Length/r, 13) : -1;
@@ -536,6 +536,9 @@ namespace muCandUtils {
     Int_t arN[3], arNMichel[3]; Float_t arMichel[3], arCharge[3];
     Int_t asN5, asN10; Float_t asCharge5, asCharge10;
     Int_t kN, kIsTrack; Float_t kDEdx, kLength, kPRange;
+    // añadidas el 26-nov (medida C): truth del candidato a K al inicio (1 si su partícula true es la madre del mu, 0 si no,
+    // -1 sin candidato o sin truth), su pureza y completitud, y la longitud true de la K madre (inicio-fin; -1 si la madre no es K+)
+    Int_t kTrueK; Float_t kTruePur, kTrueEff, tKLength;
     Int_t nDauTrk, nDauShw, dauHits, dauNearStop; Float_t dauMaxMichel;
     Int_t tKOrigin; Float_t tStartZ, tEndZ, tMom;
     // añadidas el 23-nov: conexión con el vértice primario (vc*, -1 sin vértice) y error del vértice (truth)
@@ -731,7 +734,12 @@ namespace muCandUtils {
       const AnaHitPD* hs = EndHit(p, !c.stopAtB);
       const Around as = HitsAround(hs, p, parts, unassoc);
       c.asN5 = hs ? as.n[0] : -1; c.asN10 = hs ? as.n[1] : -1; c.asCharge5 = hs ? as.charge[0] : -1; c.asCharge10 = hs ? as.charge[1] : -1; }
-    { const KAtStart k = KAt(start, p, parts); c.kN = k.n; c.kIsTrack = k.isTrack; c.kDEdx = k.dEdx; c.kLength = k.length; c.kPRange = k.pRangeK; }
+    { const KAtStart k = KAt(start, p, parts); c.kN = k.n; c.kIsTrack = k.isTrack; c.kDEdx = k.dEdx; c.kLength = k.length; c.kPRange = k.pRangeK;
+      const AnaTrueParticleB* kt = k.best ? static_cast<const AnaTrueParticleB*>(k.best->TrueObject) : nullptr;
+      c.kTrueK = (!k.best || !kt || !t) ? -1 : (kt->ID == t->ParentID ? 1 : 0);
+      c.kTruePur = k.best ? k.best->TruePur : -1; c.kTrueEff = k.best ? k.best->TrueEff : -1;
+      auto im = t ? byID.find(t->ParentID) : byID.end();
+      c.tKLength = (im != byID.end() && im->second->PDG == 321) ? (V(im->second->PositionEnd) - V(im->second->Position)).Mag() : -1; }
     { const Dau d = Daughters(p, stop, byUID); c.nDauTrk = d.nTrk; c.nDauShw = d.nShw; c.dauHits = d.hits; c.dauNearStop = d.nearStop; c.dauMaxMichel = d.maxMichel; }
     c.tKOrigin = KOrigin(t, beamTrue, byID);
     c.tStartZ = t ? t->Position[2] : -999; c.tEndZ = t ? t->PositionEnd[2] : -999; c.tMom = t ? 1000.*t->Momentum : -1;

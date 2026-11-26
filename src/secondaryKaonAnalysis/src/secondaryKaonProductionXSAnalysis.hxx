@@ -182,8 +182,10 @@ public:
     // truth de los candidatos
     cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truesignalmuon, cand_truekendmom, cand_truekorigin,
     cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
+    cand_k_truek, cand_k_truepur, cand_k_trueeff, cand_truek_length,
     // árbol truth
     truemu_korigin, truemu_level_full, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
+    truek_length, truek_nreco, truek_besteff, truek_bestpur, truek_bestlength, truek_bestistrack,
     // árbol config
     highlandpd_version,
     enumMicroTreesLast_secondaryKaonProductionXSAnalysis

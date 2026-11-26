@@ -347,6 +347,11 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_truemom,          "truth: momento inicial (MeV/c)",                               ncand, N);
   AddVarMaxSizeVF (output(), cand_truevtxerr,       "truth: distancia del vértice reco al final true del haz (cm)", ncand, N);
   AddVarMaxSizeVI (output(), cand_truelk_s_isk,     "truth: el enlace vértice -> inicio es la K madre",             ncand, N);
+  // medida C (26-nov): truth del candidato a K al inicio del mu y longitud true de la K madre
+  AddVarMaxSizeVI (output(), cand_k_truek,       "el candidato a K al inicio es la madre true del mu (1), no (0), sin candidato o truth (-1)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_k_truepur,     "pureza true del candidato a K al inicio",                                                  ncand, N);
+  AddVarMaxSizeVF (output(), cand_k_trueeff,     "completitud true del candidato a K al inicio",                                             ncand, N);
+  AddVarMaxSizeVF (output(), cand_truek_length,  "longitud true (inicio-fin) de la K+ madre del mu (cm; -1 si no hay)",                      ncand, N);
 }
 
 //********************************************************************
@@ -366,6 +371,13 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
   AddVar3VF(output(), truemu_start,     "inicio del mu (cm)");
   AddVar3VF(output(), truemu_end,       "final del mu (cm)");
   AddVarI  (output(), truemu_contained, "inicio y final en el volumen activo");
+  // medida C (26-nov): la K madre y su reconstrucción (todos los PFParticles guardados del evento)
+  AddVarF  (output(), truek_length,      "longitud true (inicio-fin) de la K+ madre (cm; -1 sin madre K+)");
+  AddVarI  (output(), truek_nreco,       "PFParticles cuya partícula true es la K madre");
+  AddVarF  (output(), truek_besteff,     "completitud del de mayor completitud de esos (-1 si no hay)");
+  AddVarF  (output(), truek_bestpur,     "su pureza");
+  AddVarF  (output(), truek_bestlength,  "su longitud reconstruida (cm; traza o traza forzada)");
+  AddVarI  (output(), truek_bestistrack, "es traza (1) o shower (0)");
 }
 
 //********************************************************************
@@ -527,6 +539,10 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_truemom,          c.tMom);
     output().FillVectorVar(cand_truevtxerr,       c.tVtxErr);
     output().FillVectorVar(cand_truelk_s_isk,     c.tLkSIsK);
+    output().FillVectorVar(cand_k_truek,          c.kTrueK);
+    output().FillVectorVar(cand_k_truepur,        c.kTruePur);
+    output().FillVectorVar(cand_k_trueeff,        c.kTrueEff);
+    output().FillVectorVar(cand_truek_length,     c.tKLength);
     output().IncrementCounter(ncand);
   }
 }
@@ -670,6 +686,24 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
   output().FillVectorVarFromArray(truemu_end,   part.PositionEnd, 3);
   output().FillVar(truemu_contained, (Int_t)(muCandUtils::DistToFaces(muCandUtils::V(part.Position)) > 0 &&
                                              muCandUtils::DistToFaces(muCandUtils::V(part.PositionEnd)) > 0));
+  // la K madre y los PFParticles que la reconstruyen
+  const AnaTrueParticleB* km = (ik != byID.end() && ik->second->PDG == 321) ? ik->second : nullptr;
+  output().FillVar(truek_length, (Float_t)(km ? (muCandUtils::V(km->PositionEnd) - muCandUtils::V(km->Position)).Mag() : -1.));
+  int nk = 0; const AnaParticlePD* bk = nullptr;
+  if(km)for(AnaBunchC* bc : GetSpill().Bunches)for(AnaParticleB* pb : static_cast<AnaBunchB*>(bc)->Particles){
+    const AnaParticlePD* q = static_cast<const AnaParticlePD*>(pb);
+    const AnaTrueParticleB* qt = static_cast<const AnaTrueParticleB*>(q->TrueObject);
+    if(!qt || qt->ID != km->ID)continue;
+    nk++;
+    if(!bk || q->TrueEff > bk->TrueEff)bk = q;
+  }
+  output().FillVar(truek_nreco, nk);
+  output().FillVar(truek_besteff, (Float_t)(bk ? bk->TrueEff : -1.));
+  output().FillVar(truek_bestpur, (Float_t)(bk ? bk->TruePur : -1.));
+  float bl = -1; int bt = -1;
+  if(bk){ bt = bk->Type == AnaParticlePD::kTrack; bl = bt ? bk->Length : (!bk->ForcedTrack.empty() ? bk->ForcedTrack[0].Length : -1.f); }
+  output().FillVar(truek_bestlength, bl);
+  output().FillVar(truek_bestistrack, bt);
 }
 
 //********************************************************************
