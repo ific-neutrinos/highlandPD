@@ -37,7 +37,7 @@
   RAMAS: una por población, porque las reconstruyen pasadas distintas de Pandora y tienen fondos distintos.
     rama 0, en la beam slice: población, caras > 35, vértice > 15, chi2 mu < 6, dE/dx parada > 3, huecos,
                               Michel por hits, ventana [205, 240]
-    rama 1, fuera:            población, no IsClearCosmic, eje < 60, chi2 mu < 6, dE/dx parada > 3, chi2 p > 80,
+    rama 1, fuera:            población, no IsClearCosmic, eje < 80, chi2 mu < 6, dE/dx parada > 3, chi2 p > 80,
                               dE/dx inicio > 1,8, huecos, Michel por hits, ventana [205, 240]
   La ventana va la última: en la medida B es el pico que se ajusta (la muestra del ajuste es la del penúltimo nivel,
   7 dentro y 9 fuera; el rango del ajuste lo pone la macro del ajuste), y en la de conteo, el último corte.
@@ -49,7 +49,7 @@ namespace muCandCuts {
 
   // ---- Umbrales por defecto de la cadena (revisión del 23-nov) ----
   const double kFacesMin      = 35.;     // cm, los dos extremos a las caras del volumen activo (en la beam slice)
-  const double kAxisMax       = 60.;     // cm, distancia mínima de un extremo al eje del haz (fuera)
+  const double kAxisMax       = 80.;     // cm (60 hasta el 26-nov-2026: el barrido con v1_00-v1_05 da el óptimo en 80-100), distancia mínima de un extremo al eje del haz (fuera)
   const double kVertexMin     = 15.;     // cm, los dos extremos al vértice del haz (en la beam slice; sin vértice pasa)
   const double kChi2MuMax     = 6.;      // chi2/ndf de mu con la parada en el extremo de mayor dE/dx
   const double kdEdxStopMin   = 3.;      // MeV/cm, media en los 5 cm de la parada (pico de Bragg)

@@ -92,7 +92,7 @@ int technote_selection(const char* in, const char* outdir, const char* categ = "
   };
   std::vector<SelCut> out_ = {
     {2, "clearcosmic", "cand_clearcosmic", "Pandora IsClearCosmic", 2, 0, 2, -999, 0.5, false},
-    {3, "axis",     "cand_axis_min", "Distance of the closest end to the beam axis (cm)", 30, 0, 150, -999, 60, false},
+    {3, "axis",     "cand_axis_min", "Distance of the closest end to the beam axis (cm)", 30, 0, 150, -999, 80, false},
     {4, "chi2mu",   "cand_chi2mu", "#chi^{2}_{#mu}/ndf", 40, 0, 40, -999, 6, false},
     {5, "dedxstop", "cand_dedx_stop", "dE/dx in the last 5 cm (MeV/cm)", 40, 0, 10, 3, -999, false},
     {6, "chi2p",    "cand_chi2p", "#chi^{2}_{p}/ndf", 40, 0, 400, 80, -999, false},

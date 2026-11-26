@@ -16,7 +16,7 @@ int technote_cutflow(const char* in){
   TTree* t = (TTree*)f->Get("ana");
   const std::vector<std::string> names[2] = {
     {"in the beam slice", "faces $>35$~cm", "vertex $>15$~cm", "$\\chi^2_\\mu<6$", "$dE/dx$ stop $>3$", "APA gaps", "Michel", "$p$ window"},
-    {"out of the beam slice", "not \\code{IsClearCosmic}", "axis $<60$~cm", "$\\chi^2_\\mu<6$", "$dE/dx$ stop $>3$", "$\\chi^2_p>80$",
+    {"out of the beam slice", "not \\code{IsClearCosmic}", "axis $<80$~cm", "$\\chi^2_\\mu<6$", "$dE/dx$ stop $>3$", "$\\chi^2_p>80$",
      "$dE/dx$ start $>1.8$", "APA gaps", "Michel", "$p$ window"}};
   const std::string sig = "cand_truesignalmuon==1";
   const std::vector<std::string> cat = {

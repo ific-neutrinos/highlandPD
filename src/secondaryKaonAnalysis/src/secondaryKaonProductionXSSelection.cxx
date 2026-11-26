@@ -48,7 +48,7 @@ void secondaryKaonProductionXSSelection::DefineSteps(){
   // rama 1: fuera de la beam slice (fondo: mu cósmicos, trozos EM, piones y protones de interacciones secundarias)
   add(1, "fuera de la beam slice",                new MuCandPopulationCut());
   add(1, "no IsClearCosmic",                      new MuCandNoClearCosmicCut());
-  add(1, "eje < 60 cm",                           new MuCandAxisCut(muCandCuts::kAxisMax));
+  add(1, "eje < 80 cm",                           new MuCandAxisCut(muCandCuts::kAxisMax));
   add(1, "#chi^{2}_{#mu} < 6",                    new MuCandChi2MuCut(muCandCuts::kChi2MuMax));
   add(1, "dE/dx parada > 3",                      new MuCandStopdEdxCut(muCandCuts::kdEdxStopMin));
   add(1, "#chi^{2}_{p} > 80",                     new MuCandChi2pCut(muCandCuts::kChi2pMin));

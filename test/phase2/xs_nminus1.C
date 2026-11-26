@@ -56,7 +56,7 @@ int xs_nminus1(const char* in){
      {"vertex > 15", [](const C& c){ return c.vtx < 0 || c.vtx > 15; }},
      {"chi2mu < 6", chi2}, {"dEdx stop > 3", [](const C& c){ return c.dedx_stop > 3; }}, {"gaps", gaps}, {"Michel >= 2", michel},
      {"p range [205, 240]", [](const C& c){ return c.prange >= 205 && c.prange <= 240; }}},
-    {{"no IsClearCosmic", [](const C& c){ return !c.clear; }}, {"axis < 60", [](const C& c){ return c.axis < 60; }},
+    {{"no IsClearCosmic", [](const C& c){ return !c.clear; }}, {"axis < 80", [](const C& c){ return c.axis < 80; }},
      {"chi2mu < 6", chi2}, {"dEdx stop > 3", [](const C& c){ return c.dedx_stop > 3; }},
      {"chi2p > 80", [](const C& c){ return c.chi2p > 80; }}, {"dEdx start > 1.8", [](const C& c){ return c.dedx_start > 1.8; }},
      {"gaps", gaps}, {"Michel >= 2", michel}, {"p range [205, 240]", [](const C& c){ return c.prange >= 205 && c.prange <= 240; }}}
