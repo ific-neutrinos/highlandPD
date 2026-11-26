@@ -39,7 +39,12 @@ namespace skpu {
   }
   const char* TBin(double dt){
     const double a = std::abs(dt);
-    return a < 10 ? "|dt| < 10 ns" : a < 100 ? "10-100 ns" : a < 1000 ? "0,1-1 us" : a < 1e4 ? "1-10 us" : "> 10 us";
+    if(a < 1e4)return a < 10 ? "|dt| < 10 ns" : a < 100 ? "10-100 ns" : a < 1000 ? "0,1-1 us" : "1-10 us";
+    // > 10 us: con signo, 10-100 us y luego por ms (la ventana de lectura es [-1, 3) ms; 26-nov-2026)
+    static std::string s;
+    if(a < 1e5)s = dt < 0 ? "-(10-100) us" : "10-100 us";
+    else{ const long k = (long)std::floor(dt/1e6); s = "[" + std::to_string(k) + "," + std::to_string(k+1) + ") ms"; }
+    return s.c_str();
   }
 }
 
