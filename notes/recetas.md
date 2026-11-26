@@ -63,8 +63,8 @@ SAM). **Siempre con URLs xrootd**, no con rutas `/pnfs`: las macros leen lo que 
 leerían por el montaje NFS de dCache. Por xrootd, ~7 eventos/s por macro (una pasada entera, 1,5-2 h):
 
 ```bash
-ls /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha>/minitree_*.root \
-  | sed 's|^/pnfs/|root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr/|' > mc_<nombre>.txt
+D=/pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha>; ls $D | grep '^minitree_.*\.root$' | sed "s|^|$D/|; s|^/pnfs/|root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr/|" > mc_<nombre>.txt
+# sin glob: con 11.626 ficheros (v1_03) "ls .../minitree_*.root" da "Argument list too long"
 head -1 mc_<nombre>.txt; wc -l mc_<nombre>.txt   # root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr/dune/...; nº de ficheros
 ```
 
