@@ -138,6 +138,8 @@ P=/pnfs/dune/persistent/users/miagarc/pdsp/dunesw_v09_56_00d01_claude/minitrees/
 ./to_persistent.sh /pnfs/dune/scratch/users/miagarc/pdsp/mc/<fecha> $P/stats 'stats_*.txt'
 ```
 
+**HTTP 401 al leer el origen (26-nov):** no es dCache ni el token: Davix (gfal) presenta el proxy X.509 de `/tmp/x509up_u<uid>` aunque `IFDH_PROXY_ENABLE=0`, y el que deja `justin get-token` (`CN=justin-jobs-no-roles`) da 401. Desde highlandAnalysis `ed27a81` `to_persistent.sh` usa un fichero de token propio (`/tmp/bt_interactive_u<uid>`) y `X509_USER_PROXY` a un fichero que no existe (aviso `impossible to open` de Davix, inofensivo). Con una versión anterior del script: `export BEARER_TOKEN_FILE=/tmp/bt_interactive_u$(id -u) X509_USER_PROXY=/tmp/no_existe` y `htgettoken ... -r interactive` antes del bucle.
+
 Se puede relanzar tal cual si se corta (salta lo ya copiado). Los fallos van a `to_persistent_failed.txt`.
 Ritmo: ~110 ficheros/min (una muestra de 7.300 ficheros, ~1 h por tipo de fichero). **Nunca** `cp`/`rsync` por NFS a
 `/pnfs`: solo `to_persistent.sh` (ifdh).

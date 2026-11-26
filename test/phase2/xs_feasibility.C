@@ -9,7 +9,9 @@
 // Conexión con el vértice (un PFParticle une el vértice con un extremo del mu, o un extremo del mu está a < 10 cm del
 // vértice) con dos vértices: el de Pandora (final del primario) y el perfecto (MC: último hit del haz true, en el
 // sistema de la reco). Con y sin exigir que el haz interaccione a z true > 30 cm (beam_trueendpos o tbeamend).
-// Proyección: error relativo de un recuento de la señal A con k veces la estadística del MC (k = 6 ~ datos a 6 GeV).
+// Proyección: error relativo de un recuento de la señal A con k veces la estadística del MC (k = 6 ~ datos a 6 GeV con
+// un bloque de ~73.000 eventos de MC; con más MC, k = 6*73070/N_MC: segundo argumento, 26-nov-2026).
+//   root -l -b -q 'test/phase2/xs_feasibility.C+("xs_v100to105d01.root", 1.196)'   // v1_00-v1_05, 366.460 eventos
 // Lee los nombres antiguos (cand_tpdg, tbeamend) y los nuevos (cand_truepdg, beam_trueendpos).
 #include "TFile.h"
 #include "TTree.h"
@@ -26,7 +28,7 @@ namespace feas {
   const char* Br(TTree* t, const char* nuevo, const char* viejo){ return t->GetBranch(nuevo) ? nuevo : viejo; }
 }
 
-int xs_feasibility(const char* in){
+int xs_feasibility(const char* in, double kData = 6){
   using namespace feas;
   TFile f(in);
   TTree* t = (TTree*)f.Get("ana");
@@ -95,8 +97,8 @@ int xs_feasibility(const char* in){
     const double S = N[z][p][kA], SP = CP[z][p][kA], ST = CT[z][p][kA];
     auto err = [](double s, double b, double k){ return s > 0 ? std::sqrt(k*(s + b))/(k*s) : 0.; };
     std::cout << Form("  pureza para A: sin conexión %.3f, con la de Pandora %.3f, con la perfecta %.3f", tot ? S/tot : 0., totP ? SP/totP : 0., totT ? ST/totT : 0.) << std::endl
-              << Form("  error relativo de un recuento de A con 6 veces esta estadística: sin conexión %.1f %%, Pandora %.1f %%, perfecta %.1f %%",
-                      100*err(S, tot - S, 6), 100*err(SP, totP - SP, 6), 100*err(ST, totT - ST, 6)) << std::endl;
+              << Form("  error relativo de un recuento de A con %.2f veces esta estadística: sin conexión %.1f %%, Pandora %.1f %%, perfecta %.1f %%", kData,
+                      100*err(S, tot - S, kData), 100*err(SP, totP - SP, kData), 100*err(ST, totT - ST, kData)) << std::endl;
   }
   return 0;
 }
