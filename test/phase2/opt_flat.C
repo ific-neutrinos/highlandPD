@@ -38,7 +38,9 @@ int opt_flat(const char* in, const char* out){
     {"cosmiccrit", "cand_cosmiccrit"}, {"sh_lin", "cand_sh_lin"},
     // actividad alrededor del inicio del mu (idea del usuario, 26-nov: la K que para deja hits con más carga)
     {"as_n5", "cand_as_n5"}, {"as_n10", "cand_as_n10"}, {"as_charge5", "cand_as_charge5"},
-    {"as_mean5", "cand_as_n5>0 ? cand_as_charge5/cand_as_n5 : -1"}, {"as_mean10", "cand_as_n10>0 ? cand_as_charge10/cand_as_n10 : -1"}};
+    {"as_mean5", "cand_as_n5>0 ? cand_as_charge5/cand_as_n5 : -1"}, {"as_mean10", "cand_as_n10>0 ? cand_as_charge10/cand_as_n10 : -1"},
+    // truth de la madre (26-nov: pi+ de K+ -> pi+ pi0 en reposo en el fondo de la medida B)
+    {"ppdg", "cand_trueparentpdg"}, {"tproc", "cand_trueproc"}};
   std::vector<std::unique_ptr<TTreeFormula>> fo;
   for(auto& v : vars){
     fo.emplace_back(new TTreeFormula(v.first.c_str(), v.second.c_str(), t));
