@@ -5,7 +5,8 @@
 //   mu : no e y la traza llega lejos sin interaccionar: z del final "empalmado" > zCut. Pandora corta las trazas largas
 //        en los huecos entre APAs (z ~ 230 y ~ 462 cm): se empalma con la hija del primario que empieza a < dMax del final
 //        (cualquiera de sus extremos) y es colineal (|cos| > cosMin con la dirección final del primario), y se toma la z
-//        de su otro extremo (un nivel de hijas: es lo que hay en el microtree);
+//        de su otro extremo (un nivel de hijas: es lo que hay en el microtree). Si el microtree tiene beam_reach
+//        (27-nov, muCandUtils::BeamReach: empalme con cualquier partícula del evento, varios trozos), se usa ese;
 //   pi : el resto.
 // Matriz de confusión frente a la partícula true del haz (MC), con la calidad del haz con SCE y beam slice, y barrido
 // de zCut. Estimación de la fracción de pi corrigiendo con la matriz (inversión 3x3) y su sensibilidad a la
@@ -24,7 +25,7 @@ int measB_beampid(const char* xs, double emCut = 0.8, double dMax = 30, double c
   TFile fx(xs); TTree* t = (TTree*)fx.Get("ana");
   const int kMaxDau = 200;
   Int_t sp, hs, q, tpdg, nd;
-  Float_t end[4], edir[3], cnn[3], dpos[kMaxDau][4], dend[kMaxDau][4], ddir[kMaxDau][3];
+  Float_t end[4], edir[3], cnn[3], dpos[kMaxDau][4], dend[kMaxDau][4], ddir[kMaxDau][3], reach[3] = {-999, -999, -999};
   t->SetBranchStatus("*", 0);
   for(const char* b : {"beam_truespecies", "hasslice", "beam_quality_sce", "beam_truepdg", "seltrk_ndau", "seltrk_endpos", "seltrk_enddir",
                        "seltrk_CNNscore", "seltrk_dau_pos", "seltrk_dau_endpos", "seltrk_dau_dir"})t->SetBranchStatus(b, 1);
@@ -32,6 +33,9 @@ int measB_beampid(const char* xs, double emCut = 0.8, double dMax = 30, double c
   t->SetBranchAddress("beam_truepdg", &tpdg); t->SetBranchAddress("seltrk_ndau", &nd); t->SetBranchAddress("seltrk_endpos", end);
   t->SetBranchAddress("seltrk_enddir", edir); t->SetBranchAddress("seltrk_CNNscore", cnn);
   t->SetBranchAddress("seltrk_dau_pos", dpos); t->SetBranchAddress("seltrk_dau_endpos", dend); t->SetBranchAddress("seltrk_dau_dir", ddir);
+  const bool hasReach = t->GetBranch("beam_reach");
+  if(hasReach){ t->SetBranchStatus("beam_reach", 1); t->SetBranchAddress("beam_reach", reach); }
+  printf("Empalme: %s\n", hasReach ? "beam_reach (todas las partículas del evento)" : "hijas del primario (no hay beam_reach)");
   if(t->GetMaximum("seltrk_ndau") > kMaxDau){ printf("ERROR: seltrk_ndau > %d\n", kMaxDau); return 1; }
   struct Ev { int tr; float em, z0, z1; };   // tr: 0 pi, 1 mu, 2 e; z0 fin del primario, z1 fin empalmado
   std::vector<Ev> ev;
@@ -50,12 +54,13 @@ int measB_beampid(const char* xs, double emCut = 0.8, double dMax = 30, double c
       const float zf = d0 < d1 ? dend[i][2] : dpos[i][2];
       if(zf > z1){ z1 = zf; st = true; }
     }
+    if(hasReach){ st = reach[2] > end[2] + 1; z1 = reach[2] > -900 ? reach[2] : end[2]; }
     nTr[tr]++; if(st)nStitch[tr]++;
     ev.push_back({tr, cnn[1], end[2], z1});
   }
   const char* nm[3] = {"pi+", "mu+", "e+"};
   printf("Grupo e/mu/pi, beam slice, calidad del haz con SCE: pi %ld, mu %ld, e %ld\n", nTr[0], nTr[1], nTr[2]);
-  printf("Empalmados (hija colineal a < %.0f cm del final que llega más lejos): pi %.1f %%, mu %.1f %%, e %.1f %%\n", dMax,
+  printf("Empalmados (trozo colineal a < %.0f cm del final que llega más lejos): pi %.1f %%, mu %.1f %%, e %.1f %%\n", dMax,
          100.*nStitch[0]/nTr[0], 100.*nStitch[1]/nTr[1], 100.*nStitch[2]/nTr[2]);
   // fin del primario y fin empalmado, por bins de 50 cm
   for(int w = 0; w < 2; w++){

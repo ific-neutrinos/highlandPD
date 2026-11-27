@@ -650,6 +650,46 @@ namespace muCandUtils {
     return d < 1e8 ? d : -1.;
   }
 
+  // Alcance del haz (27-nov-2026, denominador de la medida B: separar mu+ de pi+ en el grupo e/mu/pi). Pandora corta
+  // las trazas largas del haz en los huecos entre APAs (z ~ 230 y ~ 462 cm) y la continuación no suele ser hija del
+  // primario. Se empalma el primario con la partícula del evento (de las que el módulo guardaría en un evento normal;
+  // en resumen basta: solo se usan los extremos) que tiene un extremo a < dMax del final actual y sigue hacia delante,
+  // colineal (cos > cosMin entre la dirección actual y la del trozo); se repite desde su otro extremo. Devuelve el
+  // número de trozos añadidos (-1 sin primario) y en reach el final empalmado.
+  inline int BeamReach(const AnaParticlePD* prim, const std::vector<AnaParticlePD*>& parts, bool fullDump, TVector3& reach,
+                       double dMax = 30., double cosMin = 0.95){
+    if(!prim || !Valid(prim->PositionStart) || !Valid(prim->PositionEnd))return -1;
+    bool hasSlice = false;
+    for(const AnaParticlePD* p : parts)if(p->BeamOrigin){ hasSlice = true; break; }
+    reach = V(prim->PositionEnd);
+    TVector3 dir = reach - V(prim->PositionStart);
+    if(dir.Mag() < 1e-3)return 0;
+    dir = dir.Unit();
+    const TVector3 de(prim->DirectionEnd[0], prim->DirectionEnd[1], prim->DirectionEnd[2]);
+    if(de.Mag() > 0.5 && de.Unit().Dot(dir) > 0)dir = de.Unit();   // dirección al final, si es razonable
+    std::vector<const AnaParticlePD*> used = {prim};
+    int n = 0;
+    for(int it = 0; it < 20; it++){
+      const AnaParticlePD* best = nullptr; TVector3 bestFar, bestDir; double bestGain = 0;
+      for(const AnaParticlePD* q : parts){
+        if(std::find(used.begin(), used.end(), q) != used.end())continue;
+        if(fullDump && NormalSaveMode(q, hasSlice) == kNotSaved)continue;
+        if(!Valid(q->PositionStart) || !Valid(q->PositionEnd))continue;
+        const TVector3 a = V(q->PositionStart), b = V(q->PositionEnd);
+        const double da = (a - reach).Mag(), db = (b - reach).Mag();
+        if(std::min(da, db) > dMax)continue;
+        const TVector3 nearP = da < db ? a : b, farP = da < db ? b : a, seg = farP - nearP;
+        if(seg.Mag() < 1)continue;
+        if(seg.Unit().Dot(dir) < cosMin)continue;
+        const double gain = (farP - reach).Dot(dir);
+        if(gain > bestGain){ bestGain = gain; best = q; bestFar = farP; bestDir = seg.Unit(); }
+      }
+      if(!best)break;
+      used.push_back(best); reach = bestFar; dir = bestDir; n++;
+    }
+    return n;
+  }
+
   // Señal antigua (tSignal): mu+ cuya madre es una K+ que acaba en Decay y desciende del haz que dispara; kMomEnd en MeV/c
   inline bool IsOldSignal(const AnaTrueParticleB* t, const EventContext& ctx, double& kMomEnd){
     kMomEnd = -1;

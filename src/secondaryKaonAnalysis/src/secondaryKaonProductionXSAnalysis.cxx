@@ -244,6 +244,10 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarI  (output(), beam_quality_sce, "calidad del haz con el inicio del primario corregido por SCE (1 pasa, 0 no, -1 sin primario o sin BI)");
   AddVar3VF(output(), beam_start_sce,   "inicio del primario de la beam slice corregido por SCE (cm)");
   AddVarF  (output(), beam_cos_bi,      "cos entre la dirección inicial del primario corregida por SCE y la del BI");
+  // alcance del haz (27-nov): primario empalmado a través de los huecos entre APAs (muCandUtils::BeamReach), para separar
+  // mu+ (cruzan el TPC) de pi+ (interaccionan) en el grupo e/mu/pi (denominador de la medida B)
+  AddVar3VF(output(), beam_reach,       "final del primario de la beam slice empalmado con los trozos colineales que lo continúan (cm, sin SCE)");
+  AddVarI  (output(), beam_reach_n,     "trozos empalmados al primario (-1 sin primario)");
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
   AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
@@ -447,6 +451,14 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
       delete cp;
     }
     output().FillVar(beam_quality_sce, q); output().FillVectorVarFromArray(beam_start_sce, st, 3); output().FillVar(beam_cos_bi, cosbi); }
+  { AnaEventPD* ev = static_cast<AnaEventPD*>(&GetEvent());
+    std::vector<AnaParticlePD*> parts;
+    for(int i = 0; i < ev->nParticles; i++)parts.push_back(static_cast<AnaParticlePD*>(ev->Particles[i]));
+    const AnaEventInfoPD* inf = static_cast<AnaEventInfoPD*>(ev->EventInfo);
+    TVector3 r(-999, -999, -999);
+    const int n = muCandUtils::BeamReach(pdAnaUtils::GetBeamParticleInTPC(ev), parts, inf && inf->FullDump, r);
+    Float_t rr[3] = {(Float_t)r.X(), (Float_t)r.Y(), (Float_t)r.Z()}; if(n < 0)rr[0] = rr[1] = rr[2] = -999;
+    output().FillVectorVarFromArray(beam_reach, rr, 3); output().FillVar(beam_reach_n, n); }
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
   { Int_t n = 0; for(size_t i = 0; i < b.Candidates.size(); i++)if(b.View[i] == 0)n++; output().FillVar(nmucand, n); }
