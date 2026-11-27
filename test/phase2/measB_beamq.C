@@ -9,6 +9,8 @@
 // en z ~ 30 cm): se miden aquí con mediana y 1,4826 MAD de los eventos con beam slice cuyo primario es la partícula del haz.
 // Sin beam slice no hay calidad (falla). Clases de los mu de K seleccionados: A o secundaria con el haz acabando en el TPC
 // (z > 0) o antes (z < 0), K del haz, pileup.
+// sce = 1 (27-nov-2026, por defecto): la calidad es beam_quality_sce de los xs_*d01b (inicio corregido por SCE, cortes de
+// pdUtils.parameters.dat); las medias sin SCE se siguen midiendo e imprimiendo. sce = 0: la provisional.
 #include "TFile.h"
 #include "TTree.h"
 #include <algorithm>
@@ -22,30 +24,32 @@ namespace bq {
   double Mad(const std::vector<double>& v, double m){ std::vector<double> d; for(double x : v)d.push_back(std::abs(x - m)); return 1.4826*Median(d); }
 }
 
-int measB_beamq(const char* flat, const char* xs){
+int measB_beamq(const char* flat, const char* xs, int sce = 1){
   using namespace bq;
   TFile fx(xs); TTree* ana = (TTree*)fx.Get("ana");
-  Float_t pos[4], dir[3], bdir[3], tend[4]; Int_t hasslice, sp, tpdg;
+  Float_t pos[4], dir[3], bdir[3], tend[4]; Int_t hasslice, sp, tpdg, qsce = -1;
   ana->SetBranchStatus("*", 0);
   for(const char* b : {"seltrk_pos", "seltrk_dir", "beam_enddir", "beam_trueendpos", "hasslice", "beam_truespecies", "beam_truepdg"})ana->SetBranchStatus(b, 1);
   ana->SetBranchAddress("seltrk_pos", pos); ana->SetBranchAddress("seltrk_dir", dir); ana->SetBranchAddress("beam_enddir", bdir);
   ana->SetBranchAddress("beam_trueendpos", tend); ana->SetBranchAddress("hasslice", &hasslice);
   ana->SetBranchAddress("beam_truespecies", &sp); ana->SetBranchAddress("beam_truepdg", &tpdg);
+  if(sce){ ana->SetBranchStatus("beam_quality_sce", 1); ana->SetBranchAddress("beam_quality_sce", &qsce); }
   const Long64_t nEv = ana->GetEntries();
-  struct Ev { float x, y, z, cos, tz; int slice, sp, pdg; };
+  struct Ev { float x, y, z, cos, tz; int slice, sp, pdg, qsce; };
   std::vector<Ev> ev(nEv);
   std::vector<double> vx, vy, vz;
   for(Long64_t e = 0; e < nEv; e++){
     ana->GetEntry(e);
     double c = 0; for(int i = 0; i < 3; i++)c += dir[i]*bdir[i];
-    ev[e] = {pos[0], pos[1], pos[2], (float)c, tend[2], hasslice, sp, tpdg};
+    ev[e] = {pos[0], pos[1], pos[2], (float)c, tend[2], hasslice, sp, tpdg, qsce};
     // para medir medias y sigmas: con beam slice, primario hacia delante y el haz true entrando en el TPC
     if(hasslice && pos[2] > -900 && c > 0.95 && tend[2] > 50){ vx.push_back(pos[0]); vy.push_back(pos[1]); vz.push_back(pos[2]); }
   }
   const double mx = Median(vx), my = Median(vy), mz = Median(vz), sx = Mad(vx, mx), sy = Mad(vy, my), sz = Mad(vz, mz);
   printf("Inicio del primario (eventos con beam slice, cos > 0,95, haz true acabando a z > 50): x %.1f +- %.2f, y %.1f +- %.2f, z %.1f +- %.2f cm (n = %zu)\n",
          mx, sx, my, sy, mz, sz, vx.size());
-  auto quality = [&](const Ev& v){ return v.slice && v.z > -900 && std::abs(v.x - mx) < 3*sx && std::abs(v.y - my) < 3*sy && std::abs(v.z - mz) < 3*sz && v.cos > 0.95; };
+  printf("Calidad del haz: %s\n", sce ? "beam_quality_sce (inicio corregido por SCE)" : "provisional (sin SCE, medias de arriba)");
+  auto quality = [&](const Ev& v){ if(sce)return v.slice && v.qsce == 1; return v.slice && v.z > -900 && std::abs(v.x - mx) < 3*sx && std::abs(v.y - my) < 3*sy && std::abs(v.z - mz) < 3*sz && v.cos > 0.95; };
   // denominador: partículas del haz por especie, con y sin calidad, y cuántas acaban antes del TPC
   double nB[3][2] = {{0}}, nUp[3][2] = {{0}};
   for(auto& v : ev){ if(v.sp < 0 || v.sp > 2)continue; const bool q = quality(v); nB[v.sp][0]++; if(v.tz < 0)nUp[v.sp][0]++; if(q){ nB[v.sp][1]++; if(v.tz < 0)nUp[v.sp][1]++; } }

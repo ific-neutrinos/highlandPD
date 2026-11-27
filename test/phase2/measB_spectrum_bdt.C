@@ -3,8 +3,12 @@
 // cortes. Solo la mitad de evaluación del BDT (half == 1), escalada x2. Categorías true como en la figura de cortes, y
 // además el pi+ de K+ -> pi+ pi0 en reposo separado dentro del fondo (solo para verlo: no entra en la selección).
 // Comprobación del fondo: observado en 200-245 MeV/c frente al interpolado con exp(pol3) ajustado fuera de esa región.
+// Calidad del haz (27-nov-2026): sce = 1 (por defecto) usa beam_quality_sce de los xs nuevos (xs_*d01b, inicio del
+// primario corregido por SCE y cortes de pdUtils.parameters.dat, como pdAnaUtils::GetBeamQuality); sce = 0, la provisional
+// sin SCE (inicio a z ~ 30 cm, medias medidas en measB_beamq.C). Los xs_*d01b tienen los mismos eventos en el mismo orden
+// que los xs_*d01 (comprobado), así que valen con opt_flat3 (entry).
 //
-//   root -l -b -q 'test/phase2/measB_spectrum_bdt.C+("opt_flat3_v100to105d01.root", "xs_v100to105d01.root", "<pesos>", 0.19, "figs/measB_prange_in_bq_bdt")'
+//   root -l -b -q 'test/phase2/measB_spectrum_bdt.C+("opt_flat3_v100to105d01.root", "xs_v100to105d01b.root", "<pesos>", 0.19, "figs/measB_prange_in_bqsce_bdt")'
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1D.h"
@@ -25,18 +29,21 @@
 #include <vector>
 
 int measB_spectrum_bdt(const char* flat, const char* xs, const char* weights, double cut, const char* out,
-                       const char* varList = "as_mean5,k_dedx,k_n,cnn_michel,michel_own,nmich10,cosbeam,dedx_stop,ar_charge10,intpeak"){
+                       const char* varList = "as_mean5,k_dedx,k_n,cnn_michel,michel_own,nmich10,cosbeam,dedx_stop,ar_charge10,intpeak",
+                       int sce = 1){
   gStyle->SetOptStat(0);
   TFile fx(xs); TTree* ana = (TTree*)fx.Get("ana");
-  Int_t sp, hs_; Float_t pos[4], dir[3], bdir[3];
+  Int_t sp, hs_, qsce = -1; Float_t pos[4], dir[3], bdir[3];
   ana->SetBranchStatus("*", 0);
   for(const char* b : {"beam_truespecies", "hasslice", "seltrk_pos", "seltrk_dir", "beam_enddir"})ana->SetBranchStatus(b, 1);
+  if(sce){ ana->SetBranchStatus("beam_quality_sce", 1); ana->SetBranchAddress("beam_quality_sce", &qsce); }
   ana->SetBranchAddress("beam_truespecies", &sp); ana->SetBranchAddress("hasslice", &hs_); ana->SetBranchAddress("seltrk_pos", pos);
   ana->SetBranchAddress("seltrk_dir", dir); ana->SetBranchAddress("beam_enddir", bdir);
   std::vector<int> evSp(ana->GetEntries()); double nBeam[3] = {0};
   for(Long64_t e = 0; e < ana->GetEntries(); e++){
     ana->GetEntry(e); double c = 0; for(int i = 0; i < 3; i++)c += dir[i]*bdir[i];
-    const bool q = hs_ && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95;
+    const bool q = sce ? (hs_ && qsce == 1)
+                       : (hs_ && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95);
     evSp[e] = q ? sp : -1; if(evSp[e] >= 0 && evSp[e] <= 2 && e % 2 == 1)nBeam[evSp[e]] += 2;   // mitad 1, x2
   }
   std::vector<std::string> vars; { std::string s = std::string(varList) + ","; for(size_t a = 0, b; (b = s.find(',', a)) != std::string::npos; a = b + 1)if(b > a)vars.push_back(s.substr(a, b - a)); }
@@ -71,11 +78,11 @@ int measB_spectrum_bdt(const char* flat, const char* xs, const char* weights, do
   }
   TCanvas cv("cv", "", 1500, 520); cv.Divide(3, 1);
   const char* spName[3] = {"e/#mu/#pi beam", "K beam", "p beam"};
-  printf("BDT > %.2f (10 variables), en la beam slice, calidad del haz provisional; mitad de evaluación x2\n", cut);
+  printf("BDT > %.2f (10 variables), en la beam slice, calidad del haz %s; mitad de evaluación x2\n", cut, sce ? "con SCE (beam_quality_sce)" : "provisional sin SCE");
   printf("  %-8s %9s | %6s %6s %6s %6s %6s %7s | ventana: B, total, pureza | fondo en 200-245: observado / interpolado\n", "haz", "partículas", "A", "B-A", "C-B", "Kpipi", "fondo", "total");
   for(int s = 0; s < 3; s++){
     cv.cd(s + 1); gPad->SetLeftMargin(0.14);
-    THStack* hs = new THStack(Form("hs%d", s), Form("%s, in the beam slice, beam quality, BDT;Momentum from range, #mu hypothesis (MeV/c);Candidates / 5 MeV/c", spName[s]));
+    THStack* hs = new THStack(Form("hs%d", s), Form("%s, in the beam slice, beam quality%s, BDT;Momentum from range, #mu hypothesis (MeV/c);Candidates / 5 MeV/c", spName[s], sce ? " (SCE)" : ""));
     for(int k = 0; k < 9; k++)hs->Add(h[s][k]);
     hs->Draw("hist");
     const double ymax = hs->GetMaximum();

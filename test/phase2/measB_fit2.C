@@ -4,7 +4,9 @@
 // suave (exp(pol2) o subida saturada x exp). Misma muestra que measB_fit.C (en la beam slice, calidad provisional,
 // cadena sin ventana, 150-400 MeV/c); desde el microtree directamente.
 //
-//   root -l -b -q 'test/phase2/measB_fit2.C+("xs_v100to105d01.root", 0, "figs/measB_fit2_pi")'
+// sce = 1 (27-nov-2026, por defecto): calidad del haz beam_quality_sce de los xs_*d01b; sce = 0: la provisional.
+//
+//   root -l -b -q 'test/phase2/measB_fit2.C+("xs_v100to105d01b.root", 0, "figs/measB_fit2_pi")'
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1D.h"
@@ -16,12 +18,13 @@
 #include <cstdio>
 #include <functional>
 
-int measB_fit2(const char* xs, int species, const char* out){
+int measB_fit2(const char* xs, int species, const char* out, int sce = 1){
   gStyle->SetOptStat(0);
   const double x0 = 150, x1 = 400, bw = 5; const int nb = 50;
   TFile fx(xs); TTree* a = (TTree*)fx.Get("ana");
-  const TString q = "hasslice && abs(seltrk_pos[0]+28.7)<3*4.17 && abs(seltrk_pos[1]-422.4)<3*3.91 && abs(seltrk_pos[2]-29.7)<3*0.59"
-                    " && seltrk_dir[0]*beam_enddir[0]+seltrk_dir[1]*beam_enddir[1]+seltrk_dir[2]*beam_enddir[2]>0.95";
+  const TString q = sce ? "hasslice && beam_quality_sce==1"
+                        : "hasslice && abs(seltrk_pos[0]+28.7)<3*4.17 && abs(seltrk_pos[1]-422.4)<3*3.91 && abs(seltrk_pos[2]-29.7)<3*0.59"
+                          " && seltrk_dir[0]*beam_enddir[0]+seltrk_dir[1]*beam_enddir[1]+seltrk_dir[2]*beam_enddir[2]>0.95";
   const TString base = Form("beam_truespecies==%d && %s && cand_pop==0 && cand_level>=7 && cand_prange>=150 && cand_prange<400", species, q.Data());
   TH1D hD("hD", "", nb, x0, x1), hK("hK", "", nb, x0, x1), hP("hP", "", nb, x0, x1), hB("hB", "", nb, x0, x1);
   a->Project("hD", "cand_prange", base);

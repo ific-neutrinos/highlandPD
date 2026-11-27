@@ -15,25 +15,31 @@
 #include "TStyle.h"
 #include <cstdio>
 #include <vector>
+#include <map>
 #include <cmath>
 
 // quality = 1: solo eventos que pasan la calidad del haz PROVISIONAL de measB_beamq.C (inicio del primario sin corregir por
 // SCE a < 3 sigma de la media medida en el MC: x -28,7 +- 4,17, y 422,4 +- 3,91, z 29,7 +- 0,59 cm; cos con el BI > 0,95),
-// también en el denominador. La definitiva será con las posiciones corregidas por SCE (pdAnaUtils::GetBeamQuality).
+// también en el denominador. quality = 2 (27-nov-2026): la definitiva, beam_quality_sce de los xs_*d01b (inicio corregido
+// por SCE, cortes de pdUtils.parameters.dat, como pdAnaUtils::GetBeamQuality), con beam slice.
 int measB_spectrum(const char* flat, const char* xs, int pop, const char* out, int quality = 0){
   gStyle->SetOptStat(0);
   TFile fx(xs); TTree* ana = (TTree*)fx.Get("ana");
-  Int_t sp, hs_; Float_t pos[4], dir[3], bdir[3]; ana->SetBranchStatus("*", 0);
+  Int_t sp, hs_, qsce = -1, tpdg; Float_t pos[4], dir[3], bdir[3]; ana->SetBranchStatus("*", 0);
   for(const char* b : {"beam_truespecies", "hasslice", "seltrk_pos", "seltrk_dir", "beam_enddir"})ana->SetBranchStatus(b, 1);
+  ana->SetBranchStatus("beam_truepdg", 1); ana->SetBranchAddress("beam_truepdg", &tpdg);
+  if(quality == 2){ ana->SetBranchStatus("beam_quality_sce", 1); ana->SetBranchAddress("beam_quality_sce", &qsce); }
   ana->SetBranchAddress("beam_truespecies", &sp); ana->SetBranchAddress("hasslice", &hs_); ana->SetBranchAddress("seltrk_pos", pos);
   ana->SetBranchAddress("seltrk_dir", dir); ana->SetBranchAddress("beam_enddir", bdir);
-  std::vector<int> evSp(ana->GetEntries());
+  std::vector<int> evSp(ana->GetEntries()), evPdg(ana->GetEntries());
+  std::map<int, double> cmpN[5];   // grupo e/mu/pi por PDG true del haz: partículas, candidatos, señal A+B, en la ventana, señal en la ventana
   double nBeam[3] = {0};
   for(Long64_t e = 0; e < ana->GetEntries(); e++){
     ana->GetEntry(e);
     double c = 0; for(int i = 0; i < 3; i++)c += dir[i]*bdir[i];
-    const bool q = hs_ && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95;
+    const bool q = quality == 2 ? (hs_ && qsce == 1) : (hs_ && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95);
     evSp[e] = (quality && !q) ? -1 : sp; if(evSp[e] >= 0 && evSp[e] <= 2)nBeam[evSp[e]]++;
+    evPdg[e] = tpdg; if(evSp[e] == 0)cmpN[0][std::abs(tpdg) == 211 ? tpdg : std::abs(tpdg) == 13 || std::abs(tpdg) == 11 ? tpdg : 0]++;
   }
   TFile ff(flat); TTree* t = (TTree*)ff.Get("flat");
   Float_t fpop, pr; Int_t cat, chain, chain80; Long64_t entry;
@@ -53,9 +59,12 @@ int measB_spectrum(const char* flat, const char* xs, int pop, const char* out, i
     if((int)fpop != pop || !(pop == 0 ? chain : chain80) || pr < 150 || pr >= 400)continue;
     const int s = evSp[entry]; if(s < 0 || s > 2)continue;
     h[s][cat]->Fill(pr);
+    if(s == 0){ const int pg = std::abs(evPdg[entry]) == 211 || std::abs(evPdg[entry]) == 13 || std::abs(evPdg[entry]) == 11 ? evPdg[entry] : 0;
+      const bool w = pr >= 205 && pr < 240;   // bins 12-18
+      cmpN[1][pg]++; if(cat <= 1)cmpN[2][pg]++; if(w){ cmpN[3][pg]++; if(cat <= 1)cmpN[4][pg]++; } }
   }
   TCanvas cv("cv", "", 1500, 520); cv.Divide(3, 1);
-  printf("Población %s, cadena de cortes sin la ventana, p de rango 150-400 MeV/c (v1_00-v1_05)%s\n", pop == 0 ? "dentro" : "fuera", quality ? ", con calidad del haz (provisional)" : "");
+  printf("Población %s, cadena de cortes sin la ventana, p de rango 150-400 MeV/c (v1_00-v1_05)%s\n", pop == 0 ? "dentro" : "fuera", quality == 2 ? ", con calidad del haz (beam_quality_sce)" : quality ? ", con calidad del haz (provisional sin SCE)" : "");
   printf("  %-8s %9s | %6s %6s %6s %6s %7s | en la ventana [205, 240]: B, total, pureza B\n", "haz", "partículas", "A", "B-A", "C-B", "fondo", "total");
   for(int s = 0; s < 3; s++){
     cv.cd(s + 1); gPad->SetLeftMargin(0.14);
@@ -80,5 +89,9 @@ int measB_spectrum(const char* flat, const char* xs, int pop, const char* out, i
     }
   }
   cv.SaveAs(Form("%s.pdf", out)); cv.SaveAs(Form("%s.png", out));
+  printf("Grupo e/mu/pi por partícula true del haz (0 = otra): partículas, candidatos, señal A+B, candidatos en la ventana, señal B en la ventana\n");
+  double tp = 0, tc = 0; for(auto& kv : cmpN[0])tp += kv.second; for(auto& kv : cmpN[1])tc += kv.second;
+  for(auto& kv : cmpN[0]){ const int pg = kv.first;
+    printf("  %5d %8.0f (%4.1f %%) %6.0f (%4.1f %%) %5.0f %6.0f %5.0f\n", pg, kv.second, 100*kv.second/tp, cmpN[1][pg], 100*cmpN[1][pg]/std::max(1., tc), cmpN[2][pg], cmpN[3][pg], cmpN[4][pg]); }
   return 0;
 }

@@ -7,7 +7,9 @@
 // Aquí el "dato" es el mismo MC del que salen las formas (paso 1: ¿el modelo describe el espectro?); la medida simulada
 // con muestras independientes es el paso siguiente.
 //
-//   root -l -b -q 'test/phase2/measB_fit.C+("opt_flat2_v100to105d01.root", "xs_v100to105d01.root", 0, "figs/measB_fit_pi")'
+// sce = 1 (27-nov-2026, por defecto): calidad del haz beam_quality_sce de los xs_*d01b; sce = 0: la provisional.
+//
+//   root -l -b -q 'test/phase2/measB_fit.C+("opt_flat3_v100to105d01.root", "xs_v100to105d01b.root", 0, "figs/measB_fit_pi")'
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1D.h"
@@ -22,19 +24,20 @@
 #include <functional>
 #include <vector>
 
-int measB_fit(const char* flat, const char* xs, int species, const char* out){
+int measB_fit(const char* flat, const char* xs, int species, const char* out, int sce = 1){
   gStyle->SetOptStat(0);
   const double x0 = 150, x1 = 400, bw = 5; const int nb = 50;
-  TFile fx(xs); TTree* a = (TTree*)fx.Get("ana"); Int_t sp, hs; Float_t pos[4], dir[3], bdir[3];
+  TFile fx(xs); TTree* a = (TTree*)fx.Get("ana"); Int_t sp, hs, qsce = -1; Float_t pos[4], dir[3], bdir[3];
   a->SetBranchStatus("*", 0);
   for(const char* b : {"beam_truespecies", "hasslice", "seltrk_pos", "seltrk_dir", "beam_enddir"})a->SetBranchStatus(b, 1);
+  if(sce){ a->SetBranchStatus("beam_quality_sce", 1); a->SetBranchAddress("beam_quality_sce", &qsce); }
   a->SetBranchAddress("beam_truespecies", &sp); a->SetBranchAddress("hasslice", &hs); a->SetBranchAddress("seltrk_pos", pos);
   a->SetBranchAddress("seltrk_dir", dir); a->SetBranchAddress("beam_enddir", bdir);
   std::vector<char> ok(a->GetEntries());
   double nBeam = 0;
   for(Long64_t e = 0; e < a->GetEntries(); e++){
     a->GetEntry(e); double c = 0; for(int i = 0; i < 3; i++)c += dir[i]*bdir[i];
-    const bool q = hs && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95;
+    const bool q = sce ? (hs && qsce == 1) : (hs && std::abs(pos[0] + 28.7) < 3*4.17 && std::abs(pos[1] - 422.4) < 3*3.91 && std::abs(pos[2] - 29.7) < 3*0.59 && c > 0.95);
     ok[e] = (sp == species && q); if(ok[e])nBeam++;
   }
   TFile ff(flat); TTree* t = (TTree*)ff.Get("flat"); Float_t pop, pr; Int_t cat, chain; Long64_t entry;
@@ -69,8 +72,8 @@ int measB_fit(const char* flat, const char* xs, int species, const char* out){
   fc.SetParameters(0.1*tot, 0.9*tot); fc.SetParLimits(0, 0, tot); fc.SetParLimits(1, 0, 2*tot);
   const int sc = hD.Fit(&fc, "LQNR0");
   const char* spn[3] = {"e/mu/pi", "K", "p"};
-  printf("Haz %s, en la beam slice, calidad provisional: %.0f partículas, %.0f candidatos; mu de K true en el espectro %.0f (señal A+B %.0f)\n",
-         spn[species], nBeam, tot, nK, nSigB);
+  printf("Haz %s, en la beam slice, calidad %s: %.0f partículas, %.0f candidatos; mu de K true en el espectro %.0f (señal A+B %.0f)\n",
+         spn[species], sce ? "beam_quality_sce" : "provisional sin SCE", nBeam, tot, nK, nSigB);
   struct R { const char* n; double v, e; int st; double chi2; int ndf; };
   const R res[3] = {{"(a) gaussiana + exp(pol2)", fa.GetParameter(0), fa.GetParError(0), sa, fa.GetChisquare(), fa.GetNDF()},
                     {"(b) señal del MC + exp(pol2)", fb.GetParameter(0), fb.GetParError(0), sb, fb.GetChisquare(), fb.GetNDF()},
