@@ -248,6 +248,17 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   // mu+ (cruzan el TPC) de pi+ (interaccionan) en el grupo e/mu/pi (denominador de la medida B)
   AddVar3VF(output(), beam_reach,       "final del primario de la beam slice empalmado con los trozos colineales que lo continúan (cm, sin SCE)");
   AddVarI  (output(), beam_reach_n,     "trozos empalmados al primario (-1 sin primario)");
+  // interacción del haz a lo largo de su traza (27-nov, medida A; muCandUtils::BeamInteraction, como skim_survivor_reco.C)
+  AddVarF  (output(), beam_kinkmax,     "primario: codo máximo a lo largo de la traza (grados; direcciones de 10 cm de hits a cada lado)");
+  AddVarF  (output(), beam_kinkmax_s,   "primario: distancia desde el inicio del codo máximo (cm)");
+  AddVarF  (output(), beam_kinkmax_z,   "primario: z del codo máximo (cm, sin SCE)");
+  AddVarF  (output(), beam_peakmax,     "primario: dE/dx máximo a lo largo de la traza (MeV/cm)");
+  AddVarF  (output(), beam_peakmax_s,   "primario: distancia desde el inicio del dE/dx máximo (cm)");
+  AddVarF  (output(), beam_int_s,       "primario: primer punto con codo > 1 grado y dE/dx máximo a < 2 cm > 15 MeV/cm: distancia desde el inicio (cm; -1 si no hay)");
+  AddVarF  (output(), beam_int_z,       "primario: z de ese punto (cm, sin SCE)");
+  AddVarF  (output(), beam_int_kink,    "primario: codo en ese punto (grados)");
+  AddVarF  (output(), beam_int_dedx,    "primario: dE/dx máximo en ese punto (MeV/cm)");
+  AddVarI  (output(), beam_nhits,       "primario: hits de calorimetría usados");
   AddVar3VF(output(), vertex,         "vértice (cm, sin SCE)");
   AddVarI  (output(), nmucand_presel, "candidatos antes de la preselección geométrica del módulo");
   AddVarI  (output(), nmucand,        "candidatos (puede ser mayor que ncand si se pasa del máximo)");
@@ -366,6 +377,25 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   // medida C (27-nov): forced mother (muCandUtils::ForcedMother): posibles K madre con un extremo a < 10 cm del inicio del mu
   AddVarMaxSizeVI (output(), cand_fm_n,          "forced mother: partículas con un extremo a < 10 cm del inicio del mu", ncand, N);
   AddVarMaxSizeVF (output(), cand_fm_parentdist, "forced mother: distancia del extremo más cercano de la madre de Pandora al inicio del mu (cm; -1 sin madre)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_angmax, "forced mother más cercana: mayor cambio de dirección a lo largo de la traza (grados, cuerdas de 3 cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_angmax_rr, "forced mother más cercana: distancia de ese punto a la parada (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_prevdist, "forced mother más cercana: trozo anterior: distancia al otro extremo (cm; -1 si no hay a < 10 cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_prevangle, "forced mother más cercana: trozo anterior: ángulo entre los dos trozos (grados)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_prevlength, "forced mother más cercana: trozo anterior: longitud (cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_prevtruesame, "forced mother más cercana: truth: el trozo anterior es la misma partícula true (1), no (0), sin truth (-1)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_angmax, "forced mother de menor chi2 de K: mayor cambio de dirección a lo largo de la traza (grados, cuerdas de 3 cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_angmax_rr, "forced mother de menor chi2 de K: distancia de ese punto a la parada (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_prevdist, "forced mother de menor chi2 de K: trozo anterior: distancia al otro extremo (cm; -1 si no hay a < 10 cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_prevangle, "forced mother de menor chi2 de K: trozo anterior: ángulo entre los dos trozos (grados)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_prevlength, "forced mother de menor chi2 de K: trozo anterior: longitud (cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_prevtruesame, "forced mother de menor chi2 de K: truth: el trozo anterior es la misma partícula true (1), no (0), sin truth (-1)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_truek_angmax, "truth, K madre del mu: mayor ángulo entre pasos consecutivos de la trayectoria true (grados; -1 sin trayectoria)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_truek_keatmax, "truth, K madre del mu: energía cinética de la K antes de ese paso (MeV)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_truek_ke0, "truth, K madre del mu: energía cinética inicial de la K (MeV)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truek_n10, "truth, K madre del mu: pasos con ángulo > 10 grados", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truek_n20, "truth, K madre del mu: pasos con ángulo > 20 grados", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truek_n30, "truth, K madre del mu: pasos con ángulo > 30 grados", ncand, N);
+  AddVarMaxSizeVI (output(), cand_truek_ntrj, "truth, K madre del mu: puntos de la trayectoria true", ncand, N);
   AddVarMaxSizeVF (output(), cand_fmc_dist, "forced mother más cercana: distancia de su extremo cercano al inicio del mu (cm)", ncand, N);
   AddVarMaxSizeVF (output(), cand_fmc_length, "forced mother más cercana: longitud (cm)", ncand, N);
   AddVarMaxSizeVF (output(), cand_fmc_chi2k, "forced mother más cercana: chi2/ndf de K con la parada en el extremo cercano", ncand, N);
@@ -414,6 +444,18 @@ void secondaryKaonProductionXSAnalysis::DefineTruthTree(){
   AddVarF  (output(), truek_bestpur,     "su pureza");
   AddVarF  (output(), truek_bestlength,  "su longitud reconstruida (cm; traza o traza forzada)");
   AddVarI  (output(), truek_bestistrack, "es traza (1) o shower (0)");
+  // medida C (27-nov): dispersiones true de la K madre (muCandUtils::TrueScatter)
+  AddVarF  (output(), truek_angmax,      "mayor ángulo entre pasos consecutivos de la trayectoria true de la K (grados; -1 sin trayectoria)");
+  AddVarF  (output(), truek_keatmax,     "energía cinética de la K antes de ese paso (MeV)");
+  AddVarF  (output(), truek_ke0,         "energía cinética inicial de la K (MeV)");
+  AddVarI  (output(), truek_n10,         "pasos con ángulo > 10 grados");
+  AddVarI  (output(), truek_n20,         "pasos con ángulo > 20 grados");
+  AddVarI  (output(), truek_n30,         "pasos con ángulo > 30 grados");
+  AddVarI  (output(), truek_ntrj,        "puntos de la trayectoria true de la K");
+  // variables del haz del evento (27-nov), copiadas del árbol ana para las eficiencias sin cruzar árboles
+  AddVarI  (output(), hasslice,          "hay beam slice (como en ana)");
+  AddVarI  (output(), beam_quality_sce,  "calidad del haz con SCE (como en ana)");
+  AddVar3VF(output(), beam_reach,        "alcance del haz (como en ana)");
 }
 
 //********************************************************************
@@ -456,6 +498,7 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
   bool slice = false;
   for(const muCandUtils::Candidate& c : b.Candidates)if(c.hasSlice){ slice = true; break; }
   output().FillVar(hasslice, (Int_t)slice);
+  _beamEv.hasslice = slice;
   output().FillVar(hasvertex, (Int_t)b.HasVertex);
   { Int_t q = -1; Float_t st[3] = {-999, -999, -999}; Float_t cosbi = -999;
     AnaEventPD* ev = static_cast<AnaEventPD*>(&GetEvent());
@@ -475,7 +518,8 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
       q = std::abs(st[0] - mx)/sx < 3 && std::abs(st[1] - my)/sy < 3 && std::abs(st[2] - mz)/sz < 3 && c > mincos;
       delete cp;
     }
-    output().FillVar(beam_quality_sce, q); output().FillVectorVarFromArray(beam_start_sce, st, 3); output().FillVar(beam_cos_bi, cosbi); }
+    output().FillVar(beam_quality_sce, q); output().FillVectorVarFromArray(beam_start_sce, st, 3); output().FillVar(beam_cos_bi, cosbi);
+    _beamEv.quality = q; }
   { AnaEventPD* ev = static_cast<AnaEventPD*>(&GetEvent());
     std::vector<AnaParticlePD*> parts;
     for(int i = 0; i < ev->nParticles; i++)parts.push_back(static_cast<AnaParticlePD*>(ev->Particles[i]));
@@ -483,7 +527,13 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     TVector3 r(-999, -999, -999);
     const int n = muCandUtils::BeamReach(pdAnaUtils::GetBeamParticleInTPC(ev), parts, inf && inf->FullDump, r);
     Float_t rr[3] = {(Float_t)r.X(), (Float_t)r.Y(), (Float_t)r.Z()}; if(n < 0)rr[0] = rr[1] = rr[2] = -999;
-    output().FillVectorVarFromArray(beam_reach, rr, 3); output().FillVar(beam_reach_n, n); }
+    output().FillVectorVarFromArray(beam_reach, rr, 3); output().FillVar(beam_reach_n, n);
+    for(int i = 0; i < 3; i++)_beamEv.reach[i] = rr[i];
+    const muCandUtils::BeamInt bi = muCandUtils::BeamInteraction(pdAnaUtils::GetBeamParticleInTPC(ev));
+    output().FillVar(beam_kinkmax, bi.kinkMax); output().FillVar(beam_kinkmax_s, bi.kinkMaxS); output().FillVar(beam_kinkmax_z, bi.kinkMaxZ);
+    output().FillVar(beam_peakmax, bi.peakMax); output().FillVar(beam_peakmax_s, bi.peakMaxS);
+    output().FillVar(beam_int_s, bi.intS); output().FillVar(beam_int_z, bi.intZ); output().FillVar(beam_int_kink, bi.intKink); output().FillVar(beam_int_dedx, bi.intdEdx);
+    output().FillVar(beam_nhits, bi.nHits); }
   output().FillVectorVarFromArray(vertex, b.VertexPos, 3);
   output().FillVar(nmucand_presel, b.NPreselected);
   { Int_t n = 0; for(size_t i = 0; i < b.Candidates.size(); i++)if(b.View[i] == 0)n++; output().FillVar(nmucand, n); }
@@ -608,6 +658,25 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_truek_length,     c.tKLength);
     output().FillVectorVar(cand_fm_n,             c.fmN);
     output().FillVectorVar(cand_fm_parentdist,    c.fmParentDist);
+    output().FillVectorVar(cand_fmc_angmax, c.fmc.angMax);
+    output().FillVectorVar(cand_fmc_angmax_rr, c.fmc.angMaxRR);
+    output().FillVectorVar(cand_fmc_prevdist, c.fmc.prevDist);
+    output().FillVectorVar(cand_fmc_prevangle, c.fmc.prevAngle);
+    output().FillVectorVar(cand_fmc_prevlength, c.fmc.prevLength);
+    output().FillVectorVar(cand_fmc_prevtruesame, c.fmc.prevTrueSame);
+    output().FillVectorVar(cand_fmk_angmax, c.fmk.angMax);
+    output().FillVectorVar(cand_fmk_angmax_rr, c.fmk.angMaxRR);
+    output().FillVectorVar(cand_fmk_prevdist, c.fmk.prevDist);
+    output().FillVectorVar(cand_fmk_prevangle, c.fmk.prevAngle);
+    output().FillVectorVar(cand_fmk_prevlength, c.fmk.prevLength);
+    output().FillVectorVar(cand_fmk_prevtruesame, c.fmk.prevTrueSame);
+    output().FillVectorVar(cand_truek_angmax, c.tKScat.angMax);
+    output().FillVectorVar(cand_truek_keatmax, c.tKScat.keAtMax);
+    output().FillVectorVar(cand_truek_ke0, c.tKScat.ke0);
+    output().FillVectorVar(cand_truek_n10, c.tKScat.n10);
+    output().FillVectorVar(cand_truek_n20, c.tKScat.n20);
+    output().FillVectorVar(cand_truek_n30, c.tKScat.n30);
+    output().FillVectorVar(cand_truek_ntrj, c.tKScat.nPts);
     output().FillVectorVar(cand_fmc_dist, c.fmc.dist);
     output().FillVectorVar(cand_fmc_length, c.fmc.length);
     output().FillVectorVar(cand_fmc_chi2k, c.fmc.chi2K);
@@ -710,6 +779,7 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(){
     output().GetTree(OutputManager::truth)->Fill();
   }
   _fullLevel.clear();   // es de este spill
+  _beamEv = BeamEvVars();
 }
 
 //********************************************************************
@@ -791,6 +861,11 @@ void secondaryKaonProductionXSAnalysis::FillTruthTree(const AnaTrueParticlePD& p
   if(bk){ bt = bk->Type == AnaParticlePD::kTrack; bl = bt ? bk->Length : (!bk->ForcedTrack.empty() ? bk->ForcedTrack[0].Length : -1.f); }
   output().FillVar(truek_bestlength, bl);
   output().FillVar(truek_bestistrack, bt);
+  { const muCandUtils::TrueScat ts = km ? muCandUtils::TrueScatter(km) : muCandUtils::TrueScat();
+    output().FillVar(truek_angmax, ts.angMax); output().FillVar(truek_keatmax, ts.keAtMax); output().FillVar(truek_ke0, ts.ke0);
+    output().FillVar(truek_n10, ts.n10); output().FillVar(truek_n20, ts.n20); output().FillVar(truek_n30, ts.n30); output().FillVar(truek_ntrj, ts.nPts); }
+  output().FillVar(hasslice, _beamEv.hasslice); output().FillVar(beam_quality_sce, _beamEv.quality);
+  output().FillVectorVarFromArray(beam_reach, _beamEv.reach, 3);
 }
 
 //********************************************************************

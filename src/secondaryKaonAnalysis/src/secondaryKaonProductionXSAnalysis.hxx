@@ -99,6 +99,9 @@ class secondaryKaonProductionXSAnalysis: public baseAnalysis {
   /// Para el árbol truth: 1 + nivel del mejor candidato emparejado en cada rama, en la vista completa, por ID de la
   /// partícula true (lo rellena FinalizeConfiguration y lo vacía FillTruthTree)
   std::map<int, std::array<int, 2>> _fullLevel;
+  /// variables del haz del evento, para copiarlas en el árbol truth (se rellenan en FillMicroTrees, del mismo spill)
+  struct BeamEvVars { Int_t hasslice = -1, quality = -1; Float_t reach[3] = {-999, -999, -999}; };
+  BeamEvVars _beamEv;
 
   /// Categoría true de un candidato (código de la categoría "candmu"): los signal muons en capas excluyentes, 1 señal A,
   /// 2 señal B que no es A, 3 señal C que no es B; el fondo con su PDG
@@ -162,6 +165,7 @@ public:
     fulldump = standardPDTree::enumStandardMicroTreesLast_standardPDTree,
     sel_fitlevel, sel_countlevel, hasslice, hasvertex, vertex, nmucand_presel, nmucand, hastruevertex, truevertex,
     beam_quality_sce, beam_start_sce, beam_cos_bi, beam_reach, beam_reach_n,
+    beam_kinkmax, beam_kinkmax_s, beam_kinkmax_z, beam_peakmax, beam_peakmax_s, beam_int_s, beam_int_z, beam_int_kink, beam_int_dedx, beam_nhits,
     beam_species, beam_truespecies,
     // candidatos (contador ncand)
     ncand,
@@ -185,8 +189,10 @@ public:
     cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
     cand_k_truek, cand_k_truepur, cand_k_trueeff, cand_truek_length,
     cand_fm_n, cand_fm_parentdist,
+    cand_fmc_angmax, cand_fmc_angmax_rr, cand_fmc_prevdist, cand_fmc_prevangle, cand_fmc_prevlength, cand_fmc_prevtruesame, cand_fmk_angmax, cand_fmk_angmax_rr, cand_fmk_prevdist, cand_fmk_prevangle, cand_fmk_prevlength, cand_fmk_prevtruesame, cand_truek_angmax, cand_truek_keatmax, cand_truek_ke0, cand_truek_n10, cand_truek_n20, cand_truek_n30, cand_truek_ntrj,
     cand_fmc_dist, cand_fmc_length, cand_fmc_chi2k, cand_fmc_chi2p, cand_fmc_chi2mu, cand_fmc_dedx, cand_fmc_istrack, cand_fmc_isparent, cand_fmc_nhits, cand_fmc_truek, cand_fmc_truepdg, cand_fmk_dist, cand_fmk_length, cand_fmk_chi2k, cand_fmk_chi2p, cand_fmk_chi2mu, cand_fmk_dedx, cand_fmk_istrack, cand_fmk_isparent, cand_fmk_nhits, cand_fmk_truek, cand_fmk_truepdg,
     // árbol truth
+    truek_angmax, truek_keatmax, truek_ke0, truek_n10, truek_n20, truek_n30, truek_ntrj,
     truemu_korigin, truemu_level_full, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
     truek_length, truek_nreco, truek_besteff, truek_bestpur, truek_bestlength, truek_bestistrack,
     // árbol config

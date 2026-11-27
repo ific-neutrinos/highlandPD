@@ -301,7 +301,50 @@ namespace muCandUtils {
   // del mu; para cada una, la parada es ese extremo: chi2 de K, p y mu (Chi2Trimmed, sin recorte), dE/dx (kBragg cm) en
   // él, longitud. Se devuelven la más cercana y la de menor chi2 de K (los cortes se eligen después, fuera).
   const double kFMMax = 10.;
-  struct KMother { Float_t dist = -1, length = -1, chi2K = -1, chi2P = -1, chi2Mu = -1, dEdx = -1; Int_t isTrack = -1, isParent = 0, nHits = -1, tTrueK = -1, tPDG = 0; };
+  // angMax, angMaxRR: mayor cambio de dirección a lo largo de la madre (KinkOnTrack) y su distancia a la parada (rango
+  // residual); prev*: el trozo anterior (partícula con un extremo a < kFMMax del otro extremo de la madre: Pandora parte la
+  // K en una dispersión grande), su distancia, el ángulo entre los dos trozos, su longitud y si es la misma K true
+  struct KMother { Float_t dist = -1, length = -1, chi2K = -1, chi2P = -1, chi2Mu = -1, dEdx = -1; Int_t isTrack = -1, isParent = 0, nHits = -1, tTrueK = -1, tPDG = 0;
+                   Float_t angMax = -1, angMaxRR = -1, prevDist = -1, prevAngle = -1, prevLength = -1; Int_t prevTrueSame = -1; };
+
+  // Puntos válidos (posición sin SCE) de la trayectoria de una traza o de su traza forzada; si no hay (trazas forzadas),
+  // las posiciones de sus hits de calorimetría ordenadas por rango residual (27-nov: en d01 los hits de las trazas forzadas
+  // no tienen posición 3D, así que en la práctica la dispersión reconstruida solo existe para las trazas)
+  inline std::vector<TVector3> TrackPoints(const AnaParticlePD* q){
+    std::vector<TVector3> v;
+    const bool isTrk = q->Type == AnaParticlePD::kTrack;
+    const std::vector<AnaTrajectoryPointPD>* tp = isTrk ? &q->TrjPoints : (!q->ForcedTrack.empty() ? &q->ForcedTrack[0].TrjPoints : nullptr);
+    if(tp)for(const AnaTrajectoryPointPD& x : *tp)if(x.Position_NoSCE.X() > -900 && x.Position_NoSCE.Y() > -900 && x.Position_NoSCE.Z() > -900)v.push_back(x.Position_NoSCE);
+    if(v.size() >= 3)return v;
+    // sin trayectoria (las trazas forzadas no la guardan): hits de calorimetría del plano 2 ordenados por rango residual
+    v.clear();
+    std::vector<std::pair<double, TVector3>> h;
+    for(const AnaHitPD& x : CaloHits(q))if(x.ResidualRange >= 0 && x.Position_NoSCE.X() > -900 && x.Position_NoSCE.Mag2() > 0)h.push_back({x.ResidualRange, x.Position_NoSCE});
+    std::sort(h.begin(), h.end(), [](const std::pair<double, TVector3>& a, const std::pair<double, TVector3>& b){ return a.first > b.first; });
+    for(auto& x : h)v.push_back(x.second);
+    return v;
+  }
+  // Mayor cambio de dirección a lo largo de una traza (puntos de su trayectoria): en cada punto, ángulo entre la cuerda de
+  // los kKinkSeg cm anteriores y la de los kKinkSeg cm siguientes; rr: distancia (a lo largo de la traza) del punto al
+  // extremo más cercano a stop. -1 si no hay puntos suficientes
+  const double kKinkSeg = 3.;
+  inline void KinkOnTrack(const std::vector<TVector3>& pts, const TVector3& stop, double& angMax, double& rr){
+    angMax = -1; rr = -1;
+    if(pts.size() < 3)return;
+    std::vector<double> s(pts.size(), 0);
+    for(size_t i = 1; i < pts.size(); i++)s[i] = s[i - 1] + (pts[i] - pts[i - 1]).Mag();
+    const bool stopAtEnd = (pts.back() - stop).Mag() < (pts.front() - stop).Mag();
+    for(size_t i = 1; i + 1 < pts.size(); i++){
+      size_t j = i, k = i;
+      while(j > 0 && s[i] - s[j] < kKinkSeg)j--;
+      while(k + 1 < pts.size() && s[k] - s[i] < kKinkSeg)k++;
+      if(s[i] - s[j] < 0.5*kKinkSeg || s[k] - s[i] < 0.5*kKinkSeg)continue;
+      const TVector3 a = pts[i] - pts[j], b = pts[k] - pts[i];
+      if(a.Mag() <= 0 || b.Mag() <= 0)continue;
+      const double ang = a.Angle(b)*180./M_PI;
+      if(ang > angMax){ angMax = ang; rr = stopAtEnd ? s.back() - s[i] : s[i]; }
+    }
+  }
   inline void ForcedMother(const TVector3& x, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts,
                            const AnaTrueParticleB* selfTrue, KMother& closest, KMother& bestK, Int_t& n, Float_t& parentDist){
     closest = KMother(); bestK = KMother(); n = 0; parentDist = -1;
@@ -323,11 +366,107 @@ namespace muCandUtils {
       f.chi2K = Chi2Trimmed(q, 321, stopAtB, 0); f.chi2P = Chi2Trimmed(q, 2212, stopAtB, 0); f.chi2Mu = Chi2Trimmed(q, 13, stopAtB, 0);
       double dA, dB; int nA, nB; EndsdEdx(q, dA, dB, nA, nB); f.dEdx = stopAtB ? dB : dA;
       f.nHits = CaloHits(q).size();
+      { const TVector3 stopP = stopAtB ? V(qb) : V(qa), farP = stopAtB ? V(qa) : V(qb);
+        double am, ar; KinkOnTrack(TrackPoints(q), stopP, am, ar); f.angMax = am; f.angMaxRR = ar;
+        // trozo anterior: lo más cercano al otro extremo de la madre
+        double best = kFMMax; const AnaParticlePD* rb = nullptr; TVector3 rFar;
+        for(const AnaParticlePD* r : parts){
+          if(r == q || r == self)continue;
+          const bool rTrk = r->Type == AnaParticlePD::kTrack;
+          const AnaForcedTrackPD* rf = (!rTrk && !r->ForcedTrack.empty()) ? &r->ForcedTrack[0] : nullptr;
+          if(!rTrk && !rf)continue;
+          const Float_t* ra = rTrk ? r->PositionStart : rf->PositionStart; const Float_t* rbp = rTrk ? r->PositionEnd : rf->PositionEnd;
+          if(!Valid(ra) || !Valid(rbp))continue;
+          const double d0 = (V(ra) - farP).Mag(), d1 = (V(rbp) - farP).Mag();
+          if(std::min(d0, d1) < best){ best = std::min(d0, d1); rb = r; rFar = d0 < d1 ? V(rbp) : V(ra); }
+        }
+        if(rb){
+          f.prevDist = best; f.prevLength = rb->Type == AnaParticlePD::kTrack ? rb->Length : rb->ForcedTrack[0].Length;
+          const TVector3 din = farP - rFar, dout = stopP - farP;
+          if(din.Mag() > 0 && dout.Mag() > 0)f.prevAngle = din.Angle(dout)*180./M_PI;
+          const AnaTrueParticleB* rt = static_cast<const AnaTrueParticleB*>(rb->TrueObject);
+          const AnaTrueParticleB* qt0 = static_cast<const AnaTrueParticleB*>(q->TrueObject);
+          f.prevTrueSame = (rt && qt0) ? (rt->ID == qt0->ID) : -1;
+        } }
       const AnaTrueParticleB* qt = static_cast<const AnaTrueParticleB*>(q->TrueObject);
       f.tPDG = qt ? qt->PDG : 0; f.tTrueK = (!qt || !selfTrue) ? -1 : (qt->ID == selfTrue->ParentID ? 1 : 0);
       if(d < dBest){ dBest = d; closest = f; }
       if(f.chi2K >= 0 && f.chi2K < kBest){ kBest = f.chi2K; bestK = f; }
     }
+  }
+
+  // ---- Dispersiones true de una K (27-nov-2026, medida C) ----
+  // Con la trayectoria true (el módulo la guarda para las K+-, TrueTrajPDGs): ángulo entre los momentos de puntos
+  // consecutivos (una elástica de Geant4 no crea partícula: es un cambio brusco de dirección). Mayor ángulo, energía
+  // cinética de la K justo antes (MeV), cuántos pasos con ángulo > 10, 20 y 30 grados, energía cinética inicial (MeV) y
+  // número de puntos. Todo a -1 sin trayectoria.
+  struct TrueScat { Float_t angMax = -1, keAtMax = -1, ke0 = -1; Int_t n10 = -1, n20 = -1, n30 = -1, nPts = 0; };
+  inline TrueScat TrueScatter(const AnaTrueParticleB* tb){
+    TrueScat r;
+    const AnaTrueParticlePD* t = static_cast<const AnaTrueParticlePD*>(tb);
+    if(!t || t->TrjPoints.size() < 2)return r;
+    const double m = pdAnaUtils::kKaonMass;   // MeV
+    auto ke = [m](const Float_t* p){ const double pp = 1000.*std::sqrt(p[0]*p[0] + p[1]*p[1] + p[2]*p[2]); return std::sqrt(pp*pp + m*m) - m; };
+    r.nPts = t->TrjPoints.size(); r.n10 = r.n20 = r.n30 = 0; r.ke0 = ke(t->TrjPoints[0].Momentum);
+    for(size_t i = 0; i + 1 < t->TrjPoints.size(); i++){
+      const TVector3 a(t->TrjPoints[i].Momentum[0], t->TrjPoints[i].Momentum[1], t->TrjPoints[i].Momentum[2]);
+      const TVector3 b(t->TrjPoints[i + 1].Momentum[0], t->TrjPoints[i + 1].Momentum[1], t->TrjPoints[i + 1].Momentum[2]);
+      if(a.Mag() <= 0 || b.Mag() <= 0)continue;
+      const double ang = a.Angle(b)*180./M_PI;
+      if(ang > 10)r.n10++; if(ang > 20)r.n20++; if(ang > 30)r.n30++;
+      if(ang > r.angMax){ r.angMax = ang; r.keAtMax = ke(t->TrjPoints[i].Momentum); }
+    }
+    return r;
+  }
+
+  // ---- Interacción del haz a lo largo de su traza (27-nov-2026, medida A) ----
+  // Como skim_survivor_reco.C (25-nov): hits de calorimetría del primario (plano 2, GooddEdx, posición sin SCE), s = RRMax -
+  // RR (distancia desde el inicio). En cada hit, codo = ángulo entre las direcciones principales de los hits en [s - kBIL, s]
+  // y [s, s + kBIL] (al menos kBIMinHits a cada lado), y pico = mayor dE/dx a < kBIWin cm. Se guardan el codo máximo (y
+  // su s y z), el pico máximo (y su s) y el primer punto con codo > kBIKink y pico > kBIdEdx (la interacción "encontrada").
+  const double kBIL = 10., kBIWin = 2., kBIKink = 1., kBIdEdx = 15.; const int kBIMinHits = 5;
+  struct BeamInt { Float_t kinkMax = -1, kinkMaxS = -1, kinkMaxZ = -999, peakMax = -1, peakMaxS = -1, intS = -1, intZ = -999, intKink = -1, intdEdx = -1; Int_t nHits = 0; };
+  inline bool PrincipalDir(const std::vector<TVector3>& x, size_t i0, size_t i1, TVector3& d){
+    if(i1 <= i0 || int(i1 - i0) < kBIMinHits)return false;
+    TVector3 c(0, 0, 0); for(size_t i = i0; i < i1; i++)c += x[i]; c *= 1./(i1 - i0);
+    double m[3][3] = {{0}};
+    for(size_t i = i0; i < i1; i++){ const TVector3 v = x[i] - c; for(int a = 0; a < 3; a++)for(int b = 0; b < 3; b++)m[a][b] += v[a]*v[b]; }
+    TVector3 v(1, 1, 1);
+    for(int it = 0; it < 30; it++){
+      TVector3 w(m[0][0]*v[0] + m[0][1]*v[1] + m[0][2]*v[2], m[1][0]*v[0] + m[1][1]*v[1] + m[1][2]*v[2], m[2][0]*v[0] + m[2][1]*v[1] + m[2][2]*v[2]);
+      if(w.Mag() <= 0)return false; v = w.Unit();
+    }
+    d = v; return true;
+  }
+  inline BeamInt BeamInteraction(const AnaParticlePD* prim){
+    BeamInt r;
+    if(!prim)return r;
+    const double L = RRMax(prim);
+    struct H { double s, dEdx; TVector3 x; };
+    std::vector<H> h;
+    for(const AnaHitPD& x : CaloHits(prim)){
+      if(!GooddEdx(x) || x.Position_NoSCE.X() < -900 || x.Position_NoSCE.Mag2() == 0)continue;
+      h.push_back({L - x.ResidualRange, x.dEdx, x.Position_NoSCE});
+    }
+    std::sort(h.begin(), h.end(), [](const H& a, const H& b){ return a.s < b.s; });
+    r.nHits = h.size();
+    if(h.size() < size_t(2*kBIMinHits))return r;
+    std::vector<TVector3> xs; std::vector<double> ss; for(auto& x : h){ xs.push_back(x.x); ss.push_back(x.s); }
+    for(size_t i = 0; i < h.size(); i++){
+      const double s0 = h[i].s;
+      const size_t a = std::lower_bound(ss.begin(), ss.end(), s0 - kBIL) - ss.begin();
+      const size_t b = std::upper_bound(ss.begin(), ss.end(), s0 + kBIL) - ss.begin();
+      const size_t w0 = std::lower_bound(ss.begin(), ss.end(), s0 - kBIWin) - ss.begin();
+      const size_t w1 = std::upper_bound(ss.begin(), ss.end(), s0 + kBIWin) - ss.begin();
+      double pk = -1; for(size_t k = w0; k < w1; k++)pk = std::max(pk, h[k].dEdx);
+      if(pk > r.peakMax){ r.peakMax = pk; r.peakMaxS = s0; }
+      TVector3 d1, d2;
+      if(!PrincipalDir(xs, a, i + 1, d1) || !PrincipalDir(xs, i, b, d2))continue;
+      const double kink = std::acos(std::min(1., std::abs(d1.Dot(d2))))*180./M_PI;
+      if(kink > r.kinkMax){ r.kinkMax = kink; r.kinkMaxS = s0; r.kinkMaxZ = h[i].x.Z(); }
+      if(r.intS < 0 && kink > kBIKink && pk > kBIdEdx){ r.intS = s0; r.intZ = h[i].x.Z(); r.intKink = kink; r.intdEdx = pk; }
+    }
+    return r;
   }
 
   // ---- Conexión con el vértice primario (23-nov) ----
@@ -578,6 +717,8 @@ namespace muCandUtils {
     // más parecida a una K (fmk, menor chi2 de K con la parada en el extremo cercano); cuántas hay a < kFMMax cm y la
     // distancia del extremo más cercano de la madre de Pandora (-1 si no tiene)
     KMother fmc, fmk; Int_t fmN = 0; Float_t fmParentDist = -1;
+    // añadida el 27-nov (medida C): dispersiones true de la K madre (TrueScatter)
+    TrueScat tKScat;
     Int_t nDauTrk, nDauShw, dauHits, dauNearStop; Float_t dauMaxMichel;
     Int_t tKOrigin; Float_t tStartZ, tEndZ, tMom;
     // añadidas el 23-nov: conexión con el vértice primario (vc*, -1 sin vértice) y error del vértice (truth)
@@ -819,7 +960,8 @@ namespace muCandUtils {
       c.kTruePur = k.best ? k.best->TruePur : -1; c.kTrueEff = k.best ? k.best->TrueEff : -1;
       ForcedMother(start, p, parts, t, c.fmc, c.fmk, c.fmN, c.fmParentDist);
       auto im = t ? byID.find(t->ParentID) : byID.end();
-      c.tKLength = (im != byID.end() && im->second->PDG == 321) ? (V(im->second->PositionEnd) - V(im->second->Position)).Mag() : -1; }
+      c.tKLength = (im != byID.end() && im->second->PDG == 321) ? (V(im->second->PositionEnd) - V(im->second->Position)).Mag() : -1;
+      c.tKScat = (im != byID.end() && im->second->PDG == 321) ? TrueScatter(im->second) : TrueScat(); }
     { const Dau d = Daughters(p, stop, byUID); c.nDauTrk = d.nTrk; c.nDauShw = d.nShw; c.dauHits = d.hits; c.dauNearStop = d.nearStop; c.dauMaxMichel = d.maxMichel; }
     c.tKOrigin = KOrigin(t, beamTrue, byID);
     c.tStartZ = t ? t->Position[2] : -999; c.tEndZ = t ? t->PositionEnd[2] : -999; c.tMom = t ? 1000.*t->Momentum : -1;
