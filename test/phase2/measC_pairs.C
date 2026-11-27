@@ -1,3 +1,5 @@
+// AVISO (27-nov-2026): la etiqueta reconstruida de la K de la parte (2) sale mal (cand_k_dedx, cand_k_n leídos con
+// TTreeFormula dan valores erróneos, igual que el BDT evaluado así); usar measC_compare.C, que lee con SetBranchAddress.
 // Medida C (27-nov-2026): ¿cuántas parejas K -> mu tendríamos? Con la truth de C de secondaryKaonProductionXS
 // (highlandPD 675d80c, en los xs_*d01b).
 //
