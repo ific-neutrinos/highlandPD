@@ -363,6 +363,31 @@ void secondaryKaonProductionXSAnalysis::DefineMicroTrees(bool addBase){
   AddVarMaxSizeVF (output(), cand_k_truepur,     "pureza true del candidato a K al inicio",                                                  ncand, N);
   AddVarMaxSizeVF (output(), cand_k_trueeff,     "completitud true del candidato a K al inicio",                                             ncand, N);
   AddVarMaxSizeVF (output(), cand_truek_length,  "longitud true (inicio-fin) de la K+ madre del mu (cm; -1 si no hay)",                      ncand, N);
+  // medida C (27-nov): forced mother (muCandUtils::ForcedMother): posibles K madre con un extremo a < 10 cm del inicio del mu
+  AddVarMaxSizeVI (output(), cand_fm_n,          "forced mother: partículas con un extremo a < 10 cm del inicio del mu", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fm_parentdist, "forced mother: distancia del extremo más cercano de la madre de Pandora al inicio del mu (cm; -1 sin madre)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_dist, "forced mother más cercana: distancia de su extremo cercano al inicio del mu (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_length, "forced mother más cercana: longitud (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_chi2k, "forced mother más cercana: chi2/ndf de K con la parada en el extremo cercano", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_chi2p, "forced mother más cercana: chi2/ndf de p, misma parada", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_chi2mu, "forced mother más cercana: chi2/ndf de mu, misma parada", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmc_dedx, "forced mother más cercana: dE/dx medio a < 5 cm del extremo cercano (MeV/cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_istrack, "forced mother más cercana: es traza (1) o traza forzada (0)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_isparent, "forced mother más cercana: es la madre de Pandora del mu", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_nhits, "forced mother más cercana: hits de calorimetría", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_truek, "forced mother más cercana: truth: es la madre true del mu (1), no (0), sin truth (-1)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmc_truepdg, "forced mother más cercana: truth: PDG", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_dist, "forced mother de menor chi2 de K: distancia de su extremo cercano al inicio del mu (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_length, "forced mother de menor chi2 de K: longitud (cm)", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_chi2k, "forced mother de menor chi2 de K: chi2/ndf de K con la parada en el extremo cercano", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_chi2p, "forced mother de menor chi2 de K: chi2/ndf de p, misma parada", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_chi2mu, "forced mother de menor chi2 de K: chi2/ndf de mu, misma parada", ncand, N);
+  AddVarMaxSizeVF (output(), cand_fmk_dedx, "forced mother de menor chi2 de K: dE/dx medio a < 5 cm del extremo cercano (MeV/cm)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_istrack, "forced mother de menor chi2 de K: es traza (1) o traza forzada (0)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_isparent, "forced mother de menor chi2 de K: es la madre de Pandora del mu", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_nhits, "forced mother de menor chi2 de K: hits de calorimetría", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_truek, "forced mother de menor chi2 de K: truth: es la madre true del mu (1), no (0), sin truth (-1)", ncand, N);
+  AddVarMaxSizeVI (output(), cand_fmk_truepdg, "forced mother de menor chi2 de K: truth: PDG", ncand, N);
 }
 
 //********************************************************************
@@ -581,6 +606,30 @@ void secondaryKaonProductionXSAnalysis::FillMicroTrees(bool addBase){
     output().FillVectorVar(cand_k_truepur,        c.kTruePur);
     output().FillVectorVar(cand_k_trueeff,        c.kTrueEff);
     output().FillVectorVar(cand_truek_length,     c.tKLength);
+    output().FillVectorVar(cand_fm_n,             c.fmN);
+    output().FillVectorVar(cand_fm_parentdist,    c.fmParentDist);
+    output().FillVectorVar(cand_fmc_dist, c.fmc.dist);
+    output().FillVectorVar(cand_fmc_length, c.fmc.length);
+    output().FillVectorVar(cand_fmc_chi2k, c.fmc.chi2K);
+    output().FillVectorVar(cand_fmc_chi2p, c.fmc.chi2P);
+    output().FillVectorVar(cand_fmc_chi2mu, c.fmc.chi2Mu);
+    output().FillVectorVar(cand_fmc_dedx, c.fmc.dEdx);
+    output().FillVectorVar(cand_fmc_istrack, c.fmc.isTrack);
+    output().FillVectorVar(cand_fmc_isparent, c.fmc.isParent);
+    output().FillVectorVar(cand_fmc_nhits, c.fmc.nHits);
+    output().FillVectorVar(cand_fmc_truek, c.fmc.tTrueK);
+    output().FillVectorVar(cand_fmc_truepdg, c.fmc.tPDG);
+    output().FillVectorVar(cand_fmk_dist, c.fmk.dist);
+    output().FillVectorVar(cand_fmk_length, c.fmk.length);
+    output().FillVectorVar(cand_fmk_chi2k, c.fmk.chi2K);
+    output().FillVectorVar(cand_fmk_chi2p, c.fmk.chi2P);
+    output().FillVectorVar(cand_fmk_chi2mu, c.fmk.chi2Mu);
+    output().FillVectorVar(cand_fmk_dedx, c.fmk.dEdx);
+    output().FillVectorVar(cand_fmk_istrack, c.fmk.isTrack);
+    output().FillVectorVar(cand_fmk_isparent, c.fmk.isParent);
+    output().FillVectorVar(cand_fmk_nhits, c.fmk.nHits);
+    output().FillVectorVar(cand_fmk_truek, c.fmk.tTrueK);
+    output().FillVectorVar(cand_fmk_truepdg, c.fmk.tPDG);
     output().IncrementCounter(ncand);
   }
 }

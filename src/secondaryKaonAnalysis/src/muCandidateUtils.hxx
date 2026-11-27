@@ -295,6 +295,41 @@ namespace muCandUtils {
     return k;
   }
 
+  // ---- Forced mother (27-nov-2026, medida C) ----
+  // Como la forced daughter de la tesis (secondaryKaonPairXS) pero al revés: la K que se para en el inicio del mu. Se
+  // miran las partículas del evento (trazas, o PFParticles con traza forzada) con un extremo a < kFMMax cm del inicio
+  // del mu; para cada una, la parada es ese extremo: chi2 de K, p y mu (Chi2Trimmed, sin recorte), dE/dx (kBragg cm) en
+  // él, longitud. Se devuelven la más cercana y la de menor chi2 de K (los cortes se eligen después, fuera).
+  const double kFMMax = 10.;
+  struct KMother { Float_t dist = -1, length = -1, chi2K = -1, chi2P = -1, chi2Mu = -1, dEdx = -1; Int_t isTrack = -1, isParent = 0, nHits = -1, tTrueK = -1, tPDG = 0; };
+  inline void ForcedMother(const TVector3& x, const AnaParticlePD* self, const std::vector<AnaParticlePD*>& parts,
+                           const AnaTrueParticleB* selfTrue, KMother& closest, KMother& bestK, Int_t& n, Float_t& parentDist){
+    closest = KMother(); bestK = KMother(); n = 0; parentDist = -1;
+    double dBest = 1e9, kBest = 1e9;
+    for(const AnaParticlePD* q : parts){
+      if(q == self)continue;
+      const bool isTrk = q->Type == AnaParticlePD::kTrack;
+      const AnaForcedTrackPD* ft = (!isTrk && !q->ForcedTrack.empty()) ? &q->ForcedTrack[0] : nullptr;
+      const Float_t* qa = isTrk ? q->PositionStart : (ft ? ft->PositionStart : q->PositionStart);
+      const Float_t* qb = isTrk ? q->PositionEnd : (ft ? ft->PositionEnd : q->PositionEnd);
+      if(!Valid(qa) || !Valid(qb))continue;
+      const double da = (V(qa) - x).Mag(), db = (V(qb) - x).Mag(), d = std::min(da, db);
+      if(q->UniqueID == self->ParentID)parentDist = d;
+      if(d > kFMMax || (!isTrk && !ft))continue;
+      n++;
+      KMother f;
+      const bool stopAtB = db <= da;   // la parada de la K es el extremo cercano al inicio del mu
+      f.dist = d; f.length = isTrk ? q->Length : ft->Length; f.isTrack = isTrk; f.isParent = q->UniqueID == self->ParentID;
+      f.chi2K = Chi2Trimmed(q, 321, stopAtB, 0); f.chi2P = Chi2Trimmed(q, 2212, stopAtB, 0); f.chi2Mu = Chi2Trimmed(q, 13, stopAtB, 0);
+      double dA, dB; int nA, nB; EndsdEdx(q, dA, dB, nA, nB); f.dEdx = stopAtB ? dB : dA;
+      f.nHits = CaloHits(q).size();
+      const AnaTrueParticleB* qt = static_cast<const AnaTrueParticleB*>(q->TrueObject);
+      f.tPDG = qt ? qt->PDG : 0; f.tTrueK = (!qt || !selfTrue) ? -1 : (qt->ID == selfTrue->ParentID ? 1 : 0);
+      if(d < dBest){ dBest = d; closest = f; }
+      if(f.chi2K >= 0 && f.chi2K < kBest){ kBest = f.chi2K; bestK = f; }
+    }
+  }
+
   // ---- Conexión con el vértice primario (23-nov) ----
   // Si la K sale del vértice del haz V y se para en el inicio S del mu, entre V y S hay una traza (casi recta) que
   // acaba con su pico de Bragg en S. Nube de puntos 3D del evento: hits de calorimetría del plano 2
@@ -539,6 +574,10 @@ namespace muCandUtils {
     // añadidas el 26-nov (medida C): truth del candidato a K al inicio (1 si su partícula true es la madre del mu, 0 si no,
     // -1 sin candidato o sin truth), su pureza y completitud, y la longitud true de la K madre (inicio-fin; -1 si la madre no es K+)
     Int_t kTrueK; Float_t kTruePur, kTrueEff, tKLength;
+    // añadidas el 27-nov (medida C, forced mother): posibles madres K del mu (ForcedMother): la más cercana (fmc) y la
+    // más parecida a una K (fmk, menor chi2 de K con la parada en el extremo cercano); cuántas hay a < kFMMax cm y la
+    // distancia del extremo más cercano de la madre de Pandora (-1 si no tiene)
+    KMother fmc, fmk; Int_t fmN = 0; Float_t fmParentDist = -1;
     Int_t nDauTrk, nDauShw, dauHits, dauNearStop; Float_t dauMaxMichel;
     Int_t tKOrigin; Float_t tStartZ, tEndZ, tMom;
     // añadidas el 23-nov: conexión con el vértice primario (vc*, -1 sin vértice) y error del vértice (truth)
@@ -778,6 +817,7 @@ namespace muCandUtils {
       const AnaTrueParticleB* kt = k.best ? static_cast<const AnaTrueParticleB*>(k.best->TrueObject) : nullptr;
       c.kTrueK = (!k.best || !kt || !t) ? -1 : (kt->ID == t->ParentID ? 1 : 0);
       c.kTruePur = k.best ? k.best->TruePur : -1; c.kTrueEff = k.best ? k.best->TrueEff : -1;
+      ForcedMother(start, p, parts, t, c.fmc, c.fmk, c.fmN, c.fmParentDist);
       auto im = t ? byID.find(t->ParentID) : byID.end();
       c.tKLength = (im != byID.end() && im->second->PDG == 321) ? (V(im->second->PositionEnd) - V(im->second->Position)).Mag() : -1; }
     { const Dau d = Daughters(p, stop, byUID); c.nDauTrk = d.nTrk; c.nDauShw = d.nShw; c.dauHits = d.hits; c.dauNearStop = d.nearStop; c.dauMaxMichel = d.maxMichel; }

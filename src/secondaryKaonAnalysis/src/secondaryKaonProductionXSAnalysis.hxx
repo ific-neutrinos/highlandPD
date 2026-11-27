@@ -184,6 +184,8 @@ public:
     cand_truepdg, cand_trueparentpdg, cand_trueproc, cand_trueorigin, cand_truefrombeam, cand_truesignal, cand_truesignalmuon, cand_truekendmom, cand_truekorigin,
     cand_truepur, cand_trueeff, cand_truelength, cand_truemom, cand_truevtxerr, cand_truelk_s_isk,
     cand_k_truek, cand_k_truepur, cand_k_trueeff, cand_truek_length,
+    cand_fm_n, cand_fm_parentdist,
+    cand_fmc_dist, cand_fmc_length, cand_fmc_chi2k, cand_fmc_chi2p, cand_fmc_chi2mu, cand_fmc_dedx, cand_fmc_istrack, cand_fmc_isparent, cand_fmc_nhits, cand_fmc_truek, cand_fmc_truepdg, cand_fmk_dist, cand_fmk_length, cand_fmk_chi2k, cand_fmk_chi2p, cand_fmk_chi2mu, cand_fmk_dedx, cand_fmk_istrack, cand_fmk_isparent, cand_fmk_nhits, cand_fmk_truek, cand_fmk_truepdg,
     // árbol truth
     truemu_korigin, truemu_level_full, truemu_mom, truemu_kmomend, truemu_start, truemu_end, truemu_contained,
     truek_length, truek_nreco, truek_besteff, truek_bestpur, truek_bestlength, truek_bestistrack,
